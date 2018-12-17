@@ -365,7 +365,7 @@
 #define USE_TUYA_DIMMER                          // Add support for Tuya Serial Dimmer
   #define TUYA_DIMMER_ID       0                 // Default dimmer Id
 #define USE_ARMTRONIX_DIMMERS                    // Add support for Armtronix Dimmers (+1k4 code)
-#define USE_PS_16_DZ                             // ADD support for PS-16-DZ Dimmer
+#define USE_PS_16_DZ                             // Add support for PS-16-DZ Dimmer
 
 // Power monitoring sensors -----------------------
 #define USE_PZEM004T                             // Add support for PZEM004T Energy monitor (+2k code)
@@ -401,7 +401,7 @@
 
 //#define USE_RF_SENSOR                            // Add support for RF sensor receiver (434MHz or 868MHz) (+0k8 code)
 //  #define USE_THEO_V2                            // Add support for decoding Theo V2 sensors as documented on https://sidweb.nl using 434MHz RF sensor receiver (+1k4 code)
-//  #define USE_ALECTO_V2                          // Add support for decoding Alecto V2 sensors like ACH2010, WS3000 and DKW2012 using 868MHz RF sensor receiver (+1k7 code)
+//  #define USE_ALECTO_V2                          // Add support for decoding Alecto V2 sensors like ACH2010, WS3000 and DKW2012 weather stations using 868MHz RF sensor receiver (+1k7 code)
 
 /*********************************************************************************************\
  * TIME PROPORTIONAL CONTROLLER  -  See xdrv_13_timeprop.ino file for more Information
