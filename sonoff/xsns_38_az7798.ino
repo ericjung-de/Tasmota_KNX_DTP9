@@ -107,9 +107,7 @@
  *
  * :  responds with : T19.9C:C2167ppm:H57.4%
  *    This one gives the current readings.
- **********************************************************************************************
-
-/*********************************************************************************************/
+\*********************************************************************************************/
 
 #include <TasmotaSerial.h>
 
@@ -254,8 +252,9 @@ void AzInit(void)
 
 void AzShow(boolean json)
 {
-  char temperature[10], humidity[10];
+  char temperature[33];
   dtostrfd(az_temperature, Settings.flag2.temperature_resolution, temperature);
+  char humidity[33];
   dtostrfd(az_humidity, Settings.flag2.humidity_resolution, humidity);
 
   if (json) {
