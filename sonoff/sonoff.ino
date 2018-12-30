@@ -109,7 +109,6 @@ unsigned long pulse_timer[MAX_PULSETIMERS] = { 0 }; // Power off timer
 unsigned long blink_timer = 0;              // Power cycle timer
 unsigned long backlog_delay = 0;            // Command backlog delay
 unsigned long button_debounce = 0;          // Button debounce timer
-unsigned long switch_debounce = 0;          // Switch debounce timer
 power_t power = 0;                          // Current copy of Settings.power
 power_t blink_power;                        // Blink power state
 power_t blink_mask = 0;                     // Blink relay active mask
@@ -127,7 +126,6 @@ int blinks = 201;                           // Number of LED blinks
 uint32_t uptime = 0;                        // Counting every second until 4294967295 = 130 year
 uint32_t loop_load_avg = 0;                 // Indicative loop load average
 uint32_t global_update = 0;                 // Timestamp of last global temperature and humidity update
-uint32_t switch_change[MAX_SWITCHES];       // Timestamp of last switch change
 float global_temperature = 0;               // Provide a global temperature to be used by some sensors
 float global_humidity = 0;                  // Provide a global humidity to be used by some sensors
 char *ota_url;                              // OTA url string pointer
@@ -137,7 +135,6 @@ uint16_t blink_counter = 0;                 // Number of blink cycles
 uint16_t seriallog_timer = 0;               // Timer to disable Seriallog
 uint16_t syslog_timer = 0;                  // Timer to re-enable syslog_level
 uint16_t holdbutton[MAX_KEYS] = { 0 };      // Timer for button hold
-uint16_t switch_no_pullup = 0;              // Switch pull-up bitmask flags
 int16_t save_data_counter;                  // Counter and flag for config save to Flash
 RulesBitfield rules_flag;                   // Rule state flags (16 bits)
 uint8_t serial_local = 0;                   // Handle serial locally;
@@ -155,9 +152,6 @@ uint8_t blinkspeed = 1;                     // LED blink rate
 uint8_t lastbutton[MAX_KEYS] = { NOT_PRESSED, NOT_PRESSED, NOT_PRESSED, NOT_PRESSED };  // Last button states
 uint8_t multiwindow[MAX_KEYS] = { 0 };      // Max time between button presses to record press count
 uint8_t multipress[MAX_KEYS] = { 0 };       // Number of button presses within multiwindow
-uint8_t lastwallswitch[MAX_SWITCHES];       // Last wall switch states
-uint8_t holdwallswitch[MAX_SWITCHES] = { 0 };  // Timer for wallswitch push button hold
-uint8_t virtualswitch[MAX_SWITCHES];        // Virtual switch states
 uint8_t pin[GPIO_MAX];                      // Possible pin configurations
 uint8_t led_inverted = 0;                   // LED inverted flag (1 = (0 = On, 1 = Off))
 uint8_t pwm_inverted = 0;                   // PWM inverted flag (1 = inverted)
@@ -181,7 +175,7 @@ byte mdns_delayed_start = 0;                // mDNS delayed start
 boolean latest_uptime_flag = true;          // Signal latest uptime
 boolean pwm_present = false;                // Any PWM channel configured with SetOption15 0
 boolean mdns_begun = false;                 // mDNS active
-mytmplt my_module;                          // Active copy of Module name and GPIOs (23 x 8 bits)
+myio my_module;                             // Active copy of Module GPIOs (18 x 8 bits)
 StateBitfield global_state;                 // Global states (currently Wifi and Mqtt) (8 bits)
 char my_version[33];                        // Composed version string
 char my_image[33];                          // Code image and/or commit
@@ -856,14 +850,13 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
         Settings.last_module = Settings.module;
         Settings.module = payload;
         if (Settings.last_module != payload) {
-          for (byte i = 0; i < MAX_GPIO_PIN; i++) {
-            Settings.my_gp.io[i] = 0;
+          for (byte i = 0; i < sizeof(Settings.my_gp); i++) {
+            Settings.my_gp.io[i] = GPIO_NONE;
           }
         }
         restart_flag = 2;
       }
-      snprintf_P(stemp1, sizeof(stemp1), kModules[Settings.module].name);
-      snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_NVALUE_SVALUE, command, Settings.module +1, stemp1);
+      snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_NVALUE_SVALUE, command, Settings.module +1, ModuleName().c_str());
     }
     else if (CMND_MODULES == command_code) {
       for (byte i = 0; i < MAXMODULE; i++) {
@@ -873,8 +866,7 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
           snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,"), mqtt_data);
         }
         jsflg = 1;
-        snprintf_P(stemp1, sizeof(stemp1), kModules[i].name);
-        snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s\"%d (%s)\""), mqtt_data, i +1, stemp1);
+        snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s\"%d (%s)\""), mqtt_data, i +1, AnyModuleName(i).c_str());
         if ((strlen(mqtt_data) > (LOGSZ - TOPSZ)) || (i == MAXMODULE -1)) {
           snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s]}"), mqtt_data);
           MqttPublishPrefixTopic_P(RESULT_OR_STAT, type);
@@ -884,19 +876,19 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
       }
       mqtt_data[0] = '\0';
     }
-    else if ((CMND_GPIO == command_code) && (index < MAX_GPIO_PIN)) {
-      mytmplt cmodule;
-      memcpy_P(&cmodule, &kModules[Settings.module], sizeof(cmodule));
-      if ((GPIO_USER == ValidGPIO(index, cmodule.gp.io[index])) && (payload >= 0) && (payload < GPIO_SENSOR_END)) {
+    else if ((CMND_GPIO == command_code) && (index < sizeof(Settings.my_gp))) {
+      myio cmodule;
+      ModuleGpios(&cmodule);
+      if ((GPIO_USER == ValidGPIO(index, cmodule.io[index])) && (payload >= 0) && (payload < GPIO_SENSOR_END)) {
         bool present = false;
         for (byte i = 0; i < sizeof(kGpioNiceList); i++) {
           uint8_t midx = pgm_read_byte(kGpioNiceList + i);
           if (midx == payload) { present = true; }
         }
         if (present) {
-          for (byte i = 0; i < MAX_GPIO_PIN; i++) {
-            if ((GPIO_USER == ValidGPIO(i, cmodule.gp.io[i])) && (Settings.my_gp.io[i] == payload)) {
-              Settings.my_gp.io[i] = 0;
+          for (byte i = 0; i < sizeof(Settings.my_gp); i++) {
+            if ((GPIO_USER == ValidGPIO(i, cmodule.io[i])) && (Settings.my_gp.io[i] == payload)) {
+              Settings.my_gp.io[i] = GPIO_NONE;
             }
           }
           Settings.my_gp.io[index] = payload;
@@ -904,8 +896,8 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
         }
       }
       snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{"));
-      for (byte i = 0; i < MAX_GPIO_PIN; i++) {
-        if (GPIO_USER == ValidGPIO(i, cmodule.gp.io[i])) {
+      for (byte i = 0; i < sizeof(Settings.my_gp); i++) {
+        if (GPIO_USER == ValidGPIO(i, cmodule.io[i])) {
           if (jsflg) snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,"), mqtt_data);
           jsflg = 1;
           snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s\"" D_CMND_GPIO "%d\":\"%d (%s)\""),
@@ -919,12 +911,12 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
       }
     }
     else if (CMND_GPIOS == command_code) {
-      mytmplt cmodule;
-      memcpy_P(&cmodule, &kModules[Settings.module], sizeof(cmodule));
+      myio cmodule;
+      ModuleGpios(&cmodule);
       uint8_t midx;
       for (byte i = 0; i < sizeof(kGpioNiceList); i++) {
         midx = pgm_read_byte(kGpioNiceList + i);
-        if (!GetUsedInModule(midx, cmodule.gp.io)) {
+        if (!GetUsedInModule(midx, cmodule.io)) {
 
           if (!jsflg) {
             snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_CMND_GPIOS "%d\":["), lines);
@@ -1163,7 +1155,6 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
     else if ((CMND_SWITCHMODE == command_code) && (index > 0) && (index <= MAX_SWITCHES)) {
       if ((payload >= 0) && (payload < MAX_SWITCH_OPTION)) {
         Settings.switchmode[index -1] = payload;
-        GpioSwitchPinMode(index -1);
       }
       snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_INDEX_NVALUE, command, index, Settings.switchmode[index-1]);
     }
@@ -1648,7 +1639,7 @@ boolean MqttShowSensor(void)
     if (pin[GPIO_SWT1 +i] < 99) {
 #endif  // USE_TM1638
       boolean swm = ((FOLLOW_INV == Settings.switchmode[i]) || (PUSHBUTTON_INV == Settings.switchmode[i]) || (PUSHBUTTONHOLD_INV == Settings.switchmode[i]));
-      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,\"" D_JSON_SWITCH "%d\":\"%s\""), mqtt_data, i +1, GetStateText(swm ^ lastwallswitch[i]));
+      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,\"" D_JSON_SWITCH "%d\":\"%s\""), mqtt_data, i +1, GetStateText(swm ^ SwitchLastState(i)));
     }
   }
   XsnsCall(FUNC_JSON_APPEND);
@@ -1885,93 +1876,6 @@ void ButtonHandler(void)
       }
     }
     lastbutton[button_index] = button;
-  }
-}
-
-/*********************************************************************************************\
- * Switch handler
-\*********************************************************************************************/
-
-void SwitchHandler(byte mode)
-{
-  uint8_t button = NOT_PRESSED;
-  uint8_t switchflag;
-  uint16_t loops_per_second = 1000 / Settings.switch_debounce;
-
-  for (byte i = 0; i < MAX_SWITCHES; i++) {
-    if (((pin[GPIO_SWT1 +i] < 99) && (TimePassedSince(switch_change[i]) > Settings.switch_debounce)) || (mode)) {
-
-      if (holdwallswitch[i]) {
-        holdwallswitch[i]--;
-        if (0 == holdwallswitch[i]) {
-          SendKey(1, i +1, 3);           // Execute command via MQTT
-        }
-      }
-
-      if (mode) {
-        button = virtualswitch[i];
-      } else {
-        if (!((uptime < 4) && (0 == pin[GPIO_SWT1 +i]))) {  // Block GPIO0 for 4 seconds after poweron to workaround Wemos D1 RTS circuit
-          button = digitalRead(pin[GPIO_SWT1 +i]);
-        }
-      }
-
-      if (button != lastwallswitch[i]) {
-        switchflag = 3;
-        switch (Settings.switchmode[i]) {
-        case TOGGLE:
-          switchflag = 2;                // Toggle
-          break;
-        case FOLLOW:
-          switchflag = button &1;        // Follow wall switch state
-          break;
-        case FOLLOW_INV:
-          switchflag = ~button &1;       // Follow inverted wall switch state
-          break;
-        case PUSHBUTTON:
-          if ((PRESSED == button) && (NOT_PRESSED == lastwallswitch[i])) {
-            switchflag = 2;              // Toggle with pushbutton to Gnd
-          }
-          break;
-        case PUSHBUTTON_INV:
-          if ((NOT_PRESSED == button) && (PRESSED == lastwallswitch[i])) {
-            switchflag = 2;              // Toggle with releasing pushbutton from Gnd
-          }
-          break;
-        case PUSHBUTTON_TOGGLE:
-          if (button != lastwallswitch[i]) {
-            switchflag = 2;              // Toggle with any pushbutton change
-          }
-          break;
-        case PUSHBUTTONHOLD:
-          if ((PRESSED == button) && (NOT_PRESSED == lastwallswitch[i])) {
-            holdwallswitch[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;
-          }
-          if ((NOT_PRESSED == button) && (PRESSED == lastwallswitch[i]) && (holdwallswitch[i])) {
-            holdwallswitch[i] = 0;
-            switchflag = 2;              // Toggle with pushbutton to Gnd
-          }
-          break;
-        case PUSHBUTTONHOLD_INV:
-          if ((NOT_PRESSED == button) && (PRESSED == lastwallswitch[i])) {
-            holdwallswitch[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;
-          }
-          if ((PRESSED == button) && (NOT_PRESSED == lastwallswitch[i]) && (holdwallswitch[i])) {
-            holdwallswitch[i] = 0;
-            switchflag = 2;              // Toggle with pushbutton to Gnd
-          }
-          break;
-        }
-
-        if (switchflag < 3) {
-          if (!SendKey(1, i +1, switchflag)) {  // Execute command via MQTT
-            ExecuteCommandPower(i +1, switchflag, SRC_SWITCH);  // Execute command internally (if i < devices_present)
-          }
-        }
-
-        lastwallswitch[i] = button;
-      }
-    }
   }
 }
 
@@ -2404,70 +2308,13 @@ void SerialInput(void)
     serial_in_byte_counter = 0;
   }
 }
+
 /********************************************************************************************/
-
-void SwitchChange(byte index)
-{
-  switch_change[index] = millis();
-}
-
-void SwitchChange1(void)
-{
-  SwitchChange(0);
-}
-
-void SwitchChange2(void)
-{
-  SwitchChange(1);
-}
-
-void SwitchChange3(void)
-{
-  SwitchChange(2);
-}
-
-void SwitchChange4(void)
-{
-  SwitchChange(3);
-}
-
-void SwitchChange5(void)
-{
-  SwitchChange(4);
-}
-
-void SwitchChange6(void)
-{
-  SwitchChange(5);
-}
-
-void SwitchChange7(void)
-{
-  SwitchChange(6);
-}
-
-void SwitchChange8(void)
-{
-  SwitchChange(7);
-}
-
-void GpioSwitchPinMode(uint8_t index)
-{
-  if ((pin[GPIO_SWT1 +index] < 99) && (index < MAX_SWITCHES)) {
-    pinMode(pin[GPIO_SWT1 +index], (16 == pin[GPIO_SWT1 +index]) ? INPUT_PULLDOWN_16 : bitRead(switch_no_pullup, index) ? INPUT : INPUT_PULLUP);
-
-    typedef void (*function)(void) ;
-    function switch_callbacks[MAX_SWITCHES] = { SwitchChange1, SwitchChange2, SwitchChange3, SwitchChange4, SwitchChange5, SwitchChange6, SwitchChange7, SwitchChange8 };
-    detachInterrupt(pin[GPIO_SWT1 +index]);
-    attachInterrupt(pin[GPIO_SWT1 +index], switch_callbacks[index], CHANGE);
-  }
-}
 
 void GpioInit(void)
 {
   uint8_t mpin;
   uint8_t key_no_pullup = 0;
-  mytmplt def_module;
 
   if (Settings.module >= MAXMODULE) {
     Settings.module = MODULE;
@@ -2477,29 +2324,31 @@ void GpioInit(void)
     baudrate = APP_BAUDRATE;
   }
 
-  memcpy_P(&def_module, &kModules[Settings.module], sizeof(def_module));
-  strlcpy(my_module.name, def_module.name, sizeof(my_module.name));
-  for (byte i = 0; i < MAX_GPIO_PIN; i++) {
+  myio def_gp;
+  ModuleGpios(&def_gp);
+
+
+  for (byte i = 0; i < sizeof(Settings.my_gp); i++) {
     if (Settings.my_gp.io[i] > GPIO_NONE) {
-      my_module.gp.io[i] = Settings.my_gp.io[i];
+      my_module.io[i] = Settings.my_gp.io[i];
     }
-    if ((def_module.gp.io[i] > GPIO_NONE) && (def_module.gp.io[i] < GPIO_USER)) {
-      my_module.gp.io[i] = def_module.gp.io[i];
+    if ((def_gp.io[i] > GPIO_NONE) && (def_gp.io[i] < GPIO_USER)) {
+      my_module.io[i] = def_gp.io[i];
     }
   }
 
   for (byte i = 0; i < GPIO_MAX; i++) {
     pin[i] = 99;
   }
-  for (byte i = 0; i < MAX_GPIO_PIN; i++) {
-    mpin = ValidGPIO(i, my_module.gp.io[i]);
+  for (byte i = 0; i < sizeof(my_module.io); i++) {
+    mpin = ValidGPIO(i, my_module.io[i]);
 
 //  snprintf_P(log_data, sizeof(log_data), PSTR("DBG: gpio pin %d, mpin %d"), i, mpin);
 //  AddLog(LOG_LEVEL_DEBUG);
 
     if (mpin) {
       if ((mpin >= GPIO_SWT1_NP) && (mpin < (GPIO_SWT1_NP + MAX_SWITCHES))) {
-        bitSet(switch_no_pullup, mpin - GPIO_SWT1_NP);
+        SwitchPullupFlag(mpin - GPIO_SWT1_NP);
         mpin -= (GPIO_SWT1_NP - GPIO_SWT1);
       }
       else if ((mpin >= GPIO_KEY1_NP) && (mpin < (GPIO_KEY1_NP + MAX_KEYS))) {
@@ -2547,11 +2396,11 @@ void GpioInit(void)
     for (byte i = 0; i < GPIO_MAX; i++) {
       if ((pin[i] >= 12) && (pin[i] <=14)) pin[i] = 99;
     }
-    my_module.gp.io[12] = GPIO_SPI_MISO;
+    my_module.io[12] = GPIO_SPI_MISO;
     pin[GPIO_SPI_MISO] = 12;
-    my_module.gp.io[13] = GPIO_SPI_MOSI;
+    my_module.io[13] = GPIO_SPI_MOSI;
     pin[GPIO_SPI_MOSI] = 13;
-    my_module.gp.io[14] = GPIO_SPI_CLK;
+    my_module.io[14] = GPIO_SPI_CLK;
     pin[GPIO_SPI_CLK] = 14;
   }
   soft_spi_flg = ((pin[GPIO_SSPI_CS] < 99) && (pin[GPIO_SSPI_SCLK] < 99) && ((pin[GPIO_SSPI_MOSI] < 99) || (pin[GPIO_SSPI_MOSI] < 99)));
@@ -2631,14 +2480,8 @@ void GpioInit(void)
       digitalWrite(pin[GPIO_LED1 +i], bitRead(led_inverted, i));
     }
   }
-  for (byte i = 0; i < MAX_SWITCHES; i++) {
-    lastwallswitch[i] = 1;  // Init global to virtual switch state;
-    if (pin[GPIO_SWT1 +i] < 99) {
-      GpioSwitchPinMode(i);
-      lastwallswitch[i] = digitalRead(pin[GPIO_SWT1 +i]);  // Set global now so doesn't change the saved power state on first switch check
-    }
-    virtualswitch[i] = lastwallswitch[i];
-  }
+
+  SwitchInit();
 
 #ifdef USE_WS2812
   if (!light_type && (pin[GPIO_WS2812] < 99)) {  // RGB led
@@ -2723,7 +2566,7 @@ void setup(void)
     if (RtcReboot.fast_reboot_count > 4) {        // Restarted 5 times
       Settings.module = SONOFF_BASIC;             // Reset module to Sonoff Basic
 //      Settings.last_module = SONOFF_BASIC;
-      for (byte i = 0; i < MAX_GPIO_PIN; i++) {
+      for (byte i = 0; i < sizeof(Settings.my_gp); i++) {
         Settings.my_gp.io[i] = GPIO_NONE;         // Reset user defined GPIO disabling sensors
       }
     }
@@ -2826,10 +2669,9 @@ void loop(void)
     SetNextTimeInterval(button_debounce, Settings.button_debounce);
     ButtonHandler();
   }
-  if (TimeReached(switch_debounce)) {
-    SetNextTimeInterval(switch_debounce, Settings.switch_debounce);
-    SwitchHandler(0);
-  }
+
+  SwitchLoop();
+
   if (TimeReached(state_50msecond)) {
     SetNextTimeInterval(state_50msecond, 50);
     XdrvCall(FUNC_EVERY_50_MSECOND);
