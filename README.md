@@ -249,8 +249,8 @@ OPTION Value | Device Parameter
 ## Modifications to Sonoff-Tasmota ##
 
 * Added the file _/sonoff/xdrv_11_KNX.ino_
-* Added the entries `#define USE_KNX` and `#define USE_KNX_WEB_MENU` on _/sonoff/user_config.h_
-* Added entries to the file _/sonoff/webserver.ino_
+* Added the entries `#define USE_KNX` and `#define USE_KNX_WEB_MENU` on _/sonoff/my_user_config.h_
+* Added entries to the file _/sonoff/xdrv_01_webserver.ino_
 * Added entries to the file _/sonoff/sonoff.ino_
 * Added entries to the file _/sonoff/sonoff.h_
 * Added entries to the file _/sonoff/settings.h_
