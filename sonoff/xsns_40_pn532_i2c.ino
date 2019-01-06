@@ -239,6 +239,8 @@ bool PN532_SAMConfig(void)
 void PN532_Detect(void)
 {
   if ((pn532_i2c_detected) || (pn532_i2c_disable)) { return; }
+  
+  Wire.setClockStretchLimit(1000); // Enable 1ms clock stretch as per datasheet Table 12.25 (Timing for the I2C interface)
 
   uint32_t ver = PN532_getFirmwareVersion();
   if (ver) {
@@ -287,7 +289,7 @@ void PN532_ScanForTag(void)
       char uids[15];
       sprintf(uids,"");
       for (uint8_t i = 0;i < uid_len;i++) {
-        sprintf(uids,"%s%X",uids,uid[i]);
+        sprintf(uids,"%s%02X",uids,uid[i]);
       }
       snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_JSON_TIME "\":\"%s\""), GetDateAndTime(DT_LOCAL).c_str());
       snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("%s,\"PN532\":{\"UID\":\"%s\"}}"), mqtt_data, uids);
