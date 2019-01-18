@@ -220,9 +220,19 @@ boolean MqttDiscoverServer(void)
   AddLog(LOG_LEVEL_INFO);
 
   if (n > 0) {
-    // Note: current strategy is to get the first MQTT service (even when many are found)
+    #ifdef MDNS_HOSTNAME
+    for (int i = 0; i < n; i++) {
+      if (!strcmp(MDNS.hostname(i).c_str(), MDNS_HOSTNAME)) {
+         snprintf_P(Settings.mqtt_host, sizeof(Settings.mqtt_host), MDNS.IP(i).toString().c_str());
+         Settings.mqtt_port = MDNS.port(i);
+         break;  // stop at the first matching record
+      }
+    }
+    #else
+    // If the hostname isn't set, use the first record found.
     snprintf_P(Settings.mqtt_host, sizeof(Settings.mqtt_host), MDNS.IP(0).toString().c_str());
     Settings.mqtt_port = MDNS.port(0);
+    #endif  // MDNS_HOSTNAME
 
     snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_MDNS D_MQTT_SERVICE_FOUND " %s, " D_IP_ADDRESS " %s, " D_PORT " %d"),
       MDNS.hostname(0).c_str(), Settings.mqtt_host, Settings.mqtt_port);
@@ -485,7 +495,19 @@ boolean MqttCheckTls(void)
       AddLog_P(LOG_LEVEL_INFO, S_LOG_MQTT, PSTR(D_VERIFIED "2"));
       result = true;
     }
-#endif
+#ifdef MDNS_HOSTNAME
+    // If the hostname is set, check that as well.
+    // This lets certs with the hostname for the CN be used.
+    else if (EspClient.verify(fingerprint1, MDNS_HOSTNAME)) {
+      AddLog_P(LOG_LEVEL_INFO, S_LOG_MQTT, PSTR(D_VERIFIED "1"));
+      result = true;
+    }
+    else if (EspClient.verify(fingerprint2, MDNS_HOSTNAME)) {
+      AddLog_P(LOG_LEVEL_INFO, S_LOG_MQTT, PSTR(D_VERIFIED "2"));
+      result = true;
+    }
+#endif  // MDNS_HOSTNAME
+#endif  // USE_MQTT_TLS_CA_CERT
   }
   if (!result) AddLog_P(LOG_LEVEL_INFO, S_LOG_MQTT, PSTR(D_FAILED));
   EspClient.stop();
@@ -513,13 +535,11 @@ void MqttReconnect(void)
   mqtt_retry_counter = Settings.mqtt_retry;
   global_state.mqtt_down = 1;
 
-#ifndef USE_MQTT_TLS
 #ifdef USE_DISCOVERY
 #ifdef MQTT_HOST_DISCOVERY
-  if (!strlen(Settings.mqtt_host) && !MqttDiscoverServer()) { return; }
+  if (!MqttDiscoverServer() && !strlen(Settings.mqtt_host)) { return; }
 #endif  // MQTT_HOST_DISCOVERY
 #endif  // USE_DISCOVERY
-#endif  // USE_MQTT_TLS
 
   char *mqtt_user = NULL;
   char *mqtt_pwd = NULL;
@@ -585,13 +605,11 @@ void MqttCheck(void)
     if (!MqttIsConnected()) {
       global_state.mqtt_down = 1;
       if (!mqtt_retry_counter) {
-#ifndef USE_MQTT_TLS
 #ifdef USE_DISCOVERY
 #ifdef MQTT_HOST_DISCOVERY
         if (!strlen(Settings.mqtt_host) && !mdns_begun) { return; }
 #endif  // MQTT_HOST_DISCOVERY
 #endif  // USE_DISCOVERY
-#endif  // USE_MQTT_TLS
         MqttReconnect();
       } else {
         mqtt_retry_counter--;
