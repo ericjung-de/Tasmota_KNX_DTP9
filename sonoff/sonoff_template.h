@@ -146,6 +146,14 @@ enum UserSelectablePins {
   GPIO_MAX31855CS,     // MAX31855 Serial interface
   GPIO_MAX31855CLK,    // MAX31855 Serial interface
   GPIO_MAX31855DO,     // MAX31855 Serial interface
+  GPIO_KEY1_INV,       // Inverted buttons
+  GPIO_KEY2_INV,
+  GPIO_KEY3_INV,
+  GPIO_KEY4_INV,
+  GPIO_KEY1_INV_NP,    // Inverted buttons without pull-up
+  GPIO_KEY2_INV_NP,
+  GPIO_KEY3_INV_NP,
+  GPIO_KEY4_INV_NP,
   GPIO_SENSOR_END };
 
 // Programmer selectable GPIO functionality offset by user selectable GPIOs
@@ -209,7 +217,10 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_SSPI_MISO "|" D_SENSOR_SSPI_MOSI "|" D_SENSOR_SSPI_SCLK "|" D_SENSOR_SSPI_CS "|" D_SENSOR_SSPI_DC "|"
   D_SENSOR_RF_SENSOR "|"
   D_SENSOR_AZ_TX "|" D_SENSOR_AZ_RX "|"
-  D_SENSOR_MAX31855_CS "|" D_SENSOR_MAX31855_CLK "|" D_SENSOR_MAX31855_DO;
+  D_SENSOR_MAX31855_CS "|" D_SENSOR_MAX31855_CLK "|" D_SENSOR_MAX31855_DO "|"
+  D_SENSOR_BUTTON "1i|" D_SENSOR_BUTTON "2i|" D_SENSOR_BUTTON "3i|" D_SENSOR_BUTTON "4i|"
+  D_SENSOR_BUTTON "1in|" D_SENSOR_BUTTON "2in|" D_SENSOR_BUTTON "3in|" D_SENSOR_BUTTON "4in"
+  ;
 
 /********************************************************************************************/
 
@@ -281,6 +292,8 @@ enum SupportedModules {
   KA10,
   ZX2820,
   MI_DESK_LAMP,
+  SP10,
+  WAGA,
   MAXMODULE };
 
 /********************************************************************************************/
@@ -331,12 +344,20 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_NONE,           // Not used
   GPIO_KEY1,           // Buttons
   GPIO_KEY1_NP,
+  GPIO_KEY1_INV,
+  GPIO_KEY1_INV_NP,
   GPIO_KEY2,
   GPIO_KEY2_NP,
+  GPIO_KEY2_INV,
+  GPIO_KEY2_INV_NP,
   GPIO_KEY3,
   GPIO_KEY3_NP,
+  GPIO_KEY3_INV,
+  GPIO_KEY3_INV_NP,
   GPIO_KEY4,
   GPIO_KEY4_NP,
+  GPIO_KEY4_INV,
+  GPIO_KEY4_INV_NP,
   GPIO_SWT1,           // User connected external switches
   GPIO_SWT1_NP,
   GPIO_SWT2,
@@ -553,6 +574,8 @@ const uint8_t kModuleNiceList[MAXMODULE] PROGMEM = {
   SK03_TUYA,
   DIGOO,
   KA10,
+  SP10,
+  WAGA,
   NEO_COOLCAM,         // Socket Relay Devices
   OBI,
   OBI2,
@@ -1774,11 +1797,71 @@ const mytmplt kModules[MAXMODULE] PROGMEM = {
      GPIO_ROT_A,       // GPIO12 Rotary switch A pin
      GPIO_ROT_B,       // GPIO13 Rotary switch B pin
      0, 0, 0, 0
+  },
+  { "SP10",            // Tuya SP10 (BL0937 Energy Monitoring)
+                       // https://www.aliexpress.com/item/Smart-Mini-WiFi-Plug-Outlet-Switch-Work-With-ForEcho-Alexa-Google-Home-Remote-EU-Smart-Socket/32963670423.html
+     0,                // GPIO00
+     GPIO_PWM1,        // GPIO01 Nightlight
+     0,                // GPIO02
+     GPIO_KEY1,        // GPIO03 Button
+     GPIO_HJL_CF,      // GPIO04 BL0937 CF power
+     GPIO_NRG_CF1,     // GPIO05 BL0937 CF1 voltage / current
+                       // GPIO06 (SD_CLK   Flash)
+                       // GPIO07 (SD_DATA0 Flash QIO/DIO/DOUT)
+                       // GPIO08 (SD_DATA1 Flash QIO/DIO/DOUT)
+     0,                // GPIO09 (SD_DATA2 Flash QIO or ESP8285)
+     0,                // GPIO10 (SD_DATA3 Flash QIO or ESP8285)
+                       // GPIO11 (SD_CMD   Flash)
+     GPIO_NRG_SEL_INV, // GPIO12 BL0937 Sel output (1 = Voltage)
+     GPIO_LED1,        // GPIO13 Blue LED - Link status
+     GPIO_REL1,        // GPIO14 Relay and red LED
+     0, 0, 0
+  },
+  { "WAGA CHCZ02MB",   // WAGA life CHCZ02MB (HJL-01 Energy Monitoring)
+                       // https://www.ebay.com/itm/332595697006
+     GPIO_LED2_INV,    // GPIO00 Red LED
+     0,                // GPIO01 Serial TX
+     0,                // GPIO02
+     GPIO_NRG_SEL_INV, // GPIO03 HJL-01 Sel output (1 = Voltage)
+     0,                // GPIO04 
+     GPIO_HJL_CF,      // GPIO05 HJL-01 CF power
+                       // GPIO06 (SD_CLK   Flash)
+                       // GPIO07 (SD_DATA0 Flash QIO/DIO/DOUT)
+                       // GPIO08 (SD_DATA1 Flash QIO/DIO/DOUT)
+     0,                // GPIO09 (SD_DATA2 Flash QIO or ESP8285)
+     0,                // GPIO10 (SD_DATA3 Flash QIO or ESP8285)
+                       // GPIO11 (SD_CMD   Flash)
+     GPIO_REL1,        // GPIO12 Relay
+     GPIO_KEY1,        // GPIO13 Button
+     GPIO_NRG_CF1,     // GPIO14 HJL-01 CF1 voltage / current
+     GPIO_LED1_INV,    // GPIO15 Blue LED - Link status
+     0, 0
   }
 };
 
 /*
   Optionals
+
+  { "ESP RGBWWC",      // esp rgbww controller https://github.com/pljakobs/esp_rgbww_controller/tree/v2.3
+     GPIO_KEY1,        // GPIO00 Button
+     GPIO_USER,        // GPIO01 Serial RXD and Optional sensor
+     0,                // GPIO02
+     GPIO_USER,        // GPIO03 Serial TXD and Optional sensor
+     GPIO_PWM5,        // GPIO04 LED Warm White
+     GPIO_PWM4,        // GPIO05 LED Cold White
+                       // GPIO06 (SD_CLK   Flash)
+                       // GPIO07 (SD_DATA0 Flash QIO/DIO/DOUT)
+                       // GPIO08 (SD_DATA1 Flash QIO/DIO/DOUT)
+     0,                // GPIO09 (SD_DATA2 Flash QIO or ESP8285)
+     0,                // GPIO10 (SD_DATA3 Flash QIO or ESP8285)
+                       // GPIO11 (SD_CMD   Flash)
+     GPIO_PWM2,        // GPIO12 LED Green
+     GPIO_PWM1,        // GPIO13 LED Red
+     GPIO_PWM3,        // GPIO14 LED Blue
+     0,                // GPIO15
+     GPIO_KEY2,        // GPIO16 Button
+     0
+  }
 
   { "N0DY Relay",      // N0DY Wifi Dual Relay (ESP-07)
                        // https://www.n0dy.com/product/web-controlled-dual-relay/
