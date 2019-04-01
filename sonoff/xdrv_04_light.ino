@@ -56,7 +56,7 @@
 
 #define XDRV_04              4
 
-#define WS2812_SCHEMES       7    // Number of additional WS2812 schemes supported by xdrv_ws2812.ino
+const uint8_t WS2812_SCHEMES = 7;    // Number of additional WS2812 schemes supported by xdrv_ws2812.ino
 
 enum LightCommands {
   CMND_COLOR, CMND_COLORTEMPERATURE, CMND_DIMMER, CMND_LED, CMND_LEDTABLE, CMND_FADE,
@@ -70,23 +70,23 @@ const char kLightCommands[] PROGMEM =
 struct LRgbColor {
   uint8_t R, G, B;
 };
-#define MAX_FIXED_COLOR  12
+const uint8_t MAX_FIXED_COLOR = 12;
 const LRgbColor kFixedColor[MAX_FIXED_COLOR] PROGMEM =
   { 255,0,0, 0,255,0, 0,0,255, 228,32,0, 0,228,32, 0,32,228, 188,64,0, 0,160,96, 160,32,240, 255,255,0, 255,0,170, 255,255,255 };
 
 struct LWColor {
   uint8_t W;
 };
-#define MAX_FIXED_WHITE  4
+const uint8_t MAX_FIXED_WHITE = 4;
 const LWColor kFixedWhite[MAX_FIXED_WHITE] PROGMEM = { 0, 255, 128, 32 };
 
 struct LCwColor {
   uint8_t C, W;
 };
-#define MAX_FIXED_COLD_WARM  4
+const uint8_t MAX_FIXED_COLD_WARM = 4;
 const LCwColor kFixedColdWarm[MAX_FIXED_COLD_WARM] PROGMEM = { 0,0, 255,0, 0,255, 128,128 };
 
-uint8_t ledTable[] = {
+const uint8_t ledTable[] = {
   0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
   1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
   1,  2,  2,  2,  2,  2,  2,  2,  2,  3,  3,  3,  3,  3,  4,  4,
@@ -132,11 +132,11 @@ unsigned long strip_timer_counter = 0;    // Bars and Gradient
  * Arilux LC11 Rf support stripped from RCSwitch library
 \*********************************************************************************************/
 
-#define ARILUX_RF_TIME_AVOID_DUPLICATE  1000  // Milliseconds
+const uint32_t ARILUX_RF_TIME_AVOID_DUPLICATE = 1000;  // Milliseconds
 
-#define ARILUX_RF_MAX_CHANGES           51    // Pulses (sync + 2 x 24 bits)
-#define ARILUX_RF_SEPARATION_LIMIT      4300  // Microseconds
-#define ARILUX_RF_RECEIVE_TOLERANCE     60    // Percentage
+const uint8_t ARILUX_RF_MAX_CHANGES = 51;              // Pulses (sync + 2 x 24 bits)
+const uint32_t ARILUX_RF_SEPARATION_LIMIT = 4300;      // Microseconds
+const uint32_t ARILUX_RF_RECEIVE_TOLERANCE = 60;       // Percentage
 
 unsigned int arilux_rf_timings[ARILUX_RF_MAX_CHANGES];
 
@@ -760,7 +760,7 @@ void LightState(uint8_t append)
     for (uint8_t i = 0; i < light_subtype; i++) {
       ResponseAppend_P(PSTR("%s%d" ), (i > 0 ? "," : ""), light_current_color[i] * 100 / 255);
     }
-    ResponseAppend_P(PSTR("%s]"));
+    ResponseAppend_P(PSTR("]"));
   }
   if ((LST_COLDWARM == light_subtype) || (LST_RGBWC == light_subtype)) {
     ResponseAppend_P(PSTR(",\"" D_CMND_COLORTEMPERATURE "\":%d"), LightGetColorTemp());
@@ -1231,9 +1231,9 @@ bool LightColorEntry(char *buffer, uint8_t buffer_length)
   }
 
   memset(&light_entry_color, 0x00, sizeof(light_entry_color));
-  if (strstr(buffer, ",")) {                        // Decimal entry
+  if (strstr(buffer, ",") != nullptr) {             // Decimal entry
     int8_t i = 0;
-    for (str = strtok_r(buffer, ",", &p); str && i < 6; str = strtok_r(NULL, ",", &p)) {
+    for (str = strtok_r(buffer, ",", &p); str && i < 6; str = strtok_r(nullptr, ",", &p)) {
       if (i < 5) {
         light_entry_color[i++] = atoi(str);
       }
@@ -1345,16 +1345,16 @@ bool LightCommand(void)
     bool validHSB = (XdrvMailbox.data_len > 0);
     if (validHSB) {
       uint16_t HSB[3];
-      if (strstr(XdrvMailbox.data, ",")) {  // Command with 3 comma separated parameters, Hue (0<H<360), Saturation (0<S<100) AND Brightness (0<B<100)
+      if (strstr(XdrvMailbox.data, ",") != nullptr) {  // Command with 3 comma separated parameters, Hue (0<H<360), Saturation (0<S<100) AND Brightness (0<B<100)
         for (int i = 0; i < 3; i++) {
           char *substr;
 
           if (0 == i) {
             substr = strtok(XdrvMailbox.data, ",");
           } else {
-            substr = strtok(NULL, ",");
+            substr = strtok(nullptr, ",");
           }
-          if (substr != NULL) {
+          if (substr != nullptr) {
             HSB[i] = atoi(substr);
           } else {
             validHSB = false;
@@ -1392,7 +1392,7 @@ bool LightCommand(void)
       char *p;
       uint16_t idx = XdrvMailbox.index;
       Ws2812ForceSuspend();
-      for (char *color = strtok_r(XdrvMailbox.data, " ", &p); color; color = strtok_r(NULL, " ", &p)) {
+      for (char *color = strtok_r(XdrvMailbox.data, " ", &p); color; color = strtok_r(nullptr, " ", &p)) {
         if (LightColorEntry(color, strlen(color))) {
           Ws2812SetColor(idx, light_entry_color[0], light_entry_color[1], light_entry_color[2], light_entry_color[3]);
           idx++;
@@ -1515,16 +1515,16 @@ bool LightCommand(void)
     bool validtable = (XdrvMailbox.data_len > 0);
     char scolor[25];
     if (validtable) {
-      if (strstr(XdrvMailbox.data, ",")) {  // Command with up to 5 comma separated parameters
+      if (strstr(XdrvMailbox.data, ",") != nullptr) {  // Command with up to 5 comma separated parameters
         for (int i = 0; i < LST_RGBWC; i++) {
           char *substr;
 
           if (0 == i) {
             substr = strtok(XdrvMailbox.data, ",");
           } else {
-            substr = strtok(NULL, ",");
+            substr = strtok(nullptr, ",");
           }
-          if (substr != NULL) {
+          if (substr != nullptr) {
             Settings.rgbwwTable[i] = atoi(substr);
           }
         }

@@ -24,17 +24,17 @@
 
 #define XDRV_08                    8
 
-#define SERIAL_BRIDGE_BUFFER_SIZE  130
+const uint8_t SERIAL_BRIDGE_BUFFER_SIZE = 130;
 
 #include <TasmotaSerial.h>
 
 enum SerialBridgeCommands { CMND_SSERIALSEND, CMND_SBAUDRATE };
 const char kSerialBridgeCommands[] PROGMEM = D_CMND_SSERIALSEND "|" D_CMND_SBAUDRATE;
 
-TasmotaSerial *SerialBridgeSerial = NULL;
+TasmotaSerial *SerialBridgeSerial = nullptr;
 
 unsigned long serial_bridge_polling_window = 0;
-char *serial_bridge_buffer = NULL;
+char *serial_bridge_buffer = nullptr;
 int serial_bridge_in_byte_counter = 0;
 bool serial_bridge_active = true;
 bool serial_bridge_raw = false;
@@ -172,11 +172,11 @@ bool Xdrv08(uint8_t function)
 
   if (serial_bridge_active) {
     switch (function) {
-      case FUNC_PRE_INIT:
-        SerialBridgeInit();
-        break;
       case FUNC_LOOP:
         if (SerialBridgeSerial) { SerialBridgeInput(); }
+        break;
+      case FUNC_PRE_INIT:
+        SerialBridgeInit();
         break;
       case FUNC_COMMAND:
         result = SerialBridgeCommand();

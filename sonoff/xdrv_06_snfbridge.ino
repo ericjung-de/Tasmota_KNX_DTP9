@@ -23,7 +23,7 @@
 
 #define XDRV_06                   6
 
-#define SFB_TIME_AVOID_DUPLICATE  2000  // Milliseconds
+const uint32_t SFB_TIME_AVOID_DUPLICATE = 2000;  // Milliseconds
 
 enum SonoffBridgeCommands {
     CMND_RFSYNC,      CMND_RFLOW,      CMND_RFHIGH,      CMND_RFHOST,      CMND_RFCODE,      CMND_RFKEY,      CMND_RFRAW };
@@ -51,8 +51,8 @@ unsigned long sonoff_bridge_last_learn_time = 0;
 #include "ihx.h"
 #include "c2.h"
 
-#define RF_RECORD_NO_START_FOUND -1
-#define RF_RECORD_NO_END_FOUND -2
+const ssize_t RF_RECORD_NO_START_FOUND = -1;
+const ssize_t RF_RECORD_NO_END_FOUND = -2;
 
 ssize_t rf_find_hex_record_start(uint8_t *buf, size_t size)
 {
@@ -98,7 +98,7 @@ ssize_t rf_glue_remnant_with_new_data_and_write(const uint8_t *remnant_data, uin
   glue_record_sz = strlen((const char *) remnant_data) + record_end;
 
   glue_buf = (uint8_t *) malloc(glue_record_sz);
-  if (glue_buf == NULL) { return -2; }  // Not enough space
+  if (glue_buf == nullptr) { return -2; }  // Not enough space
 
   // Assemble new glue buffer
   memcpy(glue_buf, remnant_data, strlen((const char *) remnant_data));

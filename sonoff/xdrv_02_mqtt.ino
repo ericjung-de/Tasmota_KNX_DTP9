@@ -37,6 +37,9 @@ const char kMqttCommands[] PROGMEM =
   D_CMND_MQTTUSER "|" D_CMND_MQTTPASSWORD "|" D_CMND_FULLTOPIC "|" D_CMND_PREFIX "|" D_CMND_GROUPTOPIC "|" D_CMND_TOPIC "|" D_CMND_PUBLISH "|"
   D_CMND_BUTTONTOPIC "|" D_CMND_SWITCHTOPIC "|" D_CMND_BUTTONRETAIN "|" D_CMND_SWITCHRETAIN "|" D_CMND_POWERRETAIN "|" D_CMND_SENSORRETAIN ;
 
+IPAddress mqtt_host_addr;                   // MQTT host IP address
+uint32_t mqtt_host_hash = 0;                // MQTT host name hash
+
 uint16_t mqtt_connect_count = 0;            // MQTT re-connect count
 uint16_t mqtt_retry_counter = 1;            // MQTT connection retry counter
 uint8_t mqtt_initial_connection_state = 2;  // MQTT connection messages state
@@ -50,7 +53,6 @@ bool mqtt_allowed = false;                  // MQTT enabled and parameters valid
  * void MqttDisconnect()
  * void MqttSubscribeLib(char *topic)
  * bool MqttPublishLib(const char* topic, bool retained)
- * void MqttLoop()
 \*********************************************************************************************/
 
 #include <PubSubClient.h>
@@ -89,11 +91,6 @@ bool MqttPublishLib(const char* topic, bool retained)
   bool result = MqttClient.publish(topic, mqtt_data, retained);
   yield();  // #3313
   return result;
-}
-
-void MqttLoop(void)
-{
-  MqttClient.loop();
 }
 
 /*********************************************************************************************/
@@ -301,7 +298,7 @@ void MqttConnected(void)
 
     GetTopic_P(stopic, CMND, mqtt_topic, PSTR("#"));
     MqttSubscribe(stopic);
-    if (strstr(Settings.mqtt_fulltopic, MQTT_TOKEN_TOPIC) != NULL) {
+    if (strstr_P(Settings.mqtt_fulltopic, MQTT_TOKEN_TOPIC) != nullptr) {
       GetTopic_P(stopic, CMND, Settings.mqtt_grptopic, PSTR("#"));
       MqttSubscribe(stopic);
       GetFallbackTopic_P(stopic, CMND, PSTR("#"));
@@ -431,8 +428,8 @@ void MqttReconnect(void)
   mqtt_retry_counter = Settings.mqtt_retry;
   global_state.mqtt_down = 1;
 
-  char *mqtt_user = NULL;
-  char *mqtt_pwd = NULL;
+  char *mqtt_user = nullptr;
+  char *mqtt_pwd = nullptr;
   if (strlen(Settings.mqtt_user) > 0) mqtt_user = Settings.mqtt_user;
   if (strlen(Settings.mqtt_pwd) > 0) mqtt_pwd = Settings.mqtt_pwd;
 
@@ -455,6 +452,15 @@ void MqttReconnect(void)
 
   MqttClient.setCallback(MqttDataHandler);
   MqttClient.setServer(Settings.mqtt_host, Settings.mqtt_port);
+/*
+  // Skip MQTT host DNS lookup if not needed
+  uint32_t current_hash = GetHash(Settings.mqtt_host, strlen(Settings.mqtt_host));
+  if (mqtt_host_hash != current_hash) {
+    mqtt_host_hash = current_hash;
+    WiFi.hostByName(Settings.mqtt_host, mqtt_host_addr);  // Skips DNS lookup if mqtt_host is IP address string as from mDns
+  }
+  MqttClient.setServer(mqtt_host_addr, Settings.mqtt_port);
+*/
   if (MqttClient.connect(mqtt_client, mqtt_user, mqtt_pwd, stopic, 1, true, mqtt_data)) {
     MqttConnected();
   } else {
@@ -607,7 +613,7 @@ bool MqttCommand(void)
       char *mqtt_part = strtok(dataBuf, " ");
       if (mqtt_part) {
         strlcpy(stemp1, mqtt_part, sizeof(stemp1));
-        mqtt_part = strtok(NULL, " ");
+        mqtt_part = strtok(nullptr, " ");
         if (mqtt_part) {
           strlcpy(mqtt_data, mqtt_part, sizeof(mqtt_data));
         } else {
@@ -741,7 +747,7 @@ const char HTTP_FORM_MQTT1[] PROGMEM =
 const char HTTP_FORM_MQTT2[] PROGMEM =
   "<p><b>" D_USER "</b> (" MQTT_USER ")<br/><input id='mu' name='mu' placeholder='" MQTT_USER "' value='%s'></p>"
   "<p><b>" D_PASSWORD "</b><br/><input id='mp' name='mp' type='password' placeholder='" D_PASSWORD "' value='" D_ASTERISK_PWD "'></p>"
-  "<p><b>" D_TOPIC "</b> = %%topic%% (" MQTT_TOPIC ")<br/><input id='mt' name='mt' placeholder='" MQTT_TOPIC "' value='%s'></p>"
+  "<p><b>" D_TOPIC "</b> = %%topic%% (%s)<br/><input id='mt' name='mt' placeholder='%s' value='%s'></p>"
   "<p><b>" D_FULL_TOPIC "</b> (%s)<br/><input id='mf' name='mf' placeholder='%s' value='%s'></p>";
 
 void HandleMqttConfiguration(void)
@@ -763,14 +769,11 @@ void HandleMqttConfiguration(void)
   WSContentSend_P(HTTP_FORM_MQTT1,
     Settings.mqtt_host,
     Settings.mqtt_port,
-    Format(str, MQTT_CLIENT_ID, sizeof(Settings.mqtt_client)),
-    MQTT_CLIENT_ID,
-    Settings.mqtt_client);
+    Format(str, MQTT_CLIENT_ID, sizeof(str)), MQTT_CLIENT_ID, Settings.mqtt_client);
   WSContentSend_P(HTTP_FORM_MQTT2,
     (Settings.mqtt_user[0] == '\0') ? "0" : Settings.mqtt_user,
-    Settings.mqtt_topic,
-    MQTT_FULLTOPIC, MQTT_FULLTOPIC,
-    Settings.mqtt_fulltopic);
+    Format(str, MQTT_TOPIC, sizeof(str)), MQTT_TOPIC, Settings.mqtt_topic,
+    MQTT_FULLTOPIC, MQTT_FULLTOPIC, Settings.mqtt_fulltopic);
   WSContentSend_P(HTTP_FORM_END);
   WSContentSpaceButton(BUTTON_CONFIGURATION);
   WSContentStop();
@@ -819,6 +822,9 @@ bool Xdrv02(uint8_t function)
 
   if (Settings.flag.mqtt_enabled) {
     switch (function) {
+      case FUNC_LOOP:
+        if (MqttIsConnected()) { MqttClient.loop(); }
+        break;
 #ifdef USE_WEBSERVER
       case FUNC_WEB_ADD_BUTTON:
         WSContentSend_P(HTTP_BTN_MENU_MQTT);
@@ -827,9 +833,6 @@ bool Xdrv02(uint8_t function)
         WebServer->on("/" WEB_HANDLE_MQTT, HandleMqttConfiguration);
         break;
 #endif  // USE_WEBSERVER
-      case FUNC_LOOP:
-        if (!global_state.mqtt_down) { MqttLoop(); }
-        break;
       case FUNC_COMMAND:
         result = MqttCommand();
         break;

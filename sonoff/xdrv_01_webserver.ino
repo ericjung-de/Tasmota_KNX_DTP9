@@ -27,21 +27,21 @@
 
 #define XDRV_01                               1
 
-#define CHUNKED_BUFFER_SIZE                 400   // Chunk buffer size
-
 #ifndef WIFI_SOFT_AP_CHANNEL
-#define WIFI_SOFT_AP_CHANNEL                  1   // Soft Access Point Channel number between 1 and 11 as used by SmartConfig web GUI
+#define WIFI_SOFT_AP_CHANNEL                  1          // Soft Access Point Channel number between 1 and 11 as used by SmartConfig web GUI
 #endif
 
-#define HTTP_REFRESH_TIME                  2345   // milliseconds
-#define HTTP_RESTART_RECONNECT_TIME        9000   // milliseconds
-#define HTTP_OTA_RESTART_RECONNECT_TIME   20000   // milliseconds
+const uint16_t CHUNKED_BUFFER_SIZE = 400;                // Chunk buffer size (should be smaller than half mqtt_date size)
+
+const uint16_t HTTP_REFRESH_TIME = 2345;                 // milliseconds
+#define HTTP_RESTART_RECONNECT_TIME           9000       // milliseconds
+#define HTTP_OTA_RESTART_RECONNECT_TIME       20000      // milliseconds
 
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
 
 #ifdef USE_RF_FLASH
-uint8_t *efm8bb1_update = NULL;
+uint8_t *efm8bb1_update = nullptr;
 #endif  // USE_RF_FLASH
 
 enum UploadTypes { UPL_TASMOTA, UPL_SETTINGS, UPL_EFM8BB1 };
@@ -376,7 +376,7 @@ const char HTTP_COUNTER[] PROGMEM =
   "<br/><div id='t' name='t' style='text-align:center;'></div>";
 
 const char HTTP_END[] PROGMEM =
-  "<div style='text-align:right;font-size:11px;'><hr/><a href='" D_WEBLINK "' target='_blank' style='color:#aaa;'>" D_PROGRAMNAME " %s " D_BY " " D_AUTHOR "</a></div>"
+  "<div style='text-align:right;font-size:11px;'><hr/><a href='https://bit.ly/tasmota' target='_blank' style='color:#aaa;'>Sonoff-Tasmota %s " D_BY " Theo Arends</a></div>"
   "</div>"
   "</body>"
   "</html>";
@@ -413,7 +413,7 @@ const char kUploadErrors[] PROGMEM =
 #endif
   ;
 
-#define DNS_PORT 53
+const uint16_t DNS_PORT = 53;
 enum HttpOptions {HTTP_OFF, HTTP_USER, HTTP_ADMIN, HTTP_MANAGER, HTTP_MANAGER_RESET_ONLY};
 
 DNSServer *DnsServer;
@@ -524,7 +524,7 @@ void WifiManagerBegin(bool reset_only)
 
   int channel = WIFI_SOFT_AP_CHANNEL;
   if ((channel < 1) || (channel > 13)) { channel = 1; }
-  WiFi.softAP(my_hostname, NULL, channel);
+  WiFi.softAP(my_hostname, nullptr, channel);
 
   delay(500); // Without delay I've seen the IP address blank
   /* Setup the DNS server redirecting all the domains to the apIP */
@@ -689,7 +689,7 @@ void WSContentStart_P(const char* title, bool auth)
 
   WSContentBegin(200, CT_HTML);
 
-  if (title != NULL) {
+  if (title != nullptr) {
     char ctitle[strlen_P(title) +1];
     strcpy_P(ctitle, title);                       // Get title from flash to RAM
     WSContentSend_P(HTTP_HEAD, Settings.friendlyname[0], ctitle);
@@ -710,7 +710,7 @@ void WSContentSendStyle_P(const char* style)
   }
   WSContentSend_P(HTTP_HEAD_STYLE1);
   WSContentSend_P(HTTP_HEAD_STYLE2);
-  if (style != NULL) {
+  if (style != nullptr) {
     WSContentSend_P(style);
   }
   WSContentSend_P(HTTP_HEAD_STYLE3, ModuleName().c_str(), Settings.friendlyname[0]);
@@ -729,7 +729,7 @@ void WSContentSendStyle_P(const char* style)
 
 void WSContentSendStyle(void)
 {
-  WSContentSendStyle_P(NULL);
+  WSContentSendStyle_P(nullptr);
 }
 
 void WSContentButton(uint8_t title_index)
@@ -1359,7 +1359,7 @@ void WifiSaveSettings(void)
 
   WebGetArg("h", tmp, sizeof(tmp));
   strlcpy(Settings.hostname, (!strlen(tmp)) ? WIFI_HOSTNAME : tmp, sizeof(Settings.hostname));
-  if (strstr(Settings.hostname,"%")) {
+  if (strstr(Settings.hostname, "%") != nullptr) {
     strlcpy(Settings.hostname, WIFI_HOSTNAME, sizeof(Settings.hostname));
   }
   WebGetArg("s1", tmp, sizeof(tmp));
@@ -1885,10 +1885,10 @@ void HandleUploadLoop(void)
     }
 #ifdef USE_RF_FLASH
     else if (UPL_EFM8BB1 == upload_file_type) {
-      if (efm8bb1_update != NULL) {    // We have carry over data since last write, i. e. a start but not an end
+      if (efm8bb1_update != nullptr) {    // We have carry over data since last write, i. e. a start but not an end
         ssize_t result = rf_glue_remnant_with_new_data_and_write(efm8bb1_update, upload.buf, upload.currentSize);
         free(efm8bb1_update);
-        efm8bb1_update = NULL;
+        efm8bb1_update = nullptr;
         if (result != 0) {
           upload_error = abs(result);  // 2 = Not enough space, 8 = File invalid
           return;
@@ -1907,7 +1907,7 @@ void HandleUploadLoop(void)
         // A remnant has been detected, allocate data for it plus a null termination byte
         size_t remnant_sz = upload.currentSize - result;
         efm8bb1_update = (uint8_t *) malloc(remnant_sz + 1);
-        if (efm8bb1_update == NULL) {
+        if (efm8bb1_update == nullptr) {
           upload_error = 2;  // Not enough space - Unable to allocate memory to store new RF firmware
           return;
         }
@@ -2148,7 +2148,7 @@ void HandleNotFound(void)
 /* Redirect to captive portal if we got a request for another domain. Return true in that case so the page handler do not try to handle the request again. */
 bool CaptivePortal(void)
 {
-  if ((WifiIsInManagerMode()) && !ValidIpAddress(WebServer->hostHeader())) {
+  if ((WifiIsInManagerMode()) && !ValidIpAddress(WebServer->hostHeader().c_str())) {
     AddLog_P(LOG_LEVEL_DEBUG, PSTR(D_LOG_HTTP D_REDIRECTED));
 
     WebServer->sendHeader(F("Location"), String("http://") + WebServer->client().localIP().toString(), true);
@@ -2157,16 +2157,6 @@ bool CaptivePortal(void)
     return true;
   }
   return false;
-}
-
-/** Is this an IP? */
-bool ValidIpAddress(String str)
-{
-  for (uint16_t i = 0; i < str.length(); i++) {
-    int c = str.charAt(i);
-    if (c != '.' && (c < '0' || c > '9')) { return false; }
-  }
-  return true;
 }
 
 /*********************************************************************************************/
@@ -2355,7 +2345,7 @@ bool Xdrv01(uint8_t function)
     case FUNC_LOOP:
       PollDnsWebserver();
 #ifdef USE_EMULATION
-      if (Settings.flag2.emulation) PollUdp();
+      if (Settings.flag2.emulation) { PollUdp(); }
 #endif  // USE_EMULATION
       break;
     case FUNC_COMMAND:

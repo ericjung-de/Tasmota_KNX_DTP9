@@ -1,4 +1,12 @@
-/* 6.5.0.1 20190319
+/* 6.5.0.3 20190328
+ * Add command Sensor20 1..255 to change Nova Fitness SDS01 working period in minutes (#5452)
+ * Change some defines to const
+ *
+ * 6.5.0.2 20190325
+ * Change UDP initial message handling from string to char using static memory and add debug info (#5505)
+ * Add optional support for Badger HR-E Water Meter (#5539)
+ *
+ * 6.5.0.1 20190319
  * Change Web GUI sensor data collection
  *
  * 6.5.0 20190319
@@ -17,7 +25,7 @@
  * Change image name BE_MINIMAL to FIRMWARE_MINIMAL and USE_xyz to FIRMWARE_xyz (#5106)
  * Change GUI weblog from XML to plain text solving possible empty screens (#5154)
  * Fix most compiler warnings
- * Fix Display exception 28 when JSON value is NULL received
+ * Fix Display exception 28 when JSON value is nullptr received
  * Fix epaper driver (#4785)
  * Fix HAss Sensor Discovery Software Watchdog restart (#4831, #4988)
  * Fix allowable MAX_RULE_VARS to 16 (#4933)

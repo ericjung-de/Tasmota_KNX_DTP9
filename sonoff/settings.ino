@@ -61,11 +61,15 @@
 #define LONGITUDE              2.294442          // [Longitude] Your location to be used with sunrise and sunset
 #endif
 
+#ifndef WORKING_PERIOD
+#define WORKING_PERIOD         5                 // Working period of the SDS Sensor, Takes a reading every X Minutes
+#endif
+
 /*********************************************************************************************\
  * RTC memory
 \*********************************************************************************************/
 
-#define RTC_MEM_VALID 0xA55A
+const uint16_t RTC_MEM_VALID = 0xA55A;
 
 uint32_t rtc_settings_crc = 0;
 
@@ -164,12 +168,12 @@ extern "C" {
 extern "C" uint32_t _SPIFFS_end;
 
 // From libraries/EEPROM/EEPROM.cpp EEPROMClass
-#define SPIFFS_END          ((uint32_t)&_SPIFFS_end - 0x40200000) / SPI_FLASH_SEC_SIZE
+const uint32_t SPIFFS_END = ((uint32_t)&_SPIFFS_end - 0x40200000) / SPI_FLASH_SEC_SIZE;
 
 // Version 4.2 config = eeprom area
-#define SETTINGS_LOCATION   SPIFFS_END  // No need for SPIFFS as it uses EEPROM area
+const uint32_t SETTINGS_LOCATION = SPIFFS_END;  // No need for SPIFFS as it uses EEPROM area
 // Version 5.2 allow for more flash space
-#define CFG_ROTATES         8           // Number of flash sectors used (handles uploads)
+const uint8_t CFG_ROTATES = 8;          // Number of flash sectors used (handles uploads)
 
 /*********************************************************************************************\
  * EEPROM support based on EEPROM library and tuned for Tasmota
@@ -306,7 +310,7 @@ void EepromEnd(void)
 
 uint16_t settings_crc = 0;
 uint32_t settings_location = SETTINGS_LOCATION;
-uint8_t *settings_buffer = NULL;
+uint8_t *settings_buffer = nullptr;
 
 /********************************************************************************************/
 /*
@@ -333,9 +337,9 @@ void SetFlashModeDout(void)
 
 void SettingsBufferFree(void)
 {
-  if (settings_buffer != NULL) {
+  if (settings_buffer != nullptr) {
     free(settings_buffer);
-    settings_buffer = NULL;
+    settings_buffer = nullptr;
   }
 }
 
@@ -815,6 +819,8 @@ void SettingsDefaultSet2(void)
     Settings.rgbwwTable[j] = 255;
   }
 
+  Settings.novasds_period = WORKING_PERIOD;
+
   memset(&Settings.drivers, 0xFF, 32);  // Enable all possible monitors, displays, drivers and sensors
 }
 
@@ -1054,6 +1060,9 @@ void SettingsDelta(void)
     }
     if (Settings.version < 0x06040113) {
       Settings.param[P_RGB_REMAP] = RGB_REMAP_RGBW;
+    }
+    if (Settings.version < 0x06050003) {
+      Settings.novasds_period = WORKING_PERIOD;
     }
 
     Settings.version = VERSION;

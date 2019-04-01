@@ -28,7 +28,7 @@ uint32_t syslog_host_hash = 0;   // Syslog host name hash
 
 Ticker tickerOSWatch;
 
-#define OSWATCH_RESET_TIME 120
+const uint32_t OSWATCH_RESET_TIME = 120;
 
 static unsigned long oswatch_last_loop_time;
 uint8_t oswatch_blocked_loop = 0;
@@ -139,15 +139,15 @@ size_t strchrspn(const char *str1, int character)
 char* subStr(char* dest, char* str, const char *delim, int index)
 {
   char *act;
-  char *sub = NULL;
+  char *sub = nullptr;
   char *ptr;
   int i;
 
   // Since strtok consumes the first arg, make a copy
   strncpy(dest, str, strlen(str)+1);
-  for (i = 1, act = dest; i <= index; i++, act = NULL) {
+  for (i = 1, act = dest; i <= index; i++, act = nullptr) {
     sub = strtok_r(act, delim, &ptr);
-    if (sub == NULL) break;
+    if (sub == nullptr) break;
   }
   sub = Trim(sub);
   return sub;
@@ -283,6 +283,19 @@ char* RemoveSpace(char* p)
   return p;
 }
 
+char* LowerCase(char* dest, const char* source)
+{
+  char* write = dest;
+  const char* read = source;
+  char ch = '.';
+
+  while (ch != '\0') {
+    ch = *read++;
+    *write++ = tolower(ch);
+  }
+  return dest;
+}
+
 char* UpperCase(char* dest, const char* source)
 {
   char* write = dest;
@@ -357,6 +370,14 @@ uint8_t Shortcut(const char* str)
   return result;
 }
 
+bool ValidIpAddress(const char* str)
+{
+  const char* p = str;
+
+  while (*p && ( (*p == '.') || (*p >= '0') || (*p <= '9') )) { p++; }
+  return (*p == '\0');
+}
+
 bool ParseIp(uint32_t* addr, const char* str)
 {
   uint8_t *part = (uint8_t*)addr;
@@ -364,9 +385,9 @@ bool ParseIp(uint32_t* addr, const char* str)
 
   *addr = 0;
   for (i = 0; i < 4; i++) {
-    part[i] = strtoul(str, NULL, 10);        // Convert byte
+    part[i] = strtoul(str, nullptr, 10);        // Convert byte
     str = strchr(str, '.');
-    if (str == NULL || *str == '\0') {
+    if (str == nullptr || *str == '\0') {
       break;  // No more separators, exit
     }
     str++;                                   // Point to next character after separator
@@ -409,7 +430,7 @@ bool NewerVersion(char* version_str)
     return false;  // Bail if we can't duplicate. Assume bad.
   }
   // Loop through the version string, splitting on '.' seperators.
-  for (char *str = strtok_r(version_dup, ".", &str_ptr); str && i < sizeof(VERSION); str = strtok_r(NULL, ".", &str_ptr), i++) {
+  for (char *str = strtok_r(version_dup, ".", &str_ptr); str && i < sizeof(VERSION); str = strtok_r(nullptr, ".", &str_ptr), i++) {
     int field = atoi(str);
     // The fields in a version string can only range from 0-255.
     if ((field < 0) || (field > 255)) {
@@ -701,24 +722,24 @@ void ShowSource(int source)
  * Response data handling
 \*********************************************************************************************/
 
-int Response_P(const char* formatP, ...)     // Content send snprintf_P char data
+int Response_P(const char* format, ...)     // Content send snprintf_P char data
 {
   // This uses char strings. Be aware of sending %% if % is needed
-  va_list arg;
-  va_start(arg, formatP);
-  int len = vsnprintf_P(mqtt_data, sizeof(mqtt_data), formatP, arg);
-  va_end(arg);
+  va_list args;
+  va_start(args, format);
+  int len = vsnprintf_P(mqtt_data, sizeof(mqtt_data), format, args);
+  va_end(args);
   return len;
 }
 
-int ResponseAppend_P(const char* formatP, ...)  // Content send snprintf_P char data
+int ResponseAppend_P(const char* format, ...)  // Content send snprintf_P char data
 {
   // This uses char strings. Be aware of sending %% if % is needed
-  va_list arg;
-  va_start(arg, formatP);
+  va_list args;
+  va_start(args, format);
   int mlen = strlen(mqtt_data);
-  int len = vsnprintf_P(mqtt_data + mlen, sizeof(mqtt_data) - mlen, formatP, arg);
-  va_end(arg);
+  int len = vsnprintf_P(mqtt_data + mlen, sizeof(mqtt_data) - mlen, format, args);
+  va_end(args);
   return len + mlen;
 }
 
@@ -983,7 +1004,7 @@ void SetNextTimeInterval(unsigned long& timer, const unsigned long step)
 \*********************************************************************************************/
 
 #ifdef USE_I2C
-#define I2C_RETRY_COUNTER 3
+const uint8_t I2C_RETRY_COUNTER = 3;
 
 uint32_t i2c_buffer = 0;
 
@@ -1206,7 +1227,7 @@ void SetSeriallog(uint8_t loglevel)
 #ifdef USE_WEBSERVER
 void GetLog(uint8_t idx, char** entry_pp, size_t* len_p)
 {
-  char* entry_p = NULL;
+  char* entry_p = nullptr;
   size_t len = 0;
 
   if (idx) {
@@ -1234,8 +1255,9 @@ void Syslog(void)
   // Destroys log_data
   char syslog_preamble[64];  // Hostname + Id
 
-  if (syslog_host_hash != GetHash(Settings.syslog_host, strlen(Settings.syslog_host))) {
-    syslog_host_hash = GetHash(Settings.syslog_host, strlen(Settings.syslog_host));
+  uint32_t current_hash = GetHash(Settings.syslog_host, strlen(Settings.syslog_host));
+  if (syslog_host_hash != current_hash) {
+    syslog_host_hash = current_hash;
     WiFi.hostByName(Settings.syslog_host, syslog_host_addr);  // If sleep enabled this might result in exception so try to do it once using hash
   }
   if (PortUdp.beginPacket(syslog_host_addr, Settings.syslog_port)) {

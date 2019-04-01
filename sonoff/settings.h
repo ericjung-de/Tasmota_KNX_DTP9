@@ -20,7 +20,7 @@
 #ifndef _SETTINGS_H_
 #define _SETTINGS_H_
 
-#define PARAM8_SIZE  18                    // Number of param bytes (SetOption)
+const uint8_t PARAM8_SIZE = 18;            // Number of param bytes (SetOption)
 
 typedef union {                            // Restricted by MISRA-C Rule 18.4 but so useful...
   uint32_t data;                           // Allow bit manipulation using SetOption
@@ -330,8 +330,9 @@ struct SYSCFG {
   uint8_t       rgbwwTable[5];             // 71A
   uint8_t       user_template_base;        // 71F
   mytmplt       user_template;             // 720  29 bytes
+  uint8_t       novasds_period;            // 73D
 
-  uint8_t       free_73D[87];              // 73D
+  uint8_t       free_73D[86];              // 73E
 
   uint32_t      drivers[3];                // 794
   uint32_t      monitors;                  // 7A0
@@ -396,7 +397,7 @@ struct XDRVMAILBOX {
   char         *data;
 } XdrvMailbox;
 
-#define MAX_RULES_FLAG  7                  // Number of bits used in RulesBitfield (tricky I know...)
+const uint8_t MAX_RULES_FLAG = 7;          // Number of bits used in RulesBitfield (tricky I know...)
 typedef union {                            // Restricted by MISRA-C Rule 18.4 but so useful...
   uint16_t data;                           // Allow bit manipulation
   struct {
