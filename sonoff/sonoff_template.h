@@ -466,7 +466,9 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_DHT11,          // DHT11
   GPIO_DHT22,          // DHT21, DHT22, AM2301, AM2302, AM2321
   GPIO_SI7021,         // iTead SI7021
+#if defined(USE_DS18B20) || defined(USE_DS18x20) || defined(USE_DS18x20_LEGACY)
   GPIO_DSB,            // Single wire DS18B20 or DS18S20
+#endif
 #ifdef USE_WS2812
   GPIO_WS2812,         // WS2812 Led string
 #endif
@@ -583,18 +585,22 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_SM16716_DAT,    // SM16716 DATA
   GPIO_SM16716_SEL,    // SM16716 SELECT
 #endif // USE_SM16716
+#ifdef ROTARY_V1
   GPIO_ROT1A,          // Rotary switch1 A Pin
   GPIO_ROT1B,          // Rotary switch1 B Pin
   GPIO_ROT2A,          // Rotary switch2 A Pin
   GPIO_ROT2B,          // Rotary switch2 B Pin
+#endif
+#ifdef USE_ARILUX_RF
   GPIO_ARIRFRCV,       // AliLux RF Receive input
+#endif
 #ifdef USE_HRE
   GPIO_HRE_CLOCK,
   GPIO_HRE_DATA
-#endif  
+#endif
 };
 
-const uint8_t kModuleNiceList[MAXMODULE] PROGMEM = {
+const uint8_t kModuleNiceList[] PROGMEM = {
   SONOFF_BASIC,        // Sonoff Relay Devices
   SONOFF_RF,
   SONOFF_TH,
@@ -646,9 +652,15 @@ const uint8_t kModuleNiceList[MAXMODULE] PROGMEM = {
   OBI2,
   MANZOKU_EU_4,
   ESP_SWITCH,          // Switch Devices
+#ifdef USE_TUYA_DIMMER
   TUYA_DIMMER,         // Dimmer Devices
+#endif
+#ifdef USE_ARMTRONIX_DIMMERS
   ARMTRONIX_DIMMERS,
+#endif
+#ifdef USE_PS_16_DZ
   PS_16_DZ,
+#endif
   H801,                // Light Devices
   MAGICHOME,
   ARILUX_LC01,
@@ -656,7 +668,9 @@ const uint8_t kModuleNiceList[MAXMODULE] PROGMEM = {
   ARILUX_LC11,
   ZENGGE_ZF_WF017,
   HUAFAN_SS,
+#ifdef ROTARY_V1
   MI_DESK_LAMP,
+#endif
   KMC_70011,
   AILIGHT,             // Light Bulbs
   PHILIPS,
