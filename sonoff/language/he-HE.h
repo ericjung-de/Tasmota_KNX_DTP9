@@ -222,7 +222,7 @@
 
 // xdrv_02_webserver.ino
 #define D_NOSCRIPT "JavaScript - כדי להשתמש בקושחת אסמוטה אנא הפעל"
-#define D_MINIMAL_FIRMWARE_PLEASE_UPGRADE "קושחה מינימלית - בבקשה אנא שדרג"
+#define D_MINIMAL_FIRMWARE_PLEASE_UPGRADE "קושחה מינימלית<br/>בבקשה אנא שדרג"
 #define D_WEBSERVER_ACTIVE_ON "שרת ווב פעיל"
 #define D_WITH_IP_ADDRESS "IP עם כתובת"
 #define D_WEBSERVER_STOPPED "שרת ווב הופסק"
@@ -257,6 +257,7 @@
 #define D_MODULE_PARAMETERS "מודול פרמטרים"
 #define D_MODULE_TYPE "סוג מודול"
 #define D_PULLUP_ENABLE "pull-up אין לחצן/מתג"
+#define D_ADC "ADC"
 #define D_GPIO " רגל "
 #define D_SERIAL_IN "כניסת סריאל"
 #define D_SERIAL_OUT "יציאת סריאל"
@@ -306,8 +307,6 @@
 #define D_TEMPLATE_NAME "שם"
 #define D_BASE_TYPE "מבוסס על"
 #define D_TEMPLATE_FLAGS "אפשריות"
-#define D_ALLOW_ADC0 "ADC0 כניסת"
-#define D_ALLOW_PULLUP "pull-up בחירת משתמש עבור"
 
 #define D_SAVE_CONFIGURATION "שמירת הגדרות"
 #define D_CONFIGURATION_SAVED "הגדרות נשמרו"
@@ -513,6 +512,7 @@
 #define D_SENSOR_BUTTON        "לחצן"       // Suffix "1"
 #define D_SENSOR_RELAY         "ממסר"       // Suffix "1i"
 #define D_SENSOR_LED           "לד"         // Suffix "1i"
+#define D_SENSOR_LED_LINK      "LedLink"    // Suffix "i"
 #define D_SENSOR_PWM           "PWM"        // Suffix "1"
 #define D_SENSOR_COUNTER       "מונה"       // Suffix "1"
 #define D_SENSOR_IRRECV        "IRrecv"
@@ -578,11 +578,13 @@
 #define D_SENSOR_MY92X1_DI     "MY92x1 DI"
 #define D_SENSOR_MY92X1_DCKI   "MY92x1 DCKI"
 #define D_SENSOR_ARIRFRCV      "ALux IrRcv"
+#define D_SENSOR_ARIRFSEL      "ALux IrSel"
 #define D_SENSOR_TXD           "Serial Tx"
 #define D_SENSOR_RXD           "Serial Rx"
 #define D_SENSOR_ROTARY        "Rotary"     // Suffix "1A"
 #define D_SENSOR_HRE_CLOCK     "HRE Clock"
 #define D_SENSOR_HRE_DATA      "HRE Data"
+#define D_SENSOR_ADE7953_IRQ   "ADE7953 IRQ"
 
 // Units
 #define D_UNIT_AMPERE "A"

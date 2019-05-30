@@ -28,7 +28,7 @@
  * Use online command StateText to translate ON, OFF, HOLD and TOGGLE.
  * Use online command Prefix to translate cmnd, stat and tele.
  *
- * Updated until v6.3.0.17
+ * Updated until v6.5.0.7
 \*********************************************************************/
 
 #define LANGUAGE_MODULE_NAME         // Enable to display "Module Generic" (ie Spanish), Disable to display "Generic Module" (ie English)
@@ -93,7 +93,7 @@
 #define D_FALLBACK_TOPIC "FallbackTopic"
 #define D_FALSE "Falso"
 #define D_FILE "Archivo"
-#define D_FLOW_RATE "Flow rate"
+#define D_FLOW_RATE "Caudal"
 #define D_FREE_MEMORY "Memoria Libre"
 #define D_FREQUENCY "Frecuencia"
 #define D_GAS "Gas"
@@ -157,7 +157,7 @@
 #define D_TO "a"
 #define D_TOGGLE "Conmutar"
 #define D_TOPIC "Topic"
-#define D_TOTAL_USAGE "Total Usage"
+#define D_TOTAL_USAGE "Total Usado"
 #define D_TRANSMIT "Transmitir"
 #define D_TRUE "Verdadero"
 #define D_TVOC "TVOC"
@@ -257,6 +257,7 @@
 #define D_MODULE_PARAMETERS "Parámetros del módulo"
 #define D_MODULE_TYPE "Tipo de módulo"
 #define D_PULLUP_ENABLE "Botón/Llave sin pull-up"
+#define D_ADC "ADC"
 #define D_GPIO "GPIO"
 #define D_SERIAL_IN "Serial In"
 #define D_SERIAL_OUT "Serial Out"
@@ -291,8 +292,8 @@
 #define D_TELEMETRY_PERIOD "Período de Telemetría"
 
 #define D_OTHER_PARAMETERS "Otros parámetros"
-#define D_TEMPLATE "Template"
-#define D_ACTIVATE "Activate"
+#define D_TEMPLATE "Plantilla"
+#define D_ACTIVATE "Activar"
 #define D_WEB_ADMIN_PASSWORD "Clave Administrador Web"
 #define D_MQTT_ENABLE "Habilitar MQTT"
 #define D_FRIENDLY_NAME "Nombre Amigable"
@@ -301,13 +302,11 @@
 #define D_SINGLE_DEVICE "dispositivo simple"
 #define D_MULTI_DEVICE "dispositivo múltiple"
 
-#define D_CONFIGURE_TEMPLATE "Configure Template"
-#define D_TEMPLATE_PARAMETERS "Template parameters"
-#define D_TEMPLATE_NAME "Name"
-#define D_BASE_TYPE "Based on"
-#define D_TEMPLATE_FLAGS "Options"
-#define D_ALLOW_ADC0 "ADC0 input"
-#define D_ALLOW_PULLUP "User pull-up selection"
+#define D_CONFIGURE_TEMPLATE "Configurar Plantilla"
+#define D_TEMPLATE_PARAMETERS "Parámetros de Plantilla"
+#define D_TEMPLATE_NAME "Nombre"
+#define D_BASE_TYPE "Basada en"
+#define D_TEMPLATE_FLAGS "Opciones"
 
 #define D_SAVE_CONFIGURATION "Grabar configuración"
 #define D_CONFIGURATION_SAVED "Configuración grabada"
@@ -513,6 +512,7 @@
 #define D_SENSOR_BUTTON        "Botón"      // Suffix "1"
 #define D_SENSOR_RELAY         "Relé"       // Suffix "1i"
 #define D_SENSOR_LED           "Led"        // Suffix "1i"
+#define D_SENSOR_LED_LINK      "LedLink"    // Suffix "i"
 #define D_SENSOR_PWM           "PWM"        // Suffix "1"
 #define D_SENSOR_COUNTER       "Contador"   // Suffix "1"
 #define D_SENSOR_IRRECV        "IR Rx"
@@ -578,11 +578,13 @@
 #define D_SENSOR_MY92X1_DI     "MY92x1 DI"
 #define D_SENSOR_MY92X1_DCKI   "MY92x1 DCKI"
 #define D_SENSOR_ARIRFRCV      "ALux IrRcv"
+#define D_SENSOR_ARIRFSEL      "ALux IrSel"
 #define D_SENSOR_TXD           "Serial Tx"
 #define D_SENSOR_RXD           "Serial Rx"
 #define D_SENSOR_ROTARY        "Rotary"     // Suffix "1A"
 #define D_SENSOR_HRE_CLOCK     "HRE Clock"
 #define D_SENSOR_HRE_DATA      "HRE Data"
+#define D_SENSOR_ADE7953_IRQ   "ADE7953 IRQ"
 
 // Units
 #define D_UNIT_AMPERE "A"
