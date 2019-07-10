@@ -18,6 +18,7 @@ Any help or comment is very welcome.
 * [KNX Explanation](#knx-explanation)
 * [Integration](#integration)
 * [Requirements](#requirements)
+* [Firmware](#firmware)
 * [Usage Examples](#usage-examples)
 * [Console Commands](#console-commands)
 * [Development Road Map](#development-road-map)
@@ -60,6 +61,11 @@ All the libraries required for Sonoff-Tasmota are [here](https://github.com/asci
 * v2.3.0 Works fine but is slower than v2.4.2. Sleep feature works but needs to be 0 for better KNX performance.
 
 Recommended: v2.3.0 due to wifi stability in most wifi routers. More information in the [wiki](https://github.com/arendst/Sonoff-Tasmota/wiki/Troubleshooting#Wi-Fi-issues-arduino-core-versions-and-expressif-sdk).
+
+## Firmware ##
+
+In the [releases](https://github.com/ascillato/Sonoff-Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266 devices.
+If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://github.com/arendst/Sonoff-Tasmota/wiki).
 
 ## Implemented Features ##
 
