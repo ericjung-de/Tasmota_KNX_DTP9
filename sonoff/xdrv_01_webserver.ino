@@ -1115,7 +1115,7 @@ void HandleTemplateConfiguration(void)
     return;
   }
 
-  char stemp[20];                                           // Template number and Sensor name
+  char stemp[30];                                           // Template number and Sensor name
 
   if (WebServer->hasArg("m")) {
     WSContentBegin(200, CT_PLAIN);
@@ -1242,7 +1242,7 @@ void HandleModuleConfiguration(void)
     return;
   }
 
-  char stemp[20];  // Sensor name
+  char stemp[30];  // Sensor name
   uint8_t midx;
   myio cmodule;
   ModuleGpios(&cmodule);
@@ -1673,8 +1673,13 @@ void HandleBackupConfiguration(void)
   WebServer->setContentLength(sizeof(Settings));
 
   char attachment[100];
-  char friendlyname[sizeof(Settings.friendlyname[0])];
-  snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=Config_%s_%s.dmp"), NoAlNumToUnderscore(friendlyname, Settings.friendlyname[0]), my_version);
+
+//  char friendlyname[sizeof(Settings.friendlyname[0])];
+//  snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=Config_%s_%s.dmp"), NoAlNumToUnderscore(friendlyname, Settings.friendlyname[0]), my_version);
+
+  char hostname[sizeof(my_hostname)];
+  snprintf_P(attachment, sizeof(attachment), PSTR("attachment; filename=Config_%s_%s.dmp"), NoAlNumToUnderscore(hostname, my_hostname), my_version);
+
   WebServer->sendHeader(F("Content-Disposition"), attachment);
 
   WSSend(200, CT_STREAM, "");
@@ -2329,7 +2334,7 @@ String UrlEncode(const String& text)
 			encoded += hex[decodedChar & 0xF];
     }
 */
-    if (' ' == decodedChar) {
+    if ((' ' == decodedChar) || ('+' == decodedChar)) {
       encoded += '%';
 			encoded += hex[decodedChar >> 4];
 			encoded += hex[decodedChar & 0xF];

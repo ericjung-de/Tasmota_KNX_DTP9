@@ -259,7 +259,7 @@
 //#define MY_LANGUAGE            sk-SK           // Slovak in Slovakia
 //#define MY_LANGUAGE            sv-SE           // Swedish in Sweden
 //#define MY_LANGUAGE            tr-TR           // Turkish in Turkey
-//#define MY_LANGUAGE            uk-UK           // Ukrainian in Ukrain
+//#define MY_LANGUAGE            uk-UK           // Ukrainian in Ukraine
 //#define MY_LANGUAGE            zh-CN           // Chinese (Simplified) in China
 //#define MY_LANGUAGE            zh-TW           // Chinese (Traditional) in Taiwan
 
@@ -425,7 +425,7 @@
   #define WORKING_PERIOD       5                 // Working period of the SDS Sensor, Takes a reading every X Minutes
 #define USE_SERIAL_BRIDGE                        // Add support for software Serial Bridge (+0k8 code)
 //#define USE_SDM120                               // Add support for Eastron SDM120-Modbus energy meter (+1k7 code)
-  #define SDM120_SPEED         9600              // SDM120-Modbus RS485 serial speed (default: 2400 baud)
+  #define SDM120_SPEED         2400              // SDM120-Modbus RS485 serial speed (default: 2400 baud)
   #define USE_SDM220                             // Add extra parameters for SDM220 (+0k1 code)
 //#define USE_SDM630                               // Add support for Eastron SDM630-Modbus energy meter (+2k code)
   #define SDM630_SPEED         9600              // SDM630-Modbus RS485 serial speed (default: 9600 baud)
@@ -448,12 +448,36 @@
 
 //#define USE_MAX31855                             // Add support for MAX31855 K-Type thermocouple sensor using softSPI
 
+// -- IR Remote features --------------------------
 #define USE_IR_REMOTE                            // Send IR remote commands using library IRremoteESP8266 and ArduinoJson (+4k3 code, 0k3 mem, 48 iram)
-//  #define USE_IR_HVAC                            // Support for HVAC (Toshiba, Mitsubishi and LG) system using IR (+3k5 code)
+//  #define USE_IR_SEND_AIWA                       // Support IRsend Aiwa protocol
+  #define USE_IR_SEND_DISH                       // Support IRsend Dish protocol
+  #define USE_IR_SEND_JVC                        // Support IRsend JVC protocol
+//  #define USE_IR_SEND_LG                         // Support IRsend LG protocol
+//  #define USE_IR_SEND_MITSUBISHI                 // Support IRsend Mitsubishi protocol
+  #define USE_IR_SEND_NEC                        // Support IRsend NEC protocol
+  #define USE_IR_SEND_PANASONIC                  // Support IRsend Panasonic protocol
+  #define USE_IR_SEND_PIONEER                    // Support IRsend Pioneer protocol
+  #define USE_IR_SEND_RC5                        // Support IRsend Philips RC5 protocol
+  #define USE_IR_SEND_RC6                        // Support IRsend Philips RC6 protocol
+  #define USE_IR_SEND_SAMSUNG                    // Support IRsend Samsung protocol
+//  #define USE_IR_SEND_SANYO                      // Support IRsend Sanyo protocol
+//  #define USE_IR_SEND_SHARP                      // Support IRsend Sharp protocol
+  #define USE_IR_SEND_SONY                       // Support IRsend Sony protocol
+//  #define USE_IR_SEND_WHYNTER                    // Support IRsend Whynter protocol
+
+//  #define USE_IR_HVAC                            // Support for HVAC systems using IR (+3k5 code)
+    #define USE_IR_HVAC_TOSHIBA                  // Support IRhvac Toshiba protocol
+    #define USE_IR_HVAC_MITSUBISHI               // Support IRhvac Mitsubischi protocol
+    #define USE_IR_HVAC_LG                       // Support IRhvac LG protocol
+    #define USE_IR_HVAC_FUJITSU                  // Support IRhvac Fujitsu protocol
+//    #define USE_IR_HVAC_MIDEA                    // Support IRhvac Midea/Komeco protocol
+
   #define USE_IR_RECEIVE                         // Support for IR receiver (+7k2 code, 264 iram)
     #define IR_RCV_BUFFER_SIZE      100          // Max number of packets allowed in capture buffer (default 100 (*2 bytes ram))
     #define IR_RCV_TIMEOUT          15           // Number of milli-Seconds of no-more-data before we consider a message ended (default 15)
     #define IR_RCV_MIN_UNKNOWN_SIZE 6            // Set the smallest sized "UNKNOWN" message packets we actually care about (default 6, max 255)
+// ------------------------------------------------
 
 #define USE_WS2812                               // WS2812 Led string using library NeoPixelBus (+5k code, +1k mem, 232 iram) - Disable by //
   #define USE_WS2812_CTYPE     NEO_GRB           // WS2812 Color type (NEO_RGB, NEO_GRB, NEO_BRG, NEO_RBG, NEO_RGBW, NEO_GRBW)
