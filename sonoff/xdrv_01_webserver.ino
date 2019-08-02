@@ -2165,7 +2165,7 @@ void HandleHttpCommand(void)
   if (valid) {
     uint32_t curridx = web_log_index;
     String svalue = WebServer->arg("cmnd");
-    if (svalue.length() && (svalue.length() < INPUT_BUFFER_SIZE)) {
+    if (svalue.length() && (svalue.length() < MQTT_MAX_PACKET_SIZE)) {
       ExecuteWebCommand((char*)svalue.c_str(), SRC_WEBCOMMAND);
       if (web_log_index != curridx) {
         uint32_t counter = curridx;
@@ -2231,7 +2231,7 @@ void HandleConsoleRefresh(void)
   uint32_t counter = 0;                // Initial start, should never be 0 again
 
   String svalue = WebServer->arg("c1");
-  if (svalue.length() && (svalue.length() < INPUT_BUFFER_SIZE)) {
+  if (svalue.length() && (svalue.length() < MQTT_MAX_PACKET_SIZE)) {
     AddLog_P2(LOG_LEVEL_INFO, PSTR(D_LOG_COMMAND "%s"), svalue.c_str());
     ExecuteWebCommand((char*)svalue.c_str(), SRC_WEBCONSOLE);
   }
@@ -2578,11 +2578,7 @@ bool Xdrv01(uint8_t function)
 #endif  // USE_EMULATION
       break;
     case FUNC_COMMAND:
-      int command_code = GetCommand(kWebCommands);
-      if (command_code >= 0) {
-        WebCommand[command_code]();
-        result = true;
-      }
+      result = DecodeCommand(kWebCommands, WebCommand);
       break;
   }
   return result;
