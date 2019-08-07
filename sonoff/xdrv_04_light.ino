@@ -126,7 +126,7 @@
 \*********************************************************************************************/
 
 #define XDRV_04              4
-//#define DEBUG_LIGHT
+// #define DEBUG_LIGHT
 
 const uint8_t LIGHT_COLOR_SIZE = 25;   // Char array scolor size
 const uint8_t WS2812_SCHEMES = 7;      // Number of additional WS2812 schemes supported by xdrv_ws2812.ino
@@ -241,10 +241,11 @@ uint8_t light_new_color[LST_MAX];
 uint8_t light_last_color[LST_MAX];
 uint8_t light_color_remap[LST_MAX];
 
+power_t light_power = 0;  // Power<x> for each channel if SetOption68, or boolean if single light
 uint8_t light_wheel = 0;
 uint8_t light_subtype = 0;    // LST_ subtype
+bool    light_pwm_multi_channels = false;    // SetOption68, treat each PWM channel as an independant dimmer
 uint8_t light_device = 0;
-uint8_t light_power = 0;
 uint8_t light_old_power = 1;
 uint8_t light_update = 1;
 uint8_t light_wakeup_active = 0;
@@ -257,43 +258,6 @@ unsigned long strip_timer_counter = 0;    // Bars and Gradient
 
 static uint32_t min3(uint32_t a, uint32_t b, uint32_t c) {
   return (a < b && a < c) ? a : (b < c) ? b : c;
-}
-
-//
-// changeUIntScale
-// Change a value for range a..b to c..d, using only unsigned int math
-//
-// PRE-CONDITIONS (if not satisfied, you may 'halt and catch fire')
-//    from_min < from_max  (not checked)
-//    to_min   < to_max    (not checked)
-//    from_min <= num <= from-max  (chacked)
-// POST-CONDITIONS
-//    to_min <= result <= to_max
-//
-uint16_t changeUIntScale(uint16_t inum, uint16_t ifrom_min, uint16_t ifrom_max,
-                                       uint16_t ito_min, uint16_t ito_max) {
-  // guard-rails
-  if ((ito_min >= ito_max) || (ifrom_min >= ifrom_max)) {
-    return ito_min;  // invalid input, return arbitrary value
-  }
-  // convert to uint31, it's more verbose but code is more compact
-  uint32_t num = inum;
-  uint32_t from_min = ifrom_min;
-  uint32_t from_max = ifrom_max;
-  uint32_t to_min = ito_min;
-  uint32_t to_max = ito_max;
-
-  // check source range
-  num = (num > from_max ? from_max : (num < from_min ? from_min : num));
-  uint32_t numerator = (num - from_min) * (to_max - to_min);
-  uint32_t result;
-  if (numerator >= 0x80000000L) {
-    // don't do rounding as it would create an overflow
-    result = numerator / (from_max - from_min) + to_min;
-  } else {
-    result = (((numerator * 2) / (from_max - from_min)) + 1) / 2 + to_min;
-  }
-  return (uint32_t) (result > to_max ? to_max : (result < to_min ? to_min : result));
 }
 
 //
@@ -809,6 +773,7 @@ private:
 
   // are RGB and CT linked, i.e. if we set CT then RGB channels are off
   bool     _ct_rgb_linked = true;
+  bool     _pwm_multi_channels = false;    // treat each channel as independant dimmer
 
 public:
   LightControllerClass(LightStateClass& state) {
@@ -821,12 +786,27 @@ public:
 
   inline bool setCTRGBLinked(bool ct_rgb_linked) {
     bool prev = _ct_rgb_linked;
-    _ct_rgb_linked = ct_rgb_linked;
+    if (_pwm_multi_channels) {
+      _ct_rgb_linked = false;   // force to false if _pwm_multi_channels is set
+    } else {
+      _ct_rgb_linked = ct_rgb_linked;
+    }
     return prev;
   }
 
   inline bool isCTRGBLinked() {
     return _ct_rgb_linked;
+  }
+
+  inline bool setPWMMultiChannel(bool pwm_multi_channels) {
+    bool prev = _pwm_multi_channels;
+    _pwm_multi_channels = pwm_multi_channels;
+    if (pwm_multi_channels)  setCTRGBLinked(false);    // if pwm multi channel, then unlink RGB and CT
+    return prev;
+  }
+
+  inline bool isPWMMultiChannel(void) {
+    return _pwm_multi_channels;
   }
 
 #ifdef DEBUG_LIGHT
@@ -852,12 +832,15 @@ public:
     // first try setting CW, if zero, it select RGB mode
     _state->setCW(Settings.light_color[3], Settings.light_color[4], true);
     _state->setRGB(Settings.light_color[0], Settings.light_color[1], Settings.light_color[2]);
-    // We apply dimmer in priority to RGB
-    uint8_t bri = _state->DimmerToBri(Settings.light_dimmer);
-    if (Settings.light_color[0] + Settings.light_color[1] + Settings.light_color[2] > 0) {
-      _state->setBriRGB(bri);
-    } else {
-      _state->setBriCT(bri);
+    if (!_pwm_multi_channels) {
+      // only if non-multi channel
+      // We apply dimmer in priority to RGB
+      uint8_t bri = _state->DimmerToBri(Settings.light_dimmer);
+      if (Settings.light_color[0] + Settings.light_color[1] + Settings.light_color[2] > 0) {
+        _state->setBriRGB(bri);
+      } else {
+        _state->setBriCT(bri);
+      }
     }
   }
 
@@ -901,6 +884,15 @@ public:
   void calcLevels() {
     uint8_t r,g,b,c,w,briRGB,briCT;
     _state->getActualRGBCW(&r,&g,&b,&c,&w);
+
+    if (_pwm_multi_channels) { // if PWM multi channel, no more transformation required
+      light_current_color[0] = r;
+      light_current_color[1] = g;
+      light_current_color[2] = b;
+      light_current_color[3] = c;
+      light_current_color[4] = w;
+      return;
+    }
     briRGB = _state->getBriRGB();
     briCT = _state->getBriCT();
 
@@ -944,20 +936,28 @@ public:
 
   // save the current light state to Settings.
   void saveSettings() {
-    uint8_t cm = _state->getColorMode();
+    if (light_pwm_multi_channels) {
+      // simply save each channel
+      _state->getActualRGBCW(&Settings.light_color[0], &Settings.light_color[1],
+                             &Settings.light_color[2], &Settings.light_color[3],
+                             &Settings.light_color[4]);
+      Settings.light_dimmer = 100;    // arbitrary value, unused in this mode
+    } else {
+      uint8_t cm = _state->getColorMode();
 
-    memset(&Settings.light_color[0], 0, sizeof(Settings.light_color));
-    if (LCM_RGB & cm) {   // can be either LCM_RGB or LCM_BOTH
-      _state->getRGB(&Settings.light_color[0], &Settings.light_color[1], &Settings.light_color[2]);
-      Settings.light_dimmer = _state->BriToDimmer(_state->getBriRGB());
-      // anyways we always store RGB with BrightnessRGB
-      if (LCM_BOTH == cm) {
-        // then store at actual brightness CW/WW if dual mode
-        _state->getActualRGBCW(nullptr, nullptr, nullptr, &Settings.light_color[3], &Settings.light_color[4]);
+      memset(&Settings.light_color[0], 0, sizeof(Settings.light_color));
+      if (LCM_RGB & cm) {   // can be either LCM_RGB or LCM_BOTH
+        _state->getRGB(&Settings.light_color[0], &Settings.light_color[1], &Settings.light_color[2]);
+        Settings.light_dimmer = _state->BriToDimmer(_state->getBriRGB());
+        // anyways we always store RGB with BrightnessRGB
+        if (LCM_BOTH == cm) {
+          // then store at actual brightness CW/WW if dual mode
+          _state->getActualRGBCW(nullptr, nullptr, nullptr, &Settings.light_color[3], &Settings.light_color[4]);
+        }
+      } else if (LCM_CT == cm) {    // cm can only be LCM_CT
+        _state->getCW(&Settings.light_color[3], &Settings.light_color[4]);
+        Settings.light_dimmer = _state->BriToDimmer(_state->getBriCT());
       }
-    } else if (LCM_CT == cm) {    // cm can only be LCM_CT
-      _state->getCW(&Settings.light_color[3], &Settings.light_color[4]);
-      Settings.light_dimmer = _state->BriToDimmer(_state->getBriCT());
     }
 #ifdef DEBUG_LIGHT
     AddLog_P2(LOG_LEVEL_DEBUG_MORE, "LightControllerClass::saveSettings Settings.light_color (%d %d %d %d %d - %d)",
@@ -1359,11 +1359,22 @@ void LightInit(void)
 
   light_device = devices_present;
   light_subtype = (light_type & 7) > LST_MAX ? LST_MAX : (light_type & 7); // Always 0 - LST_MAX (5)
+  light_pwm_multi_channels = Settings.flag3.pwm_multi_channels;
 
 #if defined(USE_WS2812) && (USE_WS2812_CTYPE > NEO_3LED)
   if (LT_WS2812 == light_type) {
     light_subtype++;  // from RGB to RGBW
   }
+#endif
+
+  if ((LST_SINGLE < light_subtype) && light_pwm_multi_channels) {
+    // we treat each PWM channel as an independant one, hence we switch to
+    light_controller.setPWMMultiChannel(true);
+    light_device = devices_present - light_subtype + 1; // adjust if we also have relays
+  }
+#ifdef DEBUG_LIGHT
+  AddLog_P2(LOG_LEVEL_DEBUG_MORE, "LightInit light_pwm_multi_channels=%d light_subtype=%d light_device=%d devices_present=%d",
+    light_pwm_multi_channels, light_subtype, light_device, devices_present);
 #endif
 
   light_controller.setSubType(light_subtype);
@@ -1493,6 +1504,32 @@ void LightSetDimmer(uint8_t dimmer) {
   light_controller.changeDimmer(dimmer);
 }
 
+// If SetOption68 is set, get the brightness for a specific device
+uint8_t LightGetBri(uint8_t device) {
+  uint8_t bri = 254;   // default value if relay
+  if (light_pwm_multi_channels) {
+    if ((device >= light_device) && (device < light_device + LST_MAX) && (device <= devices_present)) {
+      bri = light_current_color[device - light_device];
+    }
+  } else if (device == light_device) {
+    bri = light_state.getBri();
+  }
+  return bri;
+}
+
+// If SetOption68 is set, get the brightness for a specific device
+
+void LightSetBri(uint8_t device, uint8_t bri) {
+  if (light_pwm_multi_channels) {
+    if ((device >= light_device) && (device < light_device + LST_MAX) && (device <= devices_present)) {
+      light_current_color[device - light_device] = bri;
+      light_controller.changeChannels(light_current_color);
+    }
+  } else if (device == light_device) {
+    light_controller.changeBri(bri);
+  }
+}
+
 void LightSetColorTemp(uint16_t ct)
 {
 /* Color Temperature (https://developers.meethue.com/documentation/core-concepts)
@@ -1605,19 +1642,52 @@ void LightState(uint8_t append)
 
 void LightPreparePower(void)
 {
-  if (light_state.getBri() && !(light_power)) {
-    if (!Settings.flag.not_power_linked) {
-      ExecuteCommandPower(light_device, POWER_ON_NO_STATE, SRC_LIGHT);
+#ifdef DEBUG_LIGHT
+  AddLog_P2(LOG_LEVEL_DEBUG, "LightPreparePower power=%d light_power=%d", power, light_power);
+#endif
+  // If multi-channels, then we only switch off channels with a value of zero
+  if (light_pwm_multi_channels) {
+//     for (uint32_t i = 0; i < light_subtype; i++) {
+//       // if channel is non-null, channel is supposed to be on, but it is off, do Power On
+//       if ((light_current_color[i]) && (bitRead(light_power, i)) && (0 == bitRead(power, i + light_device - 1))) {
+//         ExecuteCommandPower(light_device + i, POWER_ON_NO_STATE, SRC_LIGHT);
+//         //bitSet(Settings.power, i + light_device - 1);
+//         #ifdef DEBUG_LIGHT
+//           AddLog_P2(LOG_LEVEL_DEBUG, "ExecuteCommandPower ON device=%d", light_device + i);
+//         #endif
+//       }
+//       // if channel is zero and channel is on, set it off
+//       if ((0 == light_current_color[i]) && bitRead(power, i + light_device - 1)) {
+//         ExecuteCommandPower(light_device + i, POWER_OFF_NO_STATE, SRC_LIGHT);
+//         //bitClear(Settings.power, i + light_device - 1);
+//         #ifdef DEBUG_LIGHT
+//           AddLog_P2(LOG_LEVEL_DEBUG, "ExecuteCommandPower OFF device=%d", light_device + i);
+//         #endif
+//       }
+// #ifdef USE_DOMOTICZ
+//       DomoticzUpdatePowerState(light_device + i);
+// #endif  // USE_DOMOTICZ
+//     }
+  } else {
+    if (light_state.getBri() && !(light_power)) {
+      if (!Settings.flag.not_power_linked) {
+        ExecuteCommandPower(light_device, POWER_ON_NO_STATE, SRC_LIGHT);
+      }
     }
-  }
-  else if (!light_state.getBri() && light_power) {
-    ExecuteCommandPower(light_device, POWER_OFF_NO_STATE, SRC_LIGHT);
-  }
+    else if (!light_state.getBri() && light_power) {
+      ExecuteCommandPower(light_device, POWER_OFF_NO_STATE, SRC_LIGHT);
+    }
 #ifdef USE_DOMOTICZ
-  DomoticzUpdatePowerState(light_device);
+    DomoticzUpdatePowerState(light_device);
 #endif  // USE_DOMOTICZ
+  }
+
   if (Settings.flag3.hass_tele_on_power) { MqttPublishTeleState(); }
 
+#ifdef DEBUG_LIGHT
+  AddLog_P2(LOG_LEVEL_DEBUG, "LightPreparePower End power=%d light_power=%d", power, light_power);
+#endif
+  light_power = power >> (light_device - 1);  // reset next state
   LightState(0);
 }
 
@@ -1704,11 +1774,26 @@ void LightSetPower(void)
 {
 //  light_power = XdrvMailbox.index;
   light_old_power = light_power;
-  light_power = bitRead(XdrvMailbox.index, light_device -1);
+  //light_power = bitRead(XdrvMailbox.index, light_device -1);
+  uint32_t mask = 1;  // default mask
+  if (light_pwm_multi_channels) {
+    mask = (1 << light_subtype) - 1;   // wider mask
+  }
+  uint32_t shift = light_device - 1;
+  // If PWM multi_channels
+  // Ex: 3 Relays and 4 PWM - devices_present = 7, light_device = 4, light_subtype = 4
+  // Result: mask = 0b00001111 = 0x0F, shift = 3.
+  // Power bits we consider are: 0b01111000 = 0x78
+  // If regular situation: devices_present == light_subtype
+  light_power = (XdrvMailbox.index & (mask << shift)) >> shift;
   if (light_wakeup_active) {
     light_wakeup_active--;
   }
-  if (light_power && !light_old_power) {
+#ifdef DEBUG_LIGHT
+  AddLog_P2(LOG_LEVEL_DEBUG_MORE, "LightSetPower XdrvMailbox.index=%d light_old_power=%d light_power=%d mask=%d shift=%d",
+    XdrvMailbox.index, light_old_power, light_power, mask, shift);
+#endif
+  if (light_power != light_old_power) {
     light_update = 1;
   }
   LightAnimate();
@@ -1799,6 +1884,22 @@ void LightAnimate(void)
   }
 
   if ((Settings.light_scheme < LS_MAX) || !light_power) {
+
+    // If SetOption68, multi_channels
+    if (light_pwm_multi_channels) {
+      // if multi-channels, specifically apply the light_power bits
+      for (uint32_t i = 0; i < LST_MAX; i++) {
+        if (0 == bitRead(light_power,i)) {  // if power down bit is zero
+          light_new_color[i] = 0;   // shut down this channel
+        }
+      }
+      // #ifdef DEBUG_LIGHT
+      //   AddLog_P2(LOG_LEVEL_DEBUG_MORE, "Animate>> light_power=%d light_new_color=[%d,%d,%d,%d,%d]",
+      //     light_power, light_new_color[0], light_new_color[1], light_new_color[2],
+      //     light_new_color[3], light_new_color[4]);
+      // #endif
+    }
+
     if (memcmp(light_last_color, light_new_color, light_subtype)) {
       light_update = 1;
     }
@@ -1814,62 +1915,11 @@ void LightAnimate(void)
       }
 
       if (PHILIPS == my_module_type) {
-        // Xiaomi Philips bulbs follow a different scheme:
-        uint8_t cold;   // channel 1 is the color tone, mapped to cold channel (0..255)
-        light_state.getCW(&cold, nullptr);
-        cur_col[1] = cold;
-        cur_col_10bits[1] = changeUIntScale(cur_col[1], 0, 255, 0, 1023);
-        // now set channel 0 to overall brightness
-        uint8_t pxBri = light_state.getBriCT();
-        // channel 0=intensity, channel1=temperature
-        if (Settings.light_correction) { // gamma correction
-          cur_col[0] = ledGamma(pxBri);
-          cur_col_10bits[0] = ledGamma(pxBri, 10);    // 10 bits gamma correction
-        } else {
-          cur_col[0] = pxBri;
-          cur_col_10bits[0] = changeUIntScale(pxBri, 0, 255, 0, 1023);  // no gamma, extend to 10 bits
-        }
+        calcGammaXiaomiBulbs(cur_col, cur_col_10bits);
+      } else if (light_pwm_multi_channels) {
+        calcGammaMultiChannels(cur_col, cur_col_10bits);
       } else {  // PHILIPS != my_module_type
-        // Apply gamma correction for 8 and 10 bits resolutions, if needed
-        if (Settings.light_correction) {
-          // First apply combined correction to the overall white power
-          if ((LST_COLDWARM == light_subtype) || (LST_RGBWC == light_subtype)) {
-            uint8_t w_idx[2] = {0, 1};        // if LST_COLDWARM, channels 0 and 1
-            if (LST_RGBWC == light_subtype) { // if LST_RGBWC, channels 3 and 4
-              w_idx[0] = 3;
-              w_idx[1] = 4;
-            }
-            uint16_t white_bri = cur_col[w_idx[0]] + cur_col[w_idx[1]];
-            // if sum of both channels is > 255, then channels are probablu uncorrelated
-            if (white_bri <= 255) {
-              // we calculate the gamma corrected sum of CW + WW
-              uint16_t white_bri_10bits = ledGamma(white_bri, 10);
-              uint8_t white_bri_8bits = ledGamma(white_bri);
-              // then we split the total energy among the cold and warm leds
-              cur_col_10bits[w_idx[0]] = changeUIntScale(cur_col[w_idx[0]], 0, white_bri, 0, white_bri_10bits);
-              cur_col_10bits[w_idx[1]] = changeUIntScale(cur_col[w_idx[1]], 0, white_bri, 0, white_bri_10bits);
-              cur_col[w_idx[0]] = changeUIntScale(cur_col[w_idx[0]], 0, white_bri, 0, white_bri_8bits);
-              cur_col[w_idx[1]] = changeUIntScale(cur_col[w_idx[1]], 0, white_bri, 0, white_bri_8bits);
-            } else {
-              cur_col_10bits[w_idx[0]] = ledGamma(cur_col[w_idx[0]], 10);
-              cur_col_10bits[w_idx[1]] = ledGamma(cur_col[w_idx[1]], 10);
-              cur_col[w_idx[0]] = ledGamma(cur_col[w_idx[0]]);
-              cur_col[w_idx[1]] = ledGamma(cur_col[w_idx[1]]);
-            }
-          }
-          // then apply gamma correction to RGB channels
-          if (LST_RGB <= light_subtype) {
-            for (uint32_t i = 0; i < 3; i++) {
-              cur_col_10bits[i] = ledGamma(cur_col[i], 10);
-              cur_col[i] = ledGamma(cur_col[i]);
-            }
-          }
-          // If RGBW or Single channel, also adjust White channel
-          if (LST_COLDWARM != light_subtype) {
-            cur_col_10bits[3] = ledGamma(cur_col[3], 10);
-            cur_col[3] = ledGamma(cur_col[3]);
-          }
-        }
+        calcGammaBulbs(cur_col, cur_col_10bits);
 
         // Now see if we need to mix RGB and True White
         // Valid only for LST_RGBW, LST_RGBWC, rgbwwTable[4] is zero, and white is zero (see doc)
@@ -1964,6 +2014,79 @@ void LightAnimate(void)
       }
       XdrvMailbox.data = tmp_data;
       XdrvMailbox.data_len = tmp_data_len;
+    }
+  }
+}
+
+// Do specific computation for Xiaomi Bulbs
+void calcGammaXiaomiBulbs(uint8_t cur_col[5], uint16_t cur_col_10bits[5]) {
+  // Xiaomi Philips bulbs follow a different scheme:
+  uint8_t cold;   // channel 1 is the color tone, mapped to cold channel (0..255)
+  light_state.getCW(&cold, nullptr);
+  cur_col[1] = cold;
+  cur_col_10bits[1] = changeUIntScale(cur_col[1], 0, 255, 0, 1023);
+  // now set channel 0 to overall brightness
+  uint8_t pxBri = light_state.getBriCT();
+  // channel 0=intensity, channel1=temperature
+  if (Settings.light_correction) { // gamma correction
+    cur_col[0] = ledGamma(pxBri);
+    cur_col_10bits[0] = ledGamma(pxBri, 10);    // 10 bits gamma correction
+  } else {
+    cur_col[0] = pxBri;
+    cur_col_10bits[0] = changeUIntScale(pxBri, 0, 255, 0, 1023);  // no gamma, extend to 10 bits
+  }
+}
+
+// Just apply basic Gamma to each channel
+void calcGammaMultiChannels(uint8_t cur_col[5], uint16_t cur_col_10bits[5]) {
+  // Apply gamma correction for 8 and 10 bits resolutions, if needed
+  if (Settings.light_correction) {
+    for (uint32_t i = 0; i < LST_MAX; i++) {
+      cur_col_10bits[i] = ledGamma(cur_col[i], 10);
+      cur_col[i] = ledGamma(cur_col[i]);
+    }
+  }
+}
+
+void calcGammaBulbs(uint8_t cur_col[5], uint16_t cur_col_10bits[5]) {
+  // Apply gamma correction for 8 and 10 bits resolutions, if needed
+  if (Settings.light_correction) {
+    // First apply combined correction to the overall white power
+    if ((LST_COLDWARM == light_subtype) || (LST_RGBWC == light_subtype)) {
+      uint8_t w_idx[2] = {0, 1};        // if LST_COLDWARM, channels 0 and 1
+      if (LST_RGBWC == light_subtype) { // if LST_RGBWC, channels 3 and 4
+        w_idx[0] = 3;
+        w_idx[1] = 4;
+      }
+      uint16_t white_bri = cur_col[w_idx[0]] + cur_col[w_idx[1]];
+      // if sum of both channels is > 255, then channels are probablu uncorrelated
+      if (white_bri <= 255) {
+        // we calculate the gamma corrected sum of CW + WW
+        uint16_t white_bri_10bits = ledGamma(white_bri, 10);
+        uint8_t white_bri_8bits = ledGamma(white_bri);
+        // then we split the total energy among the cold and warm leds
+        cur_col_10bits[w_idx[0]] = changeUIntScale(cur_col[w_idx[0]], 0, white_bri, 0, white_bri_10bits);
+        cur_col_10bits[w_idx[1]] = changeUIntScale(cur_col[w_idx[1]], 0, white_bri, 0, white_bri_10bits);
+        cur_col[w_idx[0]] = changeUIntScale(cur_col[w_idx[0]], 0, white_bri, 0, white_bri_8bits);
+        cur_col[w_idx[1]] = changeUIntScale(cur_col[w_idx[1]], 0, white_bri, 0, white_bri_8bits);
+      } else {
+        cur_col_10bits[w_idx[0]] = ledGamma(cur_col[w_idx[0]], 10);
+        cur_col_10bits[w_idx[1]] = ledGamma(cur_col[w_idx[1]], 10);
+        cur_col[w_idx[0]] = ledGamma(cur_col[w_idx[0]]);
+        cur_col[w_idx[1]] = ledGamma(cur_col[w_idx[1]]);
+      }
+    }
+    // then apply gamma correction to RGB channels
+    if (LST_RGB <= light_subtype) {
+      for (uint32_t i = 0; i < 3; i++) {
+        cur_col_10bits[i] = ledGamma(cur_col[i], 10);
+        cur_col[i] = ledGamma(cur_col[i]);
+      }
+    }
+    // If RGBW or Single channel, also adjust White channel
+    if (LST_COLDWARM != light_subtype) {
+      cur_col_10bits[3] = ledGamma(cur_col[3], 10);
+      cur_col[3] = ledGamma(cur_col[3]);
     }
   }
 }
@@ -2069,7 +2192,7 @@ void CmndSupportColor(void)
   }
   char scolor[LIGHT_COLOR_SIZE];
   if (!valid_entry && (XdrvMailbox.index <= 2)) {
-    Response_P(S_JSON_COMMAND_SVALUE, XdrvMailbox.command, LightGetColor(scolor));
+    ResponseCmndChar(LightGetColor(scolor));
   }
   if (XdrvMailbox.index >= 3) {
     scolor[0] = '\0';
@@ -2080,7 +2203,7 @@ void CmndSupportColor(void)
         snprintf_P(scolor, sizeof(scolor), PSTR("%s%02X"), scolor, Settings.ws_color[XdrvMailbox.index -3][i]);
       }
     }
-    Response_P(S_JSON_COMMAND_INDEX_SVALUE, XdrvMailbox.command, XdrvMailbox.index, scolor);
+    ResponseCmndIdxChar(scolor);
   }
   if (coldim) {
     LightPreparePower();
@@ -2117,15 +2240,21 @@ void CmndChannel(void)
     bool coldim = false;
     //  Set "Channel" directly - this allows Color and Direct PWM control to coexist
     if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 100)) {
-      light_current_color[XdrvMailbox.index-1] = changeUIntScale(XdrvMailbox.payload,0,100,0,255);
-      // if we change channels 1,2,3 then turn off CT mode (unless non-linked)
-      if ((XdrvMailbox.index <= 3) && (light_controller.isCTRGBLinked())) {
-        light_current_color[3] = light_current_color[4] = 0;
+      light_current_color[XdrvMailbox.index - light_device] = changeUIntScale(XdrvMailbox.payload,0,100,0,255);
+      if (light_pwm_multi_channels) {
+        // if (!Settings.flag.not_power_linked) {  // SetOption20
+        //   light_power = light_power | (1 << (XdrvMailbox.index - light_device));  // ask to turn on channel
+        // }
+      } else {
+        // if we change channels 1,2,3 then turn off CT mode (unless non-linked)
+        if ((XdrvMailbox.index <= 3) && (light_controller.isCTRGBLinked())) {
+          light_current_color[3] = light_current_color[4] = 0;
+        }
       }
       light_controller.changeChannels(light_current_color);
       coldim = true;
     }
-    Response_P(S_JSON_COMMAND_INDEX_NVALUE, XdrvMailbox.command, XdrvMailbox.index, light_current_color[XdrvMailbox.index -1] * 100 / 255);
+    ResponseCmndIdxNumber(light_current_color[XdrvMailbox.index -1] * 100 / 255);
     if (coldim) {
       LightPreparePower();
     }
@@ -2204,7 +2333,7 @@ void CmndLed(void)
       Ws2812ForceUpdate();
     }
     char scolor[LIGHT_COLOR_SIZE];
-    Response_P(S_JSON_COMMAND_INDEX_SVALUE, XdrvMailbox.command, XdrvMailbox.index, Ws2812GetColor(XdrvMailbox.index, scolor));
+    ResponseCmndIdxChar(Ws2812GetColor(XdrvMailbox.index, scolor));
   }
 }
 
@@ -2217,7 +2346,7 @@ void CmndPixels(void)
       Ws2812Clear();
       light_update = 1;
     }
-    Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_pixels);
+    ResponseCmndNumber(Settings.light_pixels);
   }
 }
 
@@ -2227,7 +2356,7 @@ void CmndRotation(void)
     if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload < Settings.light_pixels)) {
       Settings.light_rotation = XdrvMailbox.payload;
     }
-    Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_rotation);
+    ResponseCmndNumber(Settings.light_rotation);
   }
 }
 
@@ -2238,12 +2367,12 @@ void CmndWidth(void)
       if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 4)) {
         Settings.light_width = XdrvMailbox.payload;
       }
-      Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_width);
+      ResponseCmndNumber(Settings.light_width);
     } else {
       if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload < 32)) {
         Settings.ws_width[XdrvMailbox.index -2] = XdrvMailbox.payload;
       }
-      Response_P(S_JSON_COMMAND_INDEX_NVALUE, XdrvMailbox.command, XdrvMailbox.index, Settings.ws_width[XdrvMailbox.index -2]);
+      ResponseCmndIdxNumber(Settings.ws_width[XdrvMailbox.index -2]);
     }
   }
 }
@@ -2271,7 +2400,7 @@ void CmndScheme(void)
       // Publish state message for Hass
       if (Settings.flag3.hass_tele_on_power) { MqttPublishTeleState(); }
     }
-    Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_scheme);
+    ResponseCmndNumber(Settings.light_scheme);
   }
 }
 
@@ -2283,7 +2412,7 @@ void CmndWakeup(void)
   light_wakeup_active = 3;
   Settings.light_scheme = LS_WAKEUP;
   LightPowerOn();
-  Response_P(S_JSON_COMMAND_SVALUE, XdrvMailbox.command, D_JSON_STARTED);
+  ResponseCmndChar(D_JSON_STARTED);
 }
 
 void CmndColorTemperature(void)
@@ -2302,7 +2431,7 @@ void CmndColorTemperature(void)
       light_controller.changeCTB(XdrvMailbox.payload, light_state.getBri());
       LightPreparePower();
     } else {
-      Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, ct);
+      ResponseCmndNumber(ct);
     }
   }
 }
@@ -2323,7 +2452,7 @@ void CmndDimmer(void)
     light_update = 1;
     LightPreparePower();
   } else {
-    Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_dimmer);
+    ResponseCmndNumber(Settings.light_dimmer);
   }
 }
 
@@ -2341,7 +2470,7 @@ void CmndLedTable(void)
     }
     light_update = 1;
   }
-  Response_P(S_JSON_COMMAND_SVALUE, XdrvMailbox.command, GetStateText(Settings.light_correction));
+  ResponseCmndStateText(Settings.light_correction);
 }
 
 void CmndRgbwwTable(void)
@@ -2368,7 +2497,7 @@ void CmndRgbwwTable(void)
   for (uint32_t i = 0; i < LST_RGBWC; i++) {
     snprintf_P(scolor, sizeof(scolor), PSTR("%s%s%d"), scolor, (i > 0) ? "," : "", Settings.rgbwwTable[i]);
   }
-  Response_P(S_JSON_COMMAND_INDEX_SVALUE, XdrvMailbox.command, XdrvMailbox.index, scolor);
+  ResponseCmndIdxChar(scolor);
 }
 
 void CmndFade(void)
@@ -2382,7 +2511,7 @@ void CmndFade(void)
     Settings.light_fade ^= 1;
     break;
   }
-  Response_P(S_JSON_COMMAND_SVALUE, XdrvMailbox.command, GetStateText(Settings.light_fade));
+  ResponseCmndStateText(Settings.light_fade);
 }
 
 void CmndSpeed(void)
@@ -2398,7 +2527,7 @@ void CmndSpeed(void)
   if ((XdrvMailbox.payload > 0) && (XdrvMailbox.payload <= STATES)) {
     Settings.light_speed = XdrvMailbox.payload;
   }
-  Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_speed);
+  ResponseCmndNumber(Settings.light_speed);
 }
 
 void CmndWakeupDuration(void)
@@ -2407,7 +2536,7 @@ void CmndWakeupDuration(void)
     Settings.light_wakeup = XdrvMailbox.payload;
     light_wakeup_active = 0;
   }
-  Response_P(S_JSON_COMMAND_NVALUE, XdrvMailbox.command, Settings.light_wakeup);
+  ResponseCmndNumber(Settings.light_wakeup);
 }
 
 void CmndUndocA(void)

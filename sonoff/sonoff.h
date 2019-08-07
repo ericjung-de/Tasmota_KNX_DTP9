@@ -71,6 +71,8 @@ const uint8_t MAX_RULE_MEMS = 5;            // Max number of saved vars
 const uint8_t MAX_RULE_SETS = 3;            // Max number of rule sets of size 512 characters
 const uint16_t MAX_RULE_SIZE = 512;         // Max number of characters in rules
 
+const uint8_t MAX_HUE_DEVICES = 15;         // Max number of Philips Hue device per emulation
+
 const char MQTT_TOKEN_PREFIX[] PROGMEM = "%prefix%";  // To be substituted by mqtt_prefix[x]
 const char MQTT_TOKEN_TOPIC[] PROGMEM = "%topic%";    // To be substituted by mqtt_topic, mqtt_grptopic, mqtt_buttontopic, mqtt_switchtopic
 const char WIFI_HOSTNAME[] = "%s-%04d";     // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
@@ -264,7 +266,7 @@ const uint8_t kDefaultRfCode[9] PROGMEM = { 0x21, 0x16, 0x01, 0x0E, 0x03, 0x48, 
 \*********************************************************************************************/
 
 extern uint8_t light_device;  // Light device number
-extern uint8_t light_power;  // Light power
+extern power_t light_power;  // Light power
 extern uint8_t rotary_changed; // Rotary switch changed
 
 #endif  // _SONOFF_H_
