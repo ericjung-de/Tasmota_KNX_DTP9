@@ -636,9 +636,12 @@
                                                 // cmnd pid_pv
 
 /*********************************************************************************************\
- * Debug features are only supported in development branch
+ * Debug features
 \*********************************************************************************************/
 
+//#define DEBUG_TASMOTA_CORE                       // Enable core debug messages
+//#define DEBUG_TASMOTA_DRIVER                     // Enable driver debug messages
+//#define DEBUG_TASMOTA_SENSOR                     // Enable sensor debug messages
 //#define USE_DEBUG_DRIVER                         // Use xdrv_99_debug.ino providing commands CpuChk, CfgXor, CfgDump, CfgPeek and CfgPoke
 
 /*********************************************************************************************\
