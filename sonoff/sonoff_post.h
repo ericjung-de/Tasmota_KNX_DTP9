@@ -177,6 +177,7 @@ void KNX_CB_Action(message_t const &msg, void *arg);
   #define USE_ALECTO_V2                       // Add support for decoding Alecto V2 sensors like ACH2010, WS3000 and DKW2012 using 868MHz RF sensor receiver (+1k7 code)
 #define USE_SM16716                           // Add support for SM16716 RGB LED controller (+0k7 code)
 #define USE_HRE                               // Add support for Badger HR-E Water Meter (+1k4 code)
+//#define USE_SOLAX_X1                          // Enable Solax X1 series log info support (+4k1 code)
 #endif  // FIRMWARE_SENSORS
 
 /*********************************************************************************************\
@@ -515,6 +516,24 @@ void KNX_CB_Action(message_t const &msg, void *arg);
 
 #ifdef ARDUINO_ESP8266_RELEASE_2_3_0          // Disable not supported features in core 2.3.0
 #undef USE_MQTT_TLS_CA_CERT
+#endif
+
+#ifdef DEBUG_TASMOTA_CORE
+#define DEBUG_CORE_LOG(...) AddLog_Debug(__VA_ARGS__)
+#else
+#define DEBUG_CORE_LOG(...)
+#endif
+
+#ifdef DEBUG_TASMOTA_DRIVER
+#define DEBUG_DRIVER_LOG(...) AddLog_Debug(__VA_ARGS__)
+#else
+#define DEBUG_DRIVER_LOG(...)
+#endif
+
+#ifdef DEBUG_TASMOTA_SENSOR
+#define DEBUG_SENSOR_LOG(...) AddLog_Debug(__VA_ARGS__)
+#else
+#define DEBUG_SENSOR_LOG(...)
 #endif
 
 #endif  // _SONOFF_POST_H_
