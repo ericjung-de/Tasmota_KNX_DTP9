@@ -192,9 +192,9 @@ void GetFeatures(void)
 #ifdef USE_SONOFF_IFAN
   feature_drv2 |= 0x00200000;  // xdrv_22_sonoff_ifan.ino
 #endif
-
-//  feature_drv2 |= 0x00400000;
-
+#ifdef USE_ZIGBEE
+  feature_drv2 |= 0x00400000;  // xdrv_23_zigbee.ino
+#endif
 #ifdef NO_EXTRA_4K_HEAP
   feature_drv2 |= 0x00800000;  // sonoff_post.h
 #endif
@@ -418,15 +418,23 @@ void GetFeatures(void)
 #ifdef USE_CHIRP
   feature_sns2 |= 0x20000000;  // xsns_48_chirp.ino
 #endif
-//  feature_sns2 |= 0x40000000;
-//  feature_sns2 |= 0x80000000;
+#ifdef USE_SOLAX_X1
+  feature_sns2 |= 0x40000000;  // xsns_49_solaxX1.ino
+#endif
+#ifdef USE_PAJ7620
+  feature_sns2 |= 0x80000000;  // xsns_50_paj7620.ino
+#endif
 
 /*********************************************************************************************/
 
   feature5 = 0x00000000;
 
-//  feature5 |= 0x00000001;
-//  feature5 |= 0x00000002;
+#ifdef USE_BUZZER
+  feature5 |= 0x00000001;  // xdrv_24_buzzer.ino
+#endif
+#ifdef USE_RDM6300
+  feature5 |= 0x00000002;  // xsns_51_rdm6300.ino
+#endif
 //  feature5 |= 0x00000004;
 //  feature5 |= 0x00000008;
 

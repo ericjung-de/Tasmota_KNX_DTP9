@@ -28,7 +28,7 @@
  * Use online command StateText to translate ON, OFF, HOLD and TOGGLE.
  * Use online command Prefix to translate cmnd, stat and tele.
  *
- * Updated until v6.5.0.16
+ * Updated until v6.6.0.4
 \*********************************************************************/
 
 #define LANGUAGE_MODULE_NAME         // Enable to display "Module Generic" (ie Spanish), Disable to display "Generic Module" (ie English)
@@ -391,15 +391,15 @@
 #define D_DOMOTICZ_KEY_IDX "Key idx"
 #define D_DOMOTICZ_SWITCH_IDX "Switch idx"
 #define D_DOMOTICZ_SENSOR_IDX "Sensor idx"
-  #define D_DOMOTICZ_TEMP "Temp"
-  #define D_DOMOTICZ_TEMP_HUM "Temp,Hum"
-  #define D_DOMOTICZ_TEMP_HUM_BARO "Temp,Hum,Baro"
-  #define D_DOMOTICZ_POWER_ENERGY "Potencia,Energía"
-  #define D_DOMOTICZ_ILLUMINANCE "Luminancia"
-  #define D_DOMOTICZ_COUNT "Contador/PM1"
-  #define D_DOMOTICZ_VOLTAGE "Voltaje/PM2,5"
-  #define D_DOMOTICZ_CURRENT "Corriente/PM10"
-  #define D_DOMOTICZ_AIRQUALITY "Calidad del Aire"
+#define D_DOMOTICZ_TEMP "Temp"
+#define D_DOMOTICZ_TEMP_HUM "Temp,Hum"
+#define D_DOMOTICZ_TEMP_HUM_BARO "Temp,Hum,Baro"
+#define D_DOMOTICZ_POWER_ENERGY "Potencia,Energía"
+#define D_DOMOTICZ_ILLUMINANCE "Luminancia"
+#define D_DOMOTICZ_COUNT "Contador/PM1"
+#define D_DOMOTICZ_VOLTAGE "Voltaje/PM2,5"
+#define D_DOMOTICZ_CURRENT "Corriente/PM10"
+#define D_DOMOTICZ_AIRQUALITY "Calidad del Aire"
 #define D_DOMOTICZ_UPDATE_TIMER "Intervalo de refresco"
 
 // xdrv_09_timers.ino
@@ -587,8 +587,14 @@
 #define D_SENSOR_ADE7953_IRQ   "ADE7953 IRQ"
 #define D_SENSOR_BUZZER        "Buzzer"
 #define D_SENSOR_OLED_RESET    "OLED Reset"
-#define D_SENSOR_SOLAXX1_TX    "SOLAXX1 Tx"
-#define D_SENSOR_SOLAXX1_RX    "SOLAXX1 Rx"
+#define D_SENSOR_ZIGBEE_TXD    "Zigbee Tx"
+#define D_SENSOR_ZIGBEE_RXD    "Zigbee Rx"
+#define D_SENSOR_SOLAXX1_TX    "SolaxX1 Tx"
+#define D_SENSOR_SOLAXX1_RX    "SolaxX1 Rx"
+#define D_SENSOR_IBEACON_TX    "iBeacon TX"
+#define D_SENSOR_IBEACON_RX    "iBeacon RX"
+#define D_SENSOR_RDM6300_RX    "RDM6300 RX"
+#define D_SENSOR_CC1101_CS     "CC1101 CS"
 
 // Units
 #define D_UNIT_AMPERE "A"
@@ -659,34 +665,28 @@
 #define D_UNIT_KWARH      "kVArH"
 #define D_UNIT_ANGLE      "Grados"
 
-#ifdef USE_SOLAX_X1
 //SOLAXX1
-#define D_PV1_VOLTAGE     "Voltaje PV1"
-#define D_PV1_CURRENT     "Intensidad PV1"
-#define D_PV1_POWER       "Potencia PV1"
-#define D_PV2_VOLTAGE     "Voltaje PV2"
-#define D_PV2_CURRENT     "Intensidad PV2"
-#define D_PV2_POWER       "Potencia PV2"
+#define D_PV1_VOLTAGE     "PV1 Voltaje"
+#define D_PV1_CURRENT     "PV1 Corriente"
+#define D_PV1_POWER       "PV1 Potencia"
+#define D_PV2_VOLTAGE     "PV2 Voltaee"
+#define D_PV2_CURRENT     "PV2 Corriente"
+#define D_PV2_POWER       "PV2 Potencia"
 #define D_SOLAR_POWER     "Potencia Solar"
-#define D_INVERTER_POWER  "Potencia Inverter"
-#define D_WORKTIME        "Horas en funcionamiento"
+#define D_INVERTER_POWER  "Potencia del Inversor"
 #define D_STATUS          "Estado"
-#define D_UNIT_TEMPERATURE "°C"
-
-#define D_WAITING          "Esperando"
-#define D_CHECKING         "Comprobando"
-#define D_WORKING          "Funcionando"
-#define D_FAILURE          "Fallo"
-
-#define D_SOLAX_ERROR_0    "Sin fallos"
-#define D_SOLAX_ERROR_1    "Red Eléctrica Caída"
-#define D_SOLAX_ERROR_2    "Fallo en Voltaje de Red"
-#define D_SOLAX_ERROR_3    "Fallo en Frecuencia de Red"
-#define D_SOLAX_ERROR_4    "Fallo en Voltaje de Paneles"
-#define D_SOLAX_ERROR_5    "Fallo de Aislación"
-#define D_SOLAX_ERROR_6    "Fallo por Sobretemperatura"
-#define D_SOLAX_ERROR_7    "Fallo de Ventilador"
-#define D_SOLAX_ERROR_8    "Fallo en Otro Sistema"
-#endif
+#define D_WAITING         "En Espera"
+#define D_CHECKING        "Revisando"
+#define D_WORKING         "Funcionando"
+#define D_FAILURE         "Falla"
+#define D_SOLAX_ERROR_0   "Sin código de Error"
+#define D_SOLAX_ERROR_1   "Falla por Pérdida de Red"
+#define D_SOLAX_ERROR_2   "Falla por Voltaje de Red"
+#define D_SOLAX_ERROR_3   "Falla por Frecuencia de Red"
+#define D_SOLAX_ERROR_4   "Falla por Voltaje en PV"
+#define D_SOLAX_ERROR_5   "Falla de Aislación"
+#define D_SOLAX_ERROR_6   "Falla por sobretemperatura"
+#define D_SOLAX_ERROR_7   "Falla de Ventilador"
+#define D_SOLAX_ERROR_8   "Falla del Dispositivo"
 
 #endif  // _LANGUAGE_ES_ES_H_
