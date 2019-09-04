@@ -258,9 +258,18 @@ void CmndPower(void)
 {
   if ((XdrvMailbox.index > 0) && (XdrvMailbox.index <= devices_present)) {
     if ((XdrvMailbox.payload < 0) || (XdrvMailbox.payload > 4)) { XdrvMailbox.payload = 9; }
-//      Settings.flag.device_index_enable = user_index;
+//      Settings.flag.device_index_enable = XdrvMailbox.usridx;
     ExecuteCommandPower(XdrvMailbox.index, XdrvMailbox.payload, SRC_IGNORE);
     mqtt_data[0] = '\0';
+  }
+  else if (0 == XdrvMailbox.index) {
+    if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 2)) {
+      if (2 == XdrvMailbox.payload) {
+        XdrvMailbox.payload = (power) ? 0 : 1;
+      }
+      SetAllPower(XdrvMailbox.payload, SRC_IGNORE);
+      mqtt_data[0] = '\0';
+    }
   }
 }
 
@@ -647,7 +656,7 @@ void CmndSetoption(void)
               LightUpdateColorMapping();
               break;
 #endif
-#if defined(USE_IR_REMOTE) && defined(USE_IR_RECEIVE)
+#if (defined(USE_IR_REMOTE) && defined(USE_IR_RECEIVE)) || defined(USE_IR_REMOTE_FULL)
             case P_IR_UNKNOW_THRESHOLD:
               IrReceiveUpdateThreshold();
               break;
