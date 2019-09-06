@@ -1,4 +1,8 @@
 /*********************************************************************************************\
+ * 6.6.0.10 20190905
+ * Redesign Tuya support by Shantur Rathore (#6353)
+ * Add command Reset 99 to reset bootcount to zero (#684, #6351)
+ *
  * 6.6.0.9 20190828
  * Change theoretical baudrate range to 300..19660500 bps in 300 increments (#6294)
  * Add Full support of all protocols in IRremoteESP8266, to be used on dedicated-IR Tasmota version. Warning: +81k Flash when compiling with USE_IR_REMOTE_FULL
@@ -7,6 +11,8 @@
  * Add Zigbee support phase 2 - cc2530 initialization and basic ZCL decoding
  * Add driver USE_SDM120_2 with Domoticz P1 Smart Meter functionality as future replacement for USE_SDM120 - Pls test and report
  * Add command Power0 0/1/2/Off/On/Toggle to control all power outputs at once (#6340)
+ * Add time to more events (#6337)
+ * Add command Time 1/2/3 to select JSON time format ISO + Epoch, ISO or Epoch
  *
  * 6.6.0.8 20190827
  * Add Tuya Energy monitoring by Shantur Rathore

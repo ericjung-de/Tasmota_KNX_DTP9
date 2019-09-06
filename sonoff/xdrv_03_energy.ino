@@ -110,8 +110,6 @@ struct ENERGY {
   bool max_current_flag = false;
 
 #ifdef USE_ENERGY_POWER_LIMIT
-  power_t mp_last_power = 0;
-  power_t me_last_power = 0;
   uint16_t mplh_counter = 0;
   uint16_t mplw_counter = 0;
   uint8_t mplr_counter = 0;
@@ -154,9 +152,9 @@ void EnergyUpdateTotal(float value, bool kwh)
 
   if (0 == Energy.start_energy || (value < Energy.start_energy)) {
     Energy.start_energy = value;  // Init after restart and handle roll-over if any
-    RtcSettings.energy_kWhtotal = (unsigned long)(value * multiplier);
-    Energy.kWhtoday = 0;
-    RtcSettings.energy_kWhtoday = 0;
+//    RtcSettings.energy_kWhtotal = (unsigned long)(value * multiplier);
+//    Energy.kWhtoday = 0;
+//    RtcSettings.energy_kWhtoday = 0;
   }
   else if (value != Energy.start_energy) {
     Energy.kWhtoday += (unsigned long)((value - Energy.start_energy) * multiplier);
@@ -316,10 +314,9 @@ void EnergyMarginCheck(void)
       } else {
         Energy.mplh_counter--;
         if (!Energy.mplh_counter) {
-          Response_P(PSTR("{\"" D_JSON_MAXPOWERREACHED "\":\"%d%s\"}"), energy_power_u, (Settings.flag.value_units) ? " " D_UNIT_WATT : "");
+          ResponseTime_P(PSTR(",\"" D_JSON_MAXPOWERREACHED "\":\"%d%s\"}"), energy_power_u, (Settings.flag.value_units) ? " " D_UNIT_WATT : "");
           MqttPublishPrefixTopic_P(STAT, S_RSLT_WARNING);
           EnergyMqttShow();
-          Energy.mp_last_power = power;
           SetAllPower(POWER_ALL_OFF, SRC_MAXPOWER);
           if (!Energy.mplr_counter) {
             Energy.mplr_counter = Settings.param[P_MAX_POWER_RETRY] +1;
@@ -340,11 +337,11 @@ void EnergyMarginCheck(void)
         if (Energy.mplr_counter) {
           Energy.mplr_counter--;
           if (Energy.mplr_counter) {
-            Response_P(PSTR("{\"" D_JSON_POWERMONITOR "\":\"%s\"}"), GetStateText(1));
+            ResponseTime_P(PSTR(",\"" D_JSON_POWERMONITOR "\":\"%s\"}"), GetStateText(1));
             MqttPublishPrefixTopic_P(RESULT_OR_STAT, PSTR(D_JSON_POWERMONITOR));
-            RestorePower(Energy.mp_last_power, SRC_MAXPOWER);
+            RestorePower(true, SRC_MAXPOWER);
           } else {
-            Response_P(PSTR("{\"" D_JSON_MAXPOWERREACHEDRETRY "\":\"%s\"}"), GetStateText(0));
+            ResponseTime_P(PSTR(",\"" D_JSON_MAXPOWERREACHEDRETRY "\":\"%s\"}"), GetStateText(0));
             MqttPublishPrefixTopic_P(STAT, S_RSLT_WARNING);
             EnergyMqttShow();
           }
@@ -358,17 +355,16 @@ void EnergyMarginCheck(void)
     energy_daily_u = (uint16_t)(Energy.daily * 1000);
     if (!Energy.max_energy_state  && (RtcTime.hour == Settings.energy_max_energy_start)) {
       Energy.max_energy_state  = 1;
-      Response_P(PSTR("{\"" D_JSON_ENERGYMONITOR "\":\"%s\"}"), GetStateText(1));
+      ResponseTime_P(PSTR(",\"" D_JSON_ENERGYMONITOR "\":\"%s\"}"), GetStateText(1));
       MqttPublishPrefixTopic_P(RESULT_OR_STAT, PSTR(D_JSON_ENERGYMONITOR));
-      RestorePower(Energy.me_last_power, SRC_MAXENERGY);
+      RestorePower(true, SRC_MAXENERGY);
     }
     else if ((1 == Energy.max_energy_state ) && (energy_daily_u >= Settings.energy_max_energy)) {
       Energy.max_energy_state  = 2;
       dtostrfd(Energy.daily, 3, mqtt_data);
-      Response_P(PSTR("{\"" D_JSON_MAXENERGYREACHED "\":\"%s%s\"}"), mqtt_data, (Settings.flag.value_units) ? " " D_UNIT_KILOWATTHOUR : "");
+      ResponseTime_P(PSTR(",\"" D_JSON_MAXENERGYREACHED "\":\"%s%s\"}"), mqtt_data, (Settings.flag.value_units) ? " " D_UNIT_KILOWATTHOUR : "");
       MqttPublishPrefixTopic_P(STAT, S_RSLT_WARNING);
       EnergyMqttShow();
-      Energy.me_last_power = power;
       SetAllPower(POWER_ALL_OFF, SRC_MAXENERGY);
     }
   }
@@ -380,9 +376,10 @@ void EnergyMarginCheck(void)
 void EnergyMqttShow(void)
 {
 // {"Time":"2017-12-16T11:48:55","ENERGY":{"Total":0.212,"Yesterday":0.000,"Today":0.014,"Period":2.0,"Power":22.0,"Factor":1.00,"Voltage":213.6,"Current":0.100}}
-  ResponseBeginTime();
   int tele_period_save = tele_period;
   tele_period = 2;
+  mqtt_data[0] = '\0';
+  ResponseAppendTime();
   EnergyShow(true);
   tele_period = tele_period_save;
   ResponseJsonEnd();
@@ -827,7 +824,7 @@ void EnergyShow(bool json)
       char energy_total1_chr[FLOATSZ];
       dtostrfd(Energy.total1 * 1000, 1, energy_total1_chr);  // Tariff1
       char energy_non[2] = "0";
-      DomoticzSensorP1SmartMeter(energy_total1_chr, energy_total_chr, energy_non, energy_non, (int)Energy.active_power, 0);
+      DomoticzSensorP1SmartMeter(energy_total1_chr, energy_total_chr, energy_non, energy_non, (int)Energy.active_power);
 
       if (Energy.voltage_available) {
         DomoticzSensor(DZ_VOLTAGE, voltage_chr);  // Voltage
