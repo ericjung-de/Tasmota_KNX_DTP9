@@ -442,6 +442,11 @@
 #define D_ENERGY_YESTERDAY "Энергия Вчера"
 #define D_ENERGY_TOTAL "Энергия Всего"
 
+// xdrv_27_shutter.ino
+#define D_OPEN "Open"
+#define D_CLOSE "Close"
+#define D_DOMOTICZ_SHUTTER "Shutter"
+
 // xsns_05_ds18b20.ino
 #define D_SENSOR_BUSY "Датчик DS18x20 занят"
 #define D_SENSOR_CRC_ERROR "Датчик DS18x20 - ошибка CRC"
@@ -596,6 +601,14 @@
 #define D_SENSOR_IBEACON_RX    "iBeacon RX"
 #define D_SENSOR_RDM6300_RX    "RDM6300 RX"
 #define D_SENSOR_CC1101_CS     "CC1101 CS"
+#define D_SENSOR_A4988_DIR     "A4988 DIR"
+#define D_SENSOR_A4988_STP     "A4988 STP"
+#define D_SENSOR_A4988_ENA     "A4988 ENA"
+#define D_SENSOR_A4988_MS1     "A4988 MS1"
+#define D_SENSOR_A4988_MS2     "A4988 MS2"
+#define D_SENSOR_A4988_MS3     "A4988 MS3"
+#define D_SENSOR_DDS2382_TX    "DDS238-2 Tx"
+#define D_SENSOR_DDS2382_RX    "DDS238-2 Rx"
 
 // Units
 #define D_UNIT_AMPERE "А"
