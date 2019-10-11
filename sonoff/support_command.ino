@@ -180,7 +180,8 @@ void CommandHandler(char* topicBuf, char* dataBuf, uint32_t data_len)
 
     DEBUG_CORE_LOG(PSTR("CMD: Payload %d"), payload);
 
-    backlog_delay = millis() + (100 * MIN_BACKLOG_DELAY);
+//    backlog_delay = millis() + (100 * MIN_BACKLOG_DELAY);
+    backlog_delay = millis() + Settings.param[P_BACKLOG_DELAY];
 
     char command[CMDSZ];
     XdrvMailbox.command = command;
@@ -283,7 +284,7 @@ void CmndBacklog(void)
 
 void CmndDelay(void)
 {
-  if ((XdrvMailbox.payload >= MIN_BACKLOG_DELAY) && (XdrvMailbox.payload <= 3600)) {
+  if ((XdrvMailbox.payload >= (MIN_BACKLOG_DELAY / 100)) && (XdrvMailbox.payload <= 3600)) {
     backlog_delay = millis() + (100 * XdrvMailbox.payload);
   }
   uint32_t bl_delay = 0;
@@ -465,6 +466,10 @@ void CmndStatus(void)
     ResponseJsonEnd();
     MqttPublishPrefixTopic_P(option, PSTR(D_CMND_STATUS "11"));
   }
+
+#ifdef USE_SCRIPT_STATUS
+  if (bitRead(Settings.rule_enabled, 0)) Run_Scripter(">U",2,mqtt_data);
+#endif
   mqtt_data[0] = '\0';
 }
 
@@ -695,21 +700,16 @@ void CmndSetoption(void)
         }
         if ((XdrvMailbox.payload >= param_low) && (XdrvMailbox.payload <= param_high)) {
           Settings.param[pindex] = XdrvMailbox.payload;
-          switch (pindex) {
 #ifdef USE_LIGHT
-            case P_RGB_REMAP:
-              LightUpdateColorMapping();
-              break;
+          if (P_RGB_REMAP == pindex) {
+            LightUpdateColorMapping();
+          }
 #endif
 #if (defined(USE_IR_REMOTE) && defined(USE_IR_RECEIVE)) || defined(USE_IR_REMOTE_FULL)
-            case P_IR_UNKNOW_THRESHOLD:
-              IrReceiveUpdateThreshold();
-              break;
-#endif
-            case P_DIMMER_MAX:
-              restart_flag = 2;  // Need a restart to update GUI
-              break;
+          if (P_IR_UNKNOW_THRESHOLD == pindex) {
+            IrReceiveUpdateThreshold();
           }
+#endif
         }
       }
     }
@@ -867,11 +867,25 @@ void CmndGpio(void)
     Response_P(PSTR("{"));
     bool jsflg = false;
     for (uint32_t i = 0; i < sizeof(Settings.my_gp); i++) {
-      if (ValidGPIO(i, cmodule.io[i])) {
+      if (ValidGPIO(i, cmodule.io[i]) || ((GPIO_USER == XdrvMailbox.payload) && !FlashPin(i))) {
         if (jsflg) { ResponseAppend_P(PSTR(",")); }
         jsflg = true;
+        uint8_t sensor_type = Settings.my_gp.io[i];
+        if (!ValidGPIO(i, cmodule.io[i])) {
+          sensor_type = cmodule.io[i];
+          if (GPIO_USER == sensor_type) {  // A user GPIO equals a not connected (=GPIO_NONE) GPIO here
+            sensor_type = GPIO_NONE;
+          }
+        }
+        uint8_t sensor_name_idx = sensor_type;
+        const char *sensor_names = kSensorNames;
+        if (sensor_type > GPIO_FIX_START) {
+          sensor_name_idx = sensor_type - GPIO_FIX_START -1;
+          sensor_names = kSensorNamesFixed;
+        }
         char stemp1[TOPSZ];
-        ResponseAppend_P(PSTR("\"" D_CMND_GPIO "%d\":{\"%d\":\"%s\"}"), i, Settings.my_gp.io[i], GetTextIndexed(stemp1, sizeof(stemp1), Settings.my_gp.io[i], kSensorNames));
+        ResponseAppend_P(PSTR("\"" D_CMND_GPIO "%d\":{\"%d\":\"%s\"}"),
+          i, sensor_type, GetTextIndexed(stemp1, sizeof(stemp1), sensor_name_idx, sensor_names));
       }
     }
     if (jsflg) {
