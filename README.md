@@ -53,9 +53,9 @@ All the libraries required for Sonoff-Tasmota are [here](https://github.com/asci
 
 **Esp8266 board libraries:**
 * v pre-2.6.x (stage) Works fine.
-* v2.5.2 Works fine. Sleep feature works fine but needs to be 0 for better KNX performance. 
-* v2.5.1 Works fine. Sleep feature works fine but needs to be 0 for better KNX performance. 
-* v2.5.0 Works fine. Sleep feature works fine but needs to be 0 for better KNX performance. 
+* v2.5.2 Works fine, but have some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. 
+* v2.5.1 Have some wifi issues. Do not use.
+* v2.5.0 Have some wifi issues. Do not use.
 * v2.4.2 Works fine. Command sleep don't work in this version. Set to 0 for better KNX performance. 
 * v2.4.1 Have some wifi issues. Do not use.
 * v2.4.0 Have some wifi issues. Do not use.
@@ -70,7 +70,7 @@ If you need any other feature enabled or disabled, or a different Arduino core, 
 
 ## Implemented Features ##
 
-The implemented features, up to now, in KNX for Tasmota are:
+The implemented features (up to now) in KNX for Tasmota are:
 
 General:
 * Buttons (just push)
