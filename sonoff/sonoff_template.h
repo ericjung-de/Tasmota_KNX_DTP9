@@ -543,7 +543,7 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_DHT22,          // DHT21, DHT22, AM2301, AM2302, AM2321
   GPIO_SI7021,         // iTead SI7021
 #endif
-#if defined(USE_DS18B20) || defined(USE_DS18x20)
+#ifdef USE_DS18x20
   GPIO_DSB,            // Single wire DS18B20 or DS18S20
 #endif
 
@@ -731,7 +731,7 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_HRE_CLOCK,
   GPIO_HRE_DATA,
 #endif
-#ifdef USE_A4988_Stepper
+#ifdef USE_A4988_STEPPER
   GPIO_A4988_DIR,     // A4988 direction pin
   GPIO_A4988_STP,     // A4988 step pin
   // folowing are not mandatory
@@ -775,7 +775,9 @@ const uint8_t kModuleNiceList[] PROGMEM = {
   SONOFF_IFAN02,       // Sonoff Fan
   SONOFF_IFAN03,
 #endif
+#ifdef USE_SONOFF_RF
   SONOFF_BRIDGE,       // Sonoff Bridge
+#endif
   SONOFF_SV,           // Sonoff Development Devices
   SONOFF_DEV,
   CH1,                 // Relay Devices
@@ -1361,7 +1363,11 @@ const mytmplt kModules[MAXMODULE] PROGMEM = {
                        // http://www.wykop.pl/ramka/3325399/diy-supla-do-puszki-instalacyjnej-podtynkowej-supla-org/
      0,                // GPIO00 Flash jumper
      GPIO_USER,        // GPIO01 Serial RXD and Optional sensor
+#ifdef USE_DS18x20
      GPIO_DSB,         // GPIO02 DS18B20 sensor
+#else
+     GPIO_USER,        // GPIO02 Optional sensor
+#endif
      GPIO_USER,        // GPIO03 Serial TXD and Optional sensor
      GPIO_KEY1,        // GPIO04 Button 1
      GPIO_REL1,        // GPIO05 Relay 1 (0 = Off, 1 = On)
