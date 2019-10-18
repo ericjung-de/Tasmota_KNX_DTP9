@@ -361,6 +361,38 @@ void SettingsSaveAll(void)
 }
 
 /*********************************************************************************************\
+ * Quick power cycle monitoring
+\*********************************************************************************************/
+
+void UpdateQuickPowerCycle(bool update)
+{
+  if (Settings.flag3.fast_power_cycle_disable) { return; }
+
+  uint32_t pc_register;
+  uint32_t pc_location = SETTINGS_LOCATION - CFG_ROTATES;
+
+  ESP.flashRead(pc_location * SPI_FLASH_SEC_SIZE, (uint32*)&pc_register, sizeof(pc_register));
+  if (update && ((pc_register & 0xFFFFFFF0) == 0xFFA55AB0)) {
+    uint32_t counter = ((pc_register & 0xF) << 1) & 0xF;
+    if (0 == counter) {  // 4 power cycles in a row
+      SettingsErase(2);  // Quickly reset all settings including QuickPowerCycle flag
+      EspRestart();      // And restart
+    } else {
+      pc_register = 0xFFA55AB0 | counter;
+      ESP.flashWrite(pc_location * SPI_FLASH_SEC_SIZE, (uint32*)&pc_register, sizeof(pc_register));
+      AddLog_P2(LOG_LEVEL_DEBUG, PSTR("QPC: Flag %02X"), counter);
+    }
+  }
+  else if (pc_register != 0xFFA55ABF) {
+    pc_register = 0xFFA55ABF;
+    // Assume flash is default all ones and setting a bit to zero does not need an erase
+    ESP.flashEraseSector(pc_location);
+    ESP.flashWrite(pc_location * SPI_FLASH_SEC_SIZE, (uint32*)&pc_register, sizeof(pc_register));
+    AddLog_P2(LOG_LEVEL_DEBUG, PSTR("QPC: Reset"));
+  }
+}
+
+/*********************************************************************************************\
  * Config Save - Save parameters to Flash ONLY if any parameter has changed
 \*********************************************************************************************/
 
@@ -486,6 +518,7 @@ void SettingsErase(uint8_t type)
   /*
     0 = Erase from program end until end of physical flash
     1 = Erase SDK parameter area at end of linker memory model (0x0FDxxx - 0x0FFFFF) solving possible wifi errors
+    2 = Erase Tasmota settings
   */
 
 #ifndef FIRMWARE_MINIMAL
@@ -496,6 +529,10 @@ void SettingsErase(uint8_t type)
   if (1 == type) {
     _sectorStart = SETTINGS_LOCATION +2;  // SDK parameter area above EEPROM area (0x0FDxxx - 0x0FFFFF)
     _sectorEnd = SETTINGS_LOCATION +5;
+  }
+  else if (2 == type) {
+    _sectorStart = SETTINGS_LOCATION - CFG_ROTATES;  // Tasmota parameter area (0x0F4xxx - 0x0FBFFF)
+    _sectorEnd = SETTINGS_LOCATION +1;
   }
 
   bool _serialoutput = (LOG_LEVEL_DEBUG_MORE <= seriallog_level);
@@ -814,7 +851,7 @@ void SettingsDefaultSet2(void)
     Settings.rgbwwTable[j] = 255;
   }
 
-  Settings.novasds_period = WORKING_PERIOD;
+  Settings.novasds_startingoffset = STARTING_OFFSET;
 
   SettingsDefaultWebColor();
 
@@ -1067,7 +1104,7 @@ void SettingsDelta(void)
       Settings.param[P_RGB_REMAP] = RGB_REMAP_RGBW;
     }
     if (Settings.version < 0x06050003) {
-      Settings.novasds_period = WORKING_PERIOD;
+      Settings.novasds_startingoffset = STARTING_OFFSET;
     }
     if (Settings.version < 0x06050006) {
       SettingsDefaultWebColor();
@@ -1102,11 +1139,11 @@ void SettingsDelta(void)
 
     if (Settings.version < 0x0606000A) {
       uint8_t tuyaindex = 0;
-      if (Settings.param[P_BACKLOG_DELAY] > 0) {         // ex SetOption34
+      if (Settings.param[P_BACKLOG_DELAY] > 0) {             // ex SetOption34
         Settings.tuya_fnid_map[tuyaindex].fnid = 21;         // TUYA_MCU_FUNC_DIMMER - Move Tuya Dimmer Id to Map
         Settings.tuya_fnid_map[tuyaindex].dpid = Settings.param[P_BACKLOG_DELAY];
         tuyaindex++;
-      } else if (Settings.flag3.ex_tuya_disable_dimmer == 1) {  // ex SetOption65
+      } else if (Settings.flag3.fast_power_cycle_disable == 1) {  // ex SetOption65
         Settings.tuya_fnid_map[tuyaindex].fnid = 11;         // TUYA_MCU_FUNC_REL1 - Create FnID for Switches
         Settings.tuya_fnid_map[tuyaindex].dpid = 1;
         tuyaindex++;
@@ -1159,6 +1196,22 @@ void SettingsDelta(void)
         Settings.dimmer_hw_min = 10;
         Settings.dimmer_hw_max = Settings.param[P_ex_DIMMER_MAX];
       }
+    }
+    if (Settings.version < 0x06060014) {
+      // Clear unused parameters for future use
+      Settings.flag3.ex_tuya_dimmer_range_255 = 0;
+      Settings.flag3.ex_tuya_dimmer_min_limit = 0;
+      Settings.param[P_ex_TUYA_RELAYS] = 0;
+      Settings.param[P_ex_DIMMER_MAX] = 0;
+      Settings.param[P_ex_TUYA_VOLTAGE_ID] = 0;
+      Settings.param[P_ex_TUYA_CURRENT_ID] = 0;
+      Settings.param[P_ex_TUYA_POWER_ID] = 0;
+      Settings.ex_baudrate = 0;
+      Settings.ex_sbaudrate = 0;
+
+      Settings.flag3.fast_power_cycle_disable = 0;
+      Settings.energy_power_delta = Settings.ex_energy_power_delta;
+      Settings.ex_energy_power_delta = 0;
     }
 
     Settings.version = VERSION;

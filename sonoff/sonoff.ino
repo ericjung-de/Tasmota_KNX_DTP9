@@ -778,6 +778,10 @@ void PerformEverySecond(void)
     ntp_synced_message = false;
   }
 
+  if (POWER_CYCLE_TIME == uptime) {
+    UpdateQuickPowerCycle(false);
+  }
+
   if (BOOT_LOOP_TIME == uptime) {
     RtcReboot.fast_reboot_count = 0;
     RtcRebootSave();
@@ -833,9 +837,6 @@ void PerformEverySecond(void)
       XdrvCall(FUNC_AFTER_TELEPERIOD);
     }
   }
-
-  XdrvCall(FUNC_EVERY_SECOND);
-  XsnsCall(FUNC_EVERY_SECOND);
 }
 
 /*********************************************************************************************\
@@ -933,8 +934,6 @@ void Every250mSeconds(void)
 
   switch (state_250mS) {
   case 0:                                                 // Every x.0 second
-    PerformEverySecond();
-
     if (ota_state_flag && BACKLOG_EMPTY) {
       ota_state_flag--;
       if (2 == ota_state_flag) {
@@ -1471,7 +1470,9 @@ void setup(void)
   global_state.data = 3;  // Init global state (wifi_down, mqtt_down) to solve possible network issues
 
   RtcRebootLoad();
-  if (!RtcRebootValid()) { RtcReboot.fast_reboot_count = 0; }
+  if (!RtcRebootValid()) {
+    RtcReboot.fast_reboot_count = 0;
+  }
   RtcReboot.fast_reboot_count++;
   RtcRebootSave();
 
@@ -1495,6 +1496,7 @@ void setup(void)
   GetFeatures();
 
   if (1 == RtcReboot.fast_reboot_count) {  // Allow setting override only when all is well
+    UpdateQuickPowerCycle(true);
     XdrvCall(FUNC_SETTINGS_OVERRIDE);
   }
 
@@ -1673,6 +1675,12 @@ void loop(void)
     Every250mSeconds();
     XdrvCall(FUNC_EVERY_250_MSECOND);
     XsnsCall(FUNC_EVERY_250_MSECOND);
+  }
+  if (TimeReached(state_second)) {
+    SetNextTimeInterval(state_second, 1000);
+    PerformEverySecond();
+    XdrvCall(FUNC_EVERY_SECOND);
+    XsnsCall(FUNC_EVERY_SECOND);
   }
 
   if (!serial_local) { SerialInput(); }
