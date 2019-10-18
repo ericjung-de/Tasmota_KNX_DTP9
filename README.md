@@ -52,16 +52,14 @@ All the libraries required for Sonoff-Tasmota are [here](https://github.com/asci
 * [ESP KNX IP Library](https://github.com/ascillato/Sonoff-Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
-* v pre-2.6.x (stage) Works fine.
-* v2.5.2 Works fine, but have some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. 
-* v2.5.1 Have some wifi issues. Do not use.
-* v2.5.0 Have some wifi issues. Do not use.
-* v2.4.2 Works fine. Command sleep don't work in this version. Set to 0 for better KNX performance. 
-* v2.4.1 Have some wifi issues. Do not use.
-* v2.4.0 Have some wifi issues. Do not use.
-* v2.3.0 Works fine but is slower than v2.4.2. Sleep feature works but needs to be 0 for better KNX performance.
-
-Recommended: v2.3.0 or v pre-2.6.x (stage) due to wifi stability in most wifi routers. More information in the [wiki](https://github.com/arendst/Sonoff-Tasmota/wiki/FAQ#what-is-this-arduino-core).
+* v pre-2.6.x (stage) Works fine. No known issues. **RECOMMENDED**
+* v2.5.2 Has some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. Do not use.
+* v2.5.1 Has some wifi and **security** issues. Do not use.
+* v2.5.0 Has some wifi and **security** issues. Do not use.
+* v2.4.2 Command sleep don't work in this version. It has **security** issues. Do not use.
+* v2.4.1 Have some wifi and **security** issues. Do not use.
+* v2.4.0 Have some wifi and **security** issues. Do not use.
+* v2.3.0 It is slower than v2.4.2. Sleep feature works but it has **security** issues. Do not use.
 
 ## Firmware ##
 
