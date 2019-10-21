@@ -207,7 +207,10 @@ enum UserSelectablePins {
   GPIO_SM2135_CLK,     // SM2135 Clk
   GPIO_SM2135_DAT,     // SM2135 Dat
   GPIO_DEEPSLEEP,      // Kill switch for deepsleep
-  GPIO_EXS_MCU_RESET,  // EXS MCU Reset
+  GPIO_EXS_ENABLE,     // EXS MCU Enable
+  GPIO_ARDUINO_TXD,    // Arduino Slave TX
+  GPIO_ARDUINO_RXD,    // Arduino Slave RX
+  GPIO_ARDUINO_RESET,  // Arduino Reset Pin
   GPIO_SENSOR_END };
 
 // Programmer selectable GPIO functionality
@@ -285,7 +288,8 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_DDS2382_TX "|" D_SENSOR_DDS2382_RX "|"
   D_SENSOR_DDSU666_TX "|" D_SENSOR_DDSU666_RX "|"
   D_SENSOR_SM2135_CLK "|" D_SENSOR_SM2135_DAT "|"
-  D_SENSOR_DEEPSLEEP "|" D_SENSOR_EXS_MCU_RESET "|"
+  D_SENSOR_DEEPSLEEP "|" D_SENSOR_EXS_ENABLE "|"
+  D_SENSOR_ARDUINO_TX "|" D_SENSOR_ARDUINO_RX "|" D_SENSOR_ARDUINO_RESET "|"
   ;
 
 const char kSensorNamesFixed[] PROGMEM =
@@ -576,7 +580,7 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_TUYA_RX,        // Tuya Serial interface
 #endif
 #ifdef USE_EXS_DIMMER
-  GPIO_EXS_MCU_RESET,  // EXS MCU Reset
+  GPIO_EXS_ENABLE,     // EXS MCU Enable
 #endif
 #endif  // USE_LIGHT
 
@@ -697,6 +701,11 @@ const uint8_t kGpioNiceList[] PROGMEM = {
 #ifdef USE_PN532_HSU
   GPIO_PN532_TXD,      // PN532 HSU Tx
   GPIO_PN532_RXD,      // PN532 HSU Rx
+#endif
+#ifdef USE_ARDUINO_SLAVE
+  GPIO_ARDUINO_TXD,    // Arduino Slave TX
+  GPIO_ARDUINO_RXD,    // Arduino Slave RX
+  GPIO_ARDUINO_RESET,  // Arduino Reset Pin
 #endif
 #ifdef USE_RDM6300
   GPIO_RDM6300_RX,
@@ -2131,12 +2140,12 @@ const mytmplt kModules[MAXMODULE] PROGMEM = {
      GPIO_REL4,        // GPIO15 WIFI_O3 Relay 4 (0 = Off, 1 = On) controlling the fan
      0, 0
   },
-  { "EXS Dimmer",      // EXS_DIMMER - EX-Stroe WiFi Dimmer v4, two channel (ESP8266 w/ separate MCU dimmer)
+  { "EXS Dimmer",      // EXS_DIMMER - EX-Store WiFi Dimmer v4, two channel (ESP8266 w/ separate MCU dimmer)
                        // https://ex-store.de/2-Kanal-RS232-WiFi-WLan-Dimmer-Modul-V4-fuer-Unterputzmontage-230V-3A
                        // https://ex-store.de/2-Kanal-RS232-WiFi-WLan-Dimmer-Modul-V4-fuer-Unterputzmontage-230V-3A-ESP8266-V12-Stift-und-Buchsenleisten
      0,
      GPIO_TXD,         // GPIO01 MCU serial control
-     0,
+     GPIO_LEDLNK,      // GPIO02 LED Link
      GPIO_RXD,         // GPIO03 MCU serial control
      GPIO_USER,        // GPIO04
      GPIO_USER,        // GPIO05
@@ -2147,7 +2156,7 @@ const mytmplt kModules[MAXMODULE] PROGMEM = {
      0,                // GPIO10 (SD_DATA3 Flash QIO or ESP8285)
                        // GPIO11 (SD_CMD   Flash)
      GPIO_USER,        // GPIO12
-     GPIO_EXS_MCU_RESET,  // GPIO13 EXS MCU Reset
+     GPIO_EXS_ENABLE,  // GPIO13 EXS MCU Enable
      GPIO_USER,        // GPIO14
      0,                // GPIO15
      0, 0
