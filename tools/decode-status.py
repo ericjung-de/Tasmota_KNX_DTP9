@@ -53,7 +53,7 @@ a_on_off = ["OFF","ON "]
 a_setoption = [[
     "Save power state and use after restart",
     "Restrict button actions to single, double and hold",
-    "Show value units in JSON messages",
+    "(not used) Show value units in JSON messages",
     "MQTT enabled",
     "Respond as Command topic instead of RESULT",
     "MQTT retain on Power",
@@ -173,7 +173,7 @@ a_features = [[
     "USE_INA226","USE_A4988_STEPPER","USE_DDS2382","USE_SM2135",
     "USE_SHUTTER","USE_PCF8574","USE_DDSU666","USE_DEEPSLEEP",
     "USE_SONOFF_SC","USE_SONOFF_RF","USE_SONOFF_L1","USE_EXS_DIMMER",
-    "","","","",
+    "USE_ARDUINO_SLAVE","","","",
     "","","","",
     "","","","",
     "","","",""

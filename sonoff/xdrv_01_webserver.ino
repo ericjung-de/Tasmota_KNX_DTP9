@@ -28,7 +28,7 @@
 #define XDRV_01                               1
 
 #ifndef WIFI_SOFT_AP_CHANNEL
-#define WIFI_SOFT_AP_CHANNEL                  1          // Soft Access Point Channel number between 1 and 11 as used by SmartConfig web GUI
+#define WIFI_SOFT_AP_CHANNEL                  1          // Soft Access Point Channel number between 1 and 11 as used by WifiManager web GUI
 #endif
 
 const uint16_t CHUNKED_BUFFER_SIZE = 400;                // Chunk buffer size (should be smaller than half mqtt_date size)
@@ -1625,7 +1625,7 @@ void HandleLoggingConfiguration(void)
       GetTextIndexed(stemp1, sizeof(stemp1), idx, kLoggingOptions),
       GetTextIndexed(stemp2, sizeof(stemp2), dlevel[idx], kLoggingLevels),
       idx);
-    for (uint32_t i = LOG_LEVEL_NONE; i < LOG_LEVEL_ALL; i++) {
+    for (uint32_t i = LOG_LEVEL_NONE; i <= LOG_LEVEL_DEBUG_MORE; i++) {
       WSContentSend_P(PSTR("<option%s value='%d'>%d %s</option>"),
         (i == llevel) ? " selected" : "", i, i,
         GetTextIndexed(stemp1, sizeof(stemp1), i, kLoggingLevels));
@@ -2043,9 +2043,9 @@ void HandleUploadDone(void)
     } else { // It was a normal firmware file, or we are ready to restart device
       restart_flag = 2;
     }
-#else    
+#else
     restart_flag = 2;  // Always restart to re-enable disabled features during update
-#endif    
+#endif
   }
   SettingsBufferFree();
   WSContentSend_P(PSTR("</div><br>"));
@@ -2055,7 +2055,7 @@ void HandleUploadDone(void)
   if (ArduinoSlave_GetFlagFlashing()) {
     ArduinoSlave_Flash();
   }
-#endif  
+#endif
 }
 
 void HandleUploadLoop(void)
@@ -2676,7 +2676,7 @@ void CmndWebPassword(void)
 
 void CmndWeblog(void)
 {
-  if ((XdrvMailbox.payload >= LOG_LEVEL_NONE) && (XdrvMailbox.payload <= LOG_LEVEL_ALL)) {
+  if ((XdrvMailbox.payload >= LOG_LEVEL_NONE) && (XdrvMailbox.payload <= LOG_LEVEL_DEBUG_MORE)) {
     Settings.weblog_level = XdrvMailbox.payload;
   }
   ResponseCmndNumber(Settings.weblog_level);
