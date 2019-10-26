@@ -9,7 +9,6 @@ echo ***************************************************************
 md %USERPROFILE%\Documents\GitHub\Sonoff-Tasmota_KNX\release
 cd %USERPROFILE%\Documents\GitHub\Sonoff-Tasmota_KNX\.pioenvs
 
-copy sonoff-minimal\firmware.bin %USERPROFILE%\Documents\GitHub\Sonoff-Tasmota_KNX\release\sonoff_minimal.bin
 copy sonoff-BG\firmware.bin %USERPROFILE%\Documents\GitHub\Sonoff-Tasmota_KNX\release\sonoff_KNX-BG.bin
 copy sonoff-BR\firmware.bin %USERPROFILE%\Documents\GitHub\Sonoff-Tasmota_KNX\release\sonoff_KNX-BR.bin
 copy sonoff-CN\firmware.bin %USERPROFILE%\Documents\GitHub\Sonoff-Tasmota_KNX\release\sonoff_KNX-CN.bin
