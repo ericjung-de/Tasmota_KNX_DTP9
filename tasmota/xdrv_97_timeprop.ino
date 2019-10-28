@@ -1,5 +1,5 @@
 /*
-  xdrv_97_timeprop.ino - Time Proportional Controller Support for Sonoff-Tasmota
+  xdrv_97_timeprop.ino - Time Proportional Controller Support for Tasmota
 
   Copyright (C) 2018  Colin Law, Thomas Herrmann and Adrian Scillato
 
