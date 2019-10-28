@@ -49,21 +49,6 @@
 #define RTC_YEAR 0x06
 #define RTC_CONTROL 0x0E
 #define RTC_STATUS 0x0F
-
-// For future use
-#define PCF8523_ADDRESS       0x68
-#define PCF8523_CLKOUTCONTROL 0x0F
-#define PCF8523_CONTROL_3     0x02
-
-#define DS1307_ADDRESS  0x68
-#define DS1307_CONTROL  0x07
-#define DS1307_NVRAM    0x08
-
-#define DS3231_ADDRESS  0x68
-#define DS3231_CONTROL  0x0E
-#define DS3231_STATUSREG 0x0F
-// end for future use
-
 //Control register bits
 #define OSF 7
 #define EOSC 7

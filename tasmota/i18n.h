@@ -1,5 +1,5 @@
 /*
-  i18n.h - internationalization for Sonoff-Tasmota
+  i18n.h - internationalization for Tasmota
 
   Copyright (C) 2019  Theo Arends
 
@@ -452,7 +452,8 @@
 // Commands xdrv_16_tuyadimmer.ino
 
 #define D_CMND_TUYA_MCU "TuyaMCU"
-#define D_JSON_TUYA_MCU_RECEIVED "TuyaMcuReceived"
+#define D_CMND_TUYA_MCU_SEND_STATE "TuyaSend"
+#define D_JSON_TUYA_MCU_RECEIVED "TuyaReceived"
 
 // Commands xdrv_23_zigbee.ino
 #define D_CMND_ZIGBEE_PERMITJOIN "ZigbeePermitJoin"

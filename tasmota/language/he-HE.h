@@ -1,5 +1,5 @@
 /*
-  he-HE.h - localization for Hebrew - Israel for Sonoff-Tasmota
+  he-HE.h - localization for Hebrew - Israel for Tasmota
 
   Copyright (C) 2019  Yuval Mejahez
 
@@ -627,9 +627,9 @@
 #define D_SENSOR_SM2135_DAT    "SM2135 Dat"
 #define D_SENSOR_DEEPSLEEP     "DeepSleep"
 #define D_SENSOR_EXS_ENABLE    "EXS Enable"
-#define D_SENSOR_ARDUINO_TX    "Arduino TX"
-#define D_SENSOR_ARDUINO_RX    "Arduino RX"
-#define D_SENSOR_ARDUINO_RESET "Arduino RST"
+#define D_SENSOR_SLAVE_TX    "Slave TX"
+#define D_SENSOR_SLAVE_RX    "Slave RX"
+#define D_SENSOR_SLAVE_RESET "Slave RST"
 
 // Units
 #define D_UNIT_AMPERE "A"
