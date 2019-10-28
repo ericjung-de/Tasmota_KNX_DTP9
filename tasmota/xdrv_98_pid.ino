@@ -1,5 +1,5 @@
 /*
-  xdrv_98_pid.ino - PID Controller Algorithm Support for Sonoff-Tasmota
+  xdrv_98_pid.ino - PID Controller Algorithm Support for Tasmota
 
   Copyright (C) 2018  Colin Law, Thomas Herrmann and Adrian Scillato
 
