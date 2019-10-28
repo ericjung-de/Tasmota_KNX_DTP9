@@ -50,7 +50,11 @@
 #define PROJECT                "tasmota"         // PROJECT is used as the default topic delimiter
 
 // If not selected the default will be SONOFF_BASIC
-//#define MODULE                 SONOFF_BASIC      // [Module] Select default model from tasmota_template.h
+//#define MODULE                 SONOFF_BASIC      // [Module] Select default model from sonoff_template.h
+//#define MODULE                 WEMOS
+//#define MODULE                 SONOFF_DUAL_R2
+//#define MODULE                 SONOFF_POW_R2
+//#define MODULE                 SONOFF_BRIDGE
 
 #define SAVE_DATA              1                 // [SaveData] Save changed parameters to Flash (0 = disable, 1 - 3600 seconds)
 #define SAVE_STATE             1                 // [SetOption0] Save changed power state to Flash (0 = disable, 1 = enable)
@@ -297,7 +301,7 @@
   #define USE_EMULATION_WEMO                     // Enable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
 
 // -- mDNS ----------------------------------------
-#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code or +23.5k code with core 2_5_x, +0.3k mem)
+//#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code or +23.5k code with core 2_5_x, +0.3k mem)
   #define WEBSERVER_ADVERTISE                    // Provide access to webserver by name <Hostname>.local/
   #define MQTT_HOST_DISCOVERY                    // Find MQTT host server (overrides MQTT_HOST if found)
 
@@ -322,7 +326,7 @@
 #define USE_SONOFF_RF                            // Add support for Sonoff Rf Bridge (+3k2 code)
   #define USE_RF_FLASH                           // Add support for flashing the EFM8BB1 chip on the Sonoff RF Bridge. C2CK must be connected to GPIO4, C2D to GPIO5 on the PCB (+2k7 code)
 #define USE_SONOFF_SC                            // Add support for Sonoff Sc (+1k1 code)
-#define USE_TUYA_MCU                             // Add support for Tuya Serial MCU
+//#define USE_TUYA_MCU                             // Add support for Tuya Serial MCU
   #define TUYA_DIMMER_ID       0                 // Default dimmer Id
 #define USE_ARMTRONIX_DIMMERS                    // Add support for Armtronix Dimmers (+1k4 code)
 #define USE_PS_16_DZ                             // Add support for PS-16-DZ Dimmer (+2k code)
@@ -494,7 +498,7 @@
 // You can reduce this size by disabling some protocols in "lib/IRremoteESP8266.x.x.x/src/IRremoteESP8266.h"
 
 // -- IR Remote features - subset of IR protocols --------------------------
-#define USE_IR_REMOTE                            // Send IR remote commands using library IRremoteESP8266 and ArduinoJson (+4k3 code, 0k3 mem, 48 iram)
+//#define USE_IR_REMOTE                            // Send IR remote commands using library IRremoteESP8266 and ArduinoJson (+4k3 code, 0k3 mem, 48 iram)
 //  #define USE_IR_SEND_AIWA                       // Support IRsend Aiwa protocol
   #define USE_IR_SEND_DISH                       // Support IRsend Dish protocol
   #define USE_IR_SEND_JVC                        // Support IRsend JVC protocol
@@ -518,7 +522,7 @@
     #define USE_IR_HVAC_FUJITSU                  // Support IRhvac Fujitsu protocol
 //    #define USE_IR_HVAC_MIDEA                    // Support IRhvac Midea/Komeco protocol
 
-  #define USE_IR_RECEIVE                         // Support for IR receiver (+7k2 code, 264 iram)
+//  #define USE_IR_RECEIVE                         // Support for IR receiver (+7k2 code, 264 iram)
     #define IR_RCV_BUFFER_SIZE      100          // Max number of packets allowed in capture buffer (default 100 (*2 bytes ram))
     #define IR_RCV_TIMEOUT          15           // Number of milli-Seconds of no-more-data before we consider a message ended (default 15)
     #define IR_RCV_MIN_UNKNOWN_SIZE 6            // Set the smallest sized "UNKNOWN" message packets we actually care about (default 6, max 255)
@@ -558,6 +562,129 @@
 // -- End of general directives -------------------
 
 /*********************************************************************************************\
+ * TIME PROPORTIONAL CONTROLLER  -  See xdrv_13_timeprop.ino file for more Information
+\*********************************************************************************************/
+
+//#define USE_TIMEPROP   // Include the Time Proportional Controller Feature (+1.2k)
+
+  // -- Configuration for single output (Values at boot time - can be changed in runtime but are not saved in EEPROM)
+  #define TIMEPROP_NUM_OUTPUTS          1       // how many outputs to control (with separate alogorithm for each)
+  #define TIMEPROP_CYCLETIMES           60      // cycle time seconds
+  #define TIMEPROP_DEADTIMES            0       // actuator action time seconds
+  #define TIMEPROP_OPINVERTS            false   // whether to invert the output
+  #define TIMEPROP_FALLBACK_POWERS      0       // falls back to this if too long betwen power updates
+  #define TIMEPROP_MAX_UPDATE_INTERVALS 120     // max no secs that are allowed between power updates (0 to disable)
+  #define TIMEPROP_RELAYS               1       // which relay to control 1:8
+
+  /**
+   * For configuring 2 relays set:
+   *   #define TIMEPROP_NUM_OUTPUTS          2
+   *   #define TIMEPROP_CYCLETIMES           60,     10
+   *   Etc.
+   * For configuring 3 relays set:
+   *   #define TIMEPROP_NUM_OUTPUTS          3
+   *   #define TIMEPROP_CYCLETIMES           60,     10,    30
+   *   Etc.
+   * Up to 8 relays
+  **/
+
+/*********************************************************************************************\
+ * PID CONTROLLER  -  See xdrv_14_pid.ino file for more Information
+\*********************************************************************************************/
+
+//#define USE_PID         // Include the PID Controller Feature (+4.3k)
+
+  // -- Configuration for boot time - can be changed in runtime but are not saved in EEPROM
+  #define PID_SETPOINT                  19.5    // Setpoint value. This is the process value that the process is
+                                                // aiming for.
+                                                // May be adjusted via MQTT using cmnd pid_sp
+
+  #define PID_PROPBAND                  5       // Proportional band in process units (eg degrees). This controls
+                                                // the gain of the loop and is the range of process value over which
+                                                // the power output will go from 0 to full power. The units are that
+                                                // of the process and setpoint, so for example in a heating
+                                                // application it might be set to 1.5 degrees.
+                                                // May be adjusted via MQTT using cmnd pid_pb
+
+  #define PID_INTEGRAL_TIME             1800    // Integral time seconds. This is a setting for the integral time,
+                                                // in seconds. It represents the time constant of the integration
+                                                // effect. The larger the value the slower the integral effect will be.
+                                                // Obviously the slower the process is the larger this should be. For
+                                                // example for a domestic room heated by convection radiators a setting
+                                                // of one hour might be appropriate (in seconds). To disable the
+                                                // integral effect set this to a large number.
+                                                // May be adjusted via MQTT using cmnd pid_ti
+
+  #define PID_DERIVATIVE_TIME           15      // Derivative time seconds. This is a setting for the derivative time,
+                                                // in seconds. It represents the time constant of the derivative effect.
+                                                // The larger the value the greater will be the derivative effect.
+                                                // Typically this will be set to somewhat less than 25% of the integral
+                                                // setting, once the integral has been adjusted to the optimum value. To
+                                                // disable the derivative effect set this to 0. When initially tuning a
+                                                // loop it is often sensible to start with derivative zero and wind it in
+                                                // once other parameters have been setup.
+                                                // May be adjusted via MQTT using cmnd pid_td
+
+  #define PID_INITIAL_INT               0.5     // Initial integral value (0:1). This is an initial value which is used
+                                                // to preset the integrated error value when the flow is deployed in
+                                                // order to assist in homing in on the setpoint the first time. It should
+                                                // be set to an estimate of what the power requirement might be in order
+                                                // to maintain the process at the setpoint. For example for a domestic
+                                                // room heating application it might be set to 0.2 indicating that 20% of
+                                                // the available power might be required to maintain the setpoint. The
+                                                // value is of no consequence apart from device restart.
+
+  #define PID_MAX_INTERVAL              300     // This is the maximum time in seconds that is expected between samples.
+                                                // It is provided to cope with unusual situations such as a faulty sensor
+                                                // that might prevent the node from being supplied with a process value.
+                                                // If no new process value is received for this time then the power is set
+                                                // to the value defined for PID_MANUAL_POWER.
+                                                // May be adjusted via MQTT using cmnd pid_max_interval
+
+  #define PID_DERIV_SMOOTH_FACTOR       3       // In situations where the process sensor has limited resolution (such as
+                                                // the DS18B20), the use of deriviative can be problematic as when the
+                                                // process is changing only slowly the steps in the value cause spikes in
+                                                // the derivative. To reduce the effect of these this parameter can be
+                                                // set to apply a filter to the derivative term. I have found that with
+                                                // the DS18B20 that a value of 3 here can be beneficial, providing
+                                                // effectively a low pass filter on the derivative at 1/3 of the derivative
+                                                // time. This feature may also be useful if the process value is particularly
+                                                // noisy. The smaller the value the greater the filtering effect but the
+                                                // more it will reduce the effectiveness of the derivative. A value of zero
+                                                // disables this feature.
+                                                // May be adjusted via MQTT using cmnd pid_d_smooth
+
+  #define PID_AUTO                      1       // Auto mode 1 or 0 (for manual). This can be used to enable or disable
+                                                // the control (1=enable, auto mode, 0=disabled, manual mode). When in
+                                                // manual mode the output is set the value definded for PID_MANUAL_POWER
+                                                // May be adjusted via MQTT using cmnd pid_auto
+
+  #define PID_MANUAL_POWER              0       // Power output when in manual mode or fallback mode if too long elapses
+                                                // between process values
+                                                // May be adjusted via MQTT using cmnd pid_manual_power
+
+  #define PID_UPDATE_SECS               0       // How often to run the pid algorithm (integer secs) or 0 to run the algorithm
+                                                // each time a new pv value is received, for most applictions specify 0.
+                                                // Otherwise set this to a time
+                                                // that is short compared to the response of the process.  For example,
+                                                // something like 15 seconds may well be appropriate for a domestic room
+                                                // heating application.
+                                                // May be adjusted via MQTT using cmnd pid_update_secs
+
+  #define PID_USE_TIMPROP               1       // To use an internal relay for a time proportioned output to drive the
+                                                // process, set this to indicate which timeprop output to use. For a device
+                                                // with just one relay then this will be 1.
+                                                // It is then also necessary to define USE_TIMEPROP and set the output up as
+                                                // explained in xdrv_91_timeprop.ino
+                                                // To disable this feature leave this undefined (undefined, not defined to nothing).
+
+  #define PID_USE_LOCAL_SENSOR                  // if defined then the local sensor will be used for pv. Leave undefined if
+                                                // this is not required.  The rate that the sensor is read is defined by TELE_PERIOD
+                                                // If not using the sensor then you can supply process values via MQTT using
+                                                // cmnd pid_pv
+
+
+/*********************************************************************************************\
  * Debug features
 \*********************************************************************************************/
 
@@ -574,7 +701,7 @@
 
 //#define FIRMWARE_BASIC                           // Create tasmota-basic with no sensors
 //#define FIRMWARE_SENSORS                         // Create tasmota-sensors with useful sensors enabled
-//#define FIRMWARE_KNX_NO_EMULATION                // Create tasmota-knx with KNX but without Emulation
+#define FIRMWARE_KNX_NO_EMULATION                // Create tasmota-knx with KNX but without Emulation
 //#define FIRMWARE_DISPLAYS                        // Create tasmota-display with display drivers enabled
 //#define FIRMWARE_IR                              // Create tasmota-ir with IR full protocols activated, and many sensors disabled
 //#define FIRMWARE_IR_CUSTOM                       // Create tasmota customizable with special marker to add all IR protocols
