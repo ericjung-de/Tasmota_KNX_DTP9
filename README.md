@@ -1,15 +1,15 @@
-## Sonoff-Tasmota KNX
+## Tasmota KNX
 
 <img src="/tools/logo/TASMOTA_FullLogo_Vector.svg" alt="Logo" align="right" height="90"/>
 
-[Sonoff-Tasmota_KNX](https://github.com/ascillato/Sonoff-Tasmota_KNX) was a modification for [Sonoff-Tasmota](https://github.com/arendst/Sonoff-Tasmota) to add a basic functionality of the [KNX IP Protocol](https://www.knx.org/knx-en/index.php) (Multicast).
-**Now it is integrated in [Sonoff-Tasmota](https://github.com/arendst/Sonoff-Tasmota)!**
+[Tasmota_KNX](https://github.com/ascillato/Tasmota_KNX) was a modification for [Tasmota](https://github.com/arendst/Tasmota) to add a basic functionality of the [KNX IP Protocol](https://www.knx.org/knx-en/index.php) (Multicast).
+**Now it is integrated in [Tasmota](https://github.com/arendst/Tasmota)!**
 
-[![GitHub version](https://img.shields.io/github/release/ascillato/Sonoff-Tasmota_KNX.svg)](https://github.com/ascillato/Sonoff-Tasmota_KNX/releases/latest) [![GitHub download](https://img.shields.io/github/downloads/ascillato/Sonoff-Tasmota_KNX/total.svg)](https://github.com/ascillato/Sonoff-Tasmota_KNX/releases/latest) [![License](https://img.shields.io/github/license/ascillato/Sonoff-Tasmota_KNX.svg)](https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/LICENSE.txt) [![donate](https://img.shields.io/badge/donate-PayPal-yellow.svg)](https://www.paypal.me/ascillato)
+[![GitHub version](https://img.shields.io/github/release/ascillato/Tasmota_KNX.svg)](https://github.com/ascillato/Tasmota_KNX/releases/latest) [![GitHub download](https://img.shields.io/github/downloads/ascillato/Tasmota_KNX/total.svg)](https://github.com/ascillato/Tasmota_KNX/releases/latest) [![License](https://img.shields.io/github/license/ascillato/Tasmota_KNX.svg)](https://github.com/ascillato/Tasmota_KNX/blob/development/LICENSE.txt) [![donate](https://img.shields.io/badge/donate-PayPal-yellow.svg)](https://www.paypal.me/ascillato)
 
-This repository is for developing new KNX features for Sonoff-Tasmota.
+This repository is for developing new KNX features for Tasmota.
 
-If you like **Sonoff Tasmota KNX**, give it a star or fork it and contribute! [![GitHub stars](https://img.shields.io/github/stars/ascillato/Sonoff-Tasmota_KNX.svg?style=social&label=Star)](https://github.com/ascillato/Sonoff-Tasmota_KNX/stargazers)
+If you like **Tasmota KNX**, give it a star or fork it and contribute! [![GitHub stars](https://img.shields.io/github/stars/ascillato/Tasmota_KNX.svg?style=social&label=Star)](https://github.com/ascillato/Tasmota_KNX/stargazers)
 
 Any help or comment is very welcome.
 
@@ -22,9 +22,9 @@ Any help or comment is very welcome.
 * [Usage Examples](#usage-examples)
 * [Console Commands](#console-commands)
 * [Development Road Map](#development-road-map)
-* [Modifications to Sonoff-Tasmota](#modifications-to-sonoff-tasmota)
+* [Modifications to Tasmota](#modifications-to-tasmota)
 * [Contributors](#contributors)
-* [Sonoff-Tasmota](#sonoff-tasmota)
+* [Tasmota](#tasmota)
 
 ## KNX Explanation ##
 
@@ -43,13 +43,13 @@ Several home automation systems have KNX support. For example, [Home Assistant](
 
 If using the Home Assistant distribution called **Hassio**, everything for KNX is already included by default.
 
-If you use the ETS (KNX Configurator Software) you can add any Sonoff Tasmota KNX as a dummy device.
+If you use the ETS (KNX Configurator Software) you can add any Tasmota KNX as a dummy device.
 
 ## Requirements ##
 
-All the libraries required for Sonoff-Tasmota are [here](https://github.com/ascillato/Sonoff-Tasmota_KNX/tree/development/lib) along with the extra required for the KNX Driver:
+All the libraries required for Tasmota are [here](https://github.com/ascillato/Tasmota_KNX/tree/development/lib) along with the extra required for the KNX Driver:
 
-* [ESP KNX IP Library](https://github.com/ascillato/Sonoff-Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
+* [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
 * v pre-2.6.x (stage) Works fine. No known issues. **RECOMMENDED**
@@ -63,8 +63,8 @@ All the libraries required for Sonoff-Tasmota are [here](https://github.com/asci
 
 ## Firmware ##
 
-In the [releases](https://github.com/ascillato/Sonoff-Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266 devices.
-If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://github.com/arendst/Sonoff-Tasmota/wiki).
+In the [releases](https://github.com/ascillato/Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266 devices.
+If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://github.com/arendst/Tasmota/wiki).
 
 ## Implemented Features ##
 
@@ -94,37 +94,37 @@ Features that can be used with Tasmota's rules:
 
 There are multiple possible configurations. Here are explained just a few as example. The options for selecting relays, buttons, sensors, etc. are only available if were configured on _Configure Module Menu_.
 
-To configure KNX, enter on the Configuration Menu of Sonoff-Tasmota and select Configure KNX.
+To configure KNX, enter on the Configuration Menu of Tasmota and select Configure KNX.
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/Config_Menu.jpg" />
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/KNX_menu.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/Config_Menu.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/KNX_menu.jpg" />
 
 _Note on KNX communication enhancement option: As Wifi Multicast communication is not reliable in some wifi router due to IGMP problems or Snooping, an enhancement was implemented. This option increase the reliability by reducing the chances of losing telegrams, sending the same telegram 3 times. In practice it works really good and it is enough for normal home use. When this option is on, Tasmota will ignore toggle commands by KNX if those are sent more than 1 toggle per second. Just 1 toggle per second is working fine._
 
-**1) Setting Several Sonoff to be controlled as one by a Home Automation System:**
+**1) Setting Several Tasmotas to be controlled as one by a Home Automation System:**
 
 We can set one of the group address to be the same in all the devices so as to turn them on or off at the same time.
 In this case, so as to inform the status of all the relays to the Automation System, just one of the devices have to be configured as the responder. If you use the same Group Address for sending and receiving, you have to take into account not to make loops.
 
 DEVICE 1
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/1.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/1.jpg" />
 
 DEVICE 2
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/2.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/2.jpg" />
 
-**2) Setting 2 Sonoff to be linked as stair lights:**
+**2) Setting 2 Tasmotas to be linked as stair lights:**
 
 We can set one device to send the status of its output and another to read that and follow. And the second device can send the status of its button and the first device will toggle. With this configuration we can avoid to make a loop.
 
 DEVICE 1
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/3.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/3.jpg" />
 
 DEVICE 2
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/4.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/4.jpg" />
 
 **3) Setting a button as initiator of a scene:**
 
@@ -132,17 +132,17 @@ Just setting one device to send the push of a button, and the rest just use that
 
 DEVICE 1
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/5.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/5.jpg" />
 
 DEVICE 2
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/6.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/6.jpg" />
 
 **4) Setting a Temperature sensor:**
 
-We can configure to send the value of temperature or humidity every teleperiod. This teleperiod can be configured. See Sonoff Tasmota [wiki](https://github.com/arendst/Sonoff-Tasmota/wiki/Commands). It is recommended also to set the reply temperature address.
+We can configure to send the value of temperature or humidity every teleperiod. This teleperiod can be configured. See Tasmota [wiki](https://github.com/arendst/Tasmota/wiki/Commands). It is recommended also to set the reply temperature address.
 
-<img src="https://github.com/ascillato/Sonoff-Tasmota_KNX/blob/development/.github/7.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/7.jpg" />
 
 **5) Using rules:**
 
@@ -226,7 +226,7 @@ OPTION Value | Device Parameter
 
 ## Development Road Map ##
 
-**For Sonoff-Tasmota_KNX:**
+**For Tasmota_KNX:**
 - [x] Add Web Menu
 - [x] Add Feature to Receive telegrams and modify Relay Status
 - [x] Add Feature to Receive telegrams from multiple Group Addresses to modify just one relay status (useful for scenes)
@@ -255,15 +255,15 @@ OPTION Value | Device Parameter
 - [ ] Add option to support ETS Programming
 - [ ] Optimize code to reduce Flash and RAM
 
-## Modifications to Sonoff-Tasmota ##
+## Modifications to Tasmota ##
 
-* Added the file _/sonoff/xdrv_11_KNX.ino_
-* Added the entries `#define USE_KNX` and `#define USE_KNX_WEB_MENU` on _/sonoff/my_user_config.h_
-* Added entries to the file _/sonoff/xdrv_01_webserver.ino_
-* Added entries to the file _/sonoff/sonoff.ino_
-* Added entries to the file _/sonoff/sonoff.h_
-* Added entries to the file _/sonoff/settings.h_
-* Added entries to the file _/sonoff/support.ino_
+* Added the file _/tasmota/xdrv_11_KNX.ino_
+* Added the entries `#define USE_KNX` and `#define USE_KNX_WEB_MENU` on _/tasmota/my_user_config.h_
+* Added entries to the file _/tasmota/xdrv_01_webserver.ino_
+* Added entries to the file _/tasmota/tasmota.ino_
+* Added entries to the file _/tasmota/tasmota.h_
+* Added entries to the file _/tasmota/settings.h_
+* Added entries to the file _/tasmota/support.ino_
 * Added entries to sensor files
 * Added entries to language files
 
