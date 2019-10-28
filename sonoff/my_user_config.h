@@ -1,5 +1,5 @@
 /*
-  my_user_config.h - user specific configuration for Sonoff-Tasmota
+  my_user_config.h - user specific configuration for Tasmota
 
   Copyright (C) 2019  Theo Arends
 
@@ -47,14 +47,10 @@
 #define CFG_HOLDER             4617              // [Reset 1] Change this value (max 32000) to load SECTION1 configuration parameters to flash
 
 // -- Project -------------------------------------
-#define PROJECT                "sonoff"          // PROJECT is used as the default topic delimiter
+#define PROJECT                "tasmota"         // PROJECT is used as the default topic delimiter
 
 // If not selected the default will be SONOFF_BASIC
-//#define MODULE                 SONOFF_BASIC      // [Module] Select default model from sonoff_template.h
-//#define MODULE                 WEMOS
-//#define MODULE                 SONOFF_DUAL_R2
-//#define MODULE                 SONOFF_POW_R2
-//#define MODULE                 SONOFF_BRIDGE
+//#define MODULE                 SONOFF_BASIC      // [Module] Select default model from tasmota_template.h
 
 #define SAVE_DATA              1                 // [SaveData] Save changed parameters to Flash (0 = disable, 1 - 3600 seconds)
 #define SAVE_STATE             1                 // [SetOption0] Save changed power state to Flash (0 = disable, 1 = enable)
@@ -83,7 +79,7 @@
 #define MQTT_LOG_LEVEL         LOG_LEVEL_NONE    // [MqttLog] (LOG_LEVEL_NONE, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG_MORE)
 
 // -- Ota -----------------------------------------
-#define OTA_URL                "http://thehackbox.org/tasmota/release/sonoff.bin"  // [OtaUrl]
+#define OTA_URL                "http://thehackbox.org/tasmota/release/tasmota.bin"  // [OtaUrl]
 
 // -- MQTT ----------------------------------------
 #define MQTT_USE               1                 // [SetOption3] Select default MQTT use (0 = Off, 1 = On)
@@ -110,13 +106,13 @@
 #define MQTT_FULLTOPIC         "%prefix%/%topic%/" // [FullTopic] Subscribe and Publish full topic name - Legacy topic
 
 // %prefix% token options
-#define SUB_PREFIX             "cmnd"            // [Prefix1] Sonoff devices subscribe to %prefix%/%topic% being SUB_PREFIX/MQTT_TOPIC and SUB_PREFIX/MQTT_GRPTOPIC
-#define PUB_PREFIX             "stat"            // [Prefix2] Sonoff devices publish to %prefix%/%topic% being PUB_PREFIX/MQTT_TOPIC
-#define PUB_PREFIX2            "tele"            // [Prefix3] Sonoff devices publish telemetry data to %prefix%/%topic% being PUB_PREFIX2/MQTT_TOPIC/UPTIME, POWER and TIME
+#define SUB_PREFIX             "cmnd"            // [Prefix1] Tasmota devices subscribe to %prefix%/%topic% being SUB_PREFIX/MQTT_TOPIC and SUB_PREFIX/MQTT_GRPTOPIC
+#define PUB_PREFIX             "stat"            // [Prefix2] Tasmota devices publish to %prefix%/%topic% being PUB_PREFIX/MQTT_TOPIC
+#define PUB_PREFIX2            "tele"            // [Prefix3] Tasmota devices publish telemetry data to %prefix%/%topic% being PUB_PREFIX2/MQTT_TOPIC/UPTIME, POWER and TIME
                                                  //   May be named the same as PUB_PREFIX
 // %topic% token options (also ButtonTopic and SwitchTopic)
 #define MQTT_TOPIC             PROJECT           // [Topic] (unique) MQTT device topic, set to 'PROJECT "_%06X"' for unique topic including device MAC address
-#define MQTT_GRPTOPIC          "sonoffs"         // [GroupTopic] MQTT Group topic
+#define MQTT_GRPTOPIC          "tasmotas"        // [GroupTopic] MQTT Group topic
 #define MQTT_BUTTON_TOPIC      "0"               // [ButtonTopic] MQTT button topic, "0" = same as MQTT_TOPIC, set to 'PROJECT "_BTN_%06X"' for unique topic including device MAC address
 #define MQTT_SWITCH_TOPIC      "0"               // [SwitchTopic] MQTT button topic, "0" = same as MQTT_TOPIC, set to 'PROJECT "_SW_%06X"' for unique topic including device MAC address
 #define MQTT_CLIENT_ID         "DVES_%06X"       // [MqttClient] Also fall back topic using Chip Id = last 6 characters of MAC address
@@ -134,13 +130,14 @@
 // -- HTTP ----------------------------------------
 #define WEB_SERVER             2                 // [WebServer] Web server (0 = Off, 1 = Start as User, 2 = Start as Admin)
 #define WEB_PASSWORD           ""                // [WebPassword] Web server Admin mode Password for WEB_USERNAME (empty string = Disable)
-#define FRIENDLY_NAME          "Sonoff"          // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
+#define FRIENDLY_NAME          "Tasmota"         // [FriendlyName] Friendlyname up to 32 characters used by webpages and Alexa
 #define EMULATION              EMUL_NONE         // [Emulation] Select Belkin WeMo (single relay/light) or Hue Bridge emulation (multi relay/light) (EMUL_NONE, EMUL_WEMO or EMUL_HUE)
 
+// -- HTTP GUI Colors -----------------------------
 // HTML hex color codes. Only 3 and 6 digit hex string values are supported!! See https://www.w3schools.com/colors/colors_hex.asp
-
-// Black text on white/greyish background (default)
-// /*
+// Light theme
+// webcolor {"webcolor":["#000","#fff","#f2f2f2","#000","#fff","#000","#fff"]}
+/*
 #define COLOR_TEXT                  "#000"       // [WebColor1] Global text color - Black
 #define COLOR_BACKGROUND            "#fff"       // [WebColor2] Global background color - White
 #define COLOR_FORM                  "#f2f2f2"    // [WebColor3] Form background color - Greyish
@@ -148,19 +145,18 @@
 #define COLOR_INPUT                 "#fff"       // [WebColor5] Input background color - White
 #define COLOR_CONSOLE_TEXT          "#000"       // [WebColor6] Console text color - Black
 #define COLOR_CONSOLE               "#fff"       // [WebColor7] Console background color - White
-// */
-
-// White text on black/greyish background (alternative)
-/*
-#define COLOR_TEXT                  "#fff"       // [WebColor1] Global text color - White
-#define COLOR_BACKGROUND            "#000"       // [WebColor2] Global background color - Black
+*/
+// Dark theme
+// webcolor {"webcolor":["#eee","#181818","#4f4f4f","#000","#ddd","#6a9955","#1e1e1e"]}
+#define COLOR_TEXT                  "#eee"       // [WebColor1] Global text color - Whiteish
+#define COLOR_BACKGROUND            "#181818"    // [WebColor2] Global background color - Blackish
 #define COLOR_FORM                  "#4f4f4f"    // [WebColor3] Form background color - Greyish
 #define COLOR_INPUT_TEXT            "#000"       // [WebColor4] Input text color - Black
-#define COLOR_INPUT                 "#ddd"       // [WebColor5] Input background color - Greyish
-#define COLOR_CONSOLE_TEXT          "#0f0"       // [WebColor6] Console text color - Green
-#define COLOR_CONSOLE               "#111"       // [WebColor7] Console background color - Blackish
-*/
+#define COLOR_INPUT                 "#ddd"       // [WebColor5] Input background color - Darker white
+#define COLOR_CONSOLE_TEXT          "#6a9955"    // [WebColor6] Console text color - Greenish
+#define COLOR_CONSOLE               "#1e1e1e"    // [WebColor7] Console background color - Blackish
 
+// Other colors
 #define COLOR_TEXT_WARNING          "#f00"       // [WebColor8] Warning text color - Red
 #define COLOR_TEXT_SUCCESS          "#008000"    // [WebColor9] Success text color - Green
 #define COLOR_BUTTON_TEXT           "#fff"       // [WebColor10] Button text color - White
@@ -284,8 +280,8 @@
 //  #define USE_MQTT_TLS_CA_CERT                   // Force full CA validation instead of fingerprints, slower, but simpler to use (+2.2k code, +1.9k mem during connection handshake)
 //  #define USE_MQTT_TLS_FORCE_EC_CIPHER           // Force Elliptic Curve cipher (higher security) required by some servers (automatically enabled with USE_MQTT_AWS_IOT) (+11.4k code, +0.4k mem)
 //  #define USE_MQTT_AWS_IOT                       // Enable MQTT for AWS IoT - requires a private key (+11.9k code, +0.4k mem)
-                                                 //   Note: you need to generate a private key + certificate per device and update 'sonoff/sonoff_aws_iot.cpp'
-                                                 //   Full documentation here: https://github.com/arendst/Sonoff-Tasmota/wiki/AWS-IoT
+                                                 //   Note: you need to generate a private key + certificate per device and update 'tasmota/tasmota_aws_iot.cpp'
+                                                 //   Full documentation here: https://github.com/arendst/Tasmota/wiki/AWS-IoT
 
 // -- KNX IP Protocol -----------------------------
 //#define USE_KNX                                  // Enable KNX IP Protocol Support (+9.4k code, +3k7 mem)
@@ -301,7 +297,7 @@
   #define USE_EMULATION_WEMO                     // Enable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
 
 // -- mDNS ----------------------------------------
-//#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code or +23.5k code with core 2_5_x, +0.3k mem)
+#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code or +23.5k code with core 2_5_x, +0.3k mem)
   #define WEBSERVER_ADVERTISE                    // Provide access to webserver by name <Hostname>.local/
   #define MQTT_HOST_DISCOVERY                    // Find MQTT host server (overrides MQTT_HOST if found)
 
@@ -489,9 +485,9 @@
 
 // -- IR Remote features - all protocols from IRremoteESP8266 --------------------------
 // IR Full Protocols mode is activated through platform.io only.
-// Either use 'default_envs = sonoff-ircustom' and disable some features here to keep code not too big
-// or use 'default_envs = sonoff-ir' for a pre-packaged IR-dedicated firmware
-// When using 'sonoff-ircustom' or 'sonoff-ir', parameters below
+// Either use 'default_envs = tasmota-ircustom' and disable some features here to keep code not too big
+// or use 'default_envs = tasmota-ir' for a pre-packaged IR-dedicated firmware
+// When using 'tasmota-ircustom' or 'tasmota-ir', parameters below
 // (USE_IR_REMOTE, USE_IR_RECEIVE, USE_IR_HVAC...) are IGNORED.
 //
 // Code impact of IR full protocols is +81k code, 3k mem
@@ -555,133 +551,11 @@
 //#define USE_HRE                                  // Add support for Badger HR-E Water Meter (+1k4 code)
 //#define USE_A4988_STEPPER                        // Add support for A4988/DRV8825 stepper-motor-driver-circuit (+10k5 code)
 
-//#define USE_ARDUINO_SLAVE                        // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k3 code, 44 mem)
-  #define USE_ARDUINO_FLASH_SPEED 57600          // Usually 57600 for 3.3V variants and 115200 for 5V variants
-  #define USE_ARDUINO_SERIAL_SPEED 57600         // Depends on the sketch that is running on the Uno/Pro Mini
+//#define USE_TASMOTA_SLAVE                        // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k6 code, 64 mem)
+  #define USE_TASMOTA_SLAVE_FLASH_SPEED 57600      // Usually 57600 for 3.3V variants and 115200 for 5V variants
+  #define USE_TASMOTA_SLAVE_SERIAL_SPEED 57600     // Depends on the sketch that is running on the Uno/Pro Mini
 
 // -- End of general directives -------------------
-
-/*********************************************************************************************\
- * TIME PROPORTIONAL CONTROLLER  -  See xdrv_13_timeprop.ino file for more Information
-\*********************************************************************************************/
-
-//#define USE_TIMEPROP   // Include the Time Proportional Controller Feature (+1.2k)
-
-  // -- Configuration for single output (Values at boot time - can be changed in runtime but are not saved in EEPROM)
-  #define TIMEPROP_NUM_OUTPUTS          1       // how many outputs to control (with separate alogorithm for each)
-  #define TIMEPROP_CYCLETIMES           60      // cycle time seconds
-  #define TIMEPROP_DEADTIMES            0       // actuator action time seconds
-  #define TIMEPROP_OPINVERTS            false   // whether to invert the output
-  #define TIMEPROP_FALLBACK_POWERS      0       // falls back to this if too long betwen power updates
-  #define TIMEPROP_MAX_UPDATE_INTERVALS 120     // max no secs that are allowed between power updates (0 to disable)
-  #define TIMEPROP_RELAYS               1       // which relay to control 1:8
-
-  /**
-   * For configuring 2 relays set:
-   *   #define TIMEPROP_NUM_OUTPUTS          2
-   *   #define TIMEPROP_CYCLETIMES           60,     10
-   *   Etc.
-   * For configuring 3 relays set:
-   *   #define TIMEPROP_NUM_OUTPUTS          3
-   *   #define TIMEPROP_CYCLETIMES           60,     10,    30
-   *   Etc.
-   * Up to 8 relays
-  **/
-
-/*********************************************************************************************\
- * PID CONTROLLER  -  See xdrv_14_pid.ino file for more Information
-\*********************************************************************************************/
-
-//#define USE_PID         // Include the PID Controller Feature (+4.3k)
-
-  // -- Configuration for boot time - can be changed in runtime but are not saved in EEPROM
-  #define PID_SETPOINT                  19.5    // Setpoint value. This is the process value that the process is
-                                                // aiming for.
-                                                // May be adjusted via MQTT using cmnd pid_sp
-
-  #define PID_PROPBAND                  5       // Proportional band in process units (eg degrees). This controls
-                                                // the gain of the loop and is the range of process value over which
-                                                // the power output will go from 0 to full power. The units are that
-                                                // of the process and setpoint, so for example in a heating
-                                                // application it might be set to 1.5 degrees.
-                                                // May be adjusted via MQTT using cmnd pid_pb
-
-  #define PID_INTEGRAL_TIME             1800    // Integral time seconds. This is a setting for the integral time,
-                                                // in seconds. It represents the time constant of the integration
-                                                // effect. The larger the value the slower the integral effect will be.
-                                                // Obviously the slower the process is the larger this should be. For
-                                                // example for a domestic room heated by convection radiators a setting
-                                                // of one hour might be appropriate (in seconds). To disable the
-                                                // integral effect set this to a large number.
-                                                // May be adjusted via MQTT using cmnd pid_ti
-
-  #define PID_DERIVATIVE_TIME           15      // Derivative time seconds. This is a setting for the derivative time,
-                                                // in seconds. It represents the time constant of the derivative effect.
-                                                // The larger the value the greater will be the derivative effect.
-                                                // Typically this will be set to somewhat less than 25% of the integral
-                                                // setting, once the integral has been adjusted to the optimum value. To
-                                                // disable the derivative effect set this to 0. When initially tuning a
-                                                // loop it is often sensible to start with derivative zero and wind it in
-                                                // once other parameters have been setup.
-                                                // May be adjusted via MQTT using cmnd pid_td
-
-  #define PID_INITIAL_INT               0.5     // Initial integral value (0:1). This is an initial value which is used
-                                                // to preset the integrated error value when the flow is deployed in
-                                                // order to assist in homing in on the setpoint the first time. It should
-                                                // be set to an estimate of what the power requirement might be in order
-                                                // to maintain the process at the setpoint. For example for a domestic
-                                                // room heating application it might be set to 0.2 indicating that 20% of
-                                                // the available power might be required to maintain the setpoint. The
-                                                // value is of no consequence apart from device restart.
-
-  #define PID_MAX_INTERVAL              300     // This is the maximum time in seconds that is expected between samples.
-                                                // It is provided to cope with unusual situations such as a faulty sensor
-                                                // that might prevent the node from being supplied with a process value.
-                                                // If no new process value is received for this time then the power is set
-                                                // to the value defined for PID_MANUAL_POWER.
-                                                // May be adjusted via MQTT using cmnd pid_max_interval
-
-  #define PID_DERIV_SMOOTH_FACTOR       3       // In situations where the process sensor has limited resolution (such as
-                                                // the DS18B20), the use of deriviative can be problematic as when the
-                                                // process is changing only slowly the steps in the value cause spikes in
-                                                // the derivative. To reduce the effect of these this parameter can be
-                                                // set to apply a filter to the derivative term. I have found that with
-                                                // the DS18B20 that a value of 3 here can be beneficial, providing
-                                                // effectively a low pass filter on the derivative at 1/3 of the derivative
-                                                // time. This feature may also be useful if the process value is particularly
-                                                // noisy. The smaller the value the greater the filtering effect but the
-                                                // more it will reduce the effectiveness of the derivative. A value of zero
-                                                // disables this feature.
-                                                // May be adjusted via MQTT using cmnd pid_d_smooth
-
-  #define PID_AUTO                      1       // Auto mode 1 or 0 (for manual). This can be used to enable or disable
-                                                // the control (1=enable, auto mode, 0=disabled, manual mode). When in
-                                                // manual mode the output is set the value definded for PID_MANUAL_POWER
-                                                // May be adjusted via MQTT using cmnd pid_auto
-
-  #define PID_MANUAL_POWER              0       // Power output when in manual mode or fallback mode if too long elapses
-                                                // between process values
-                                                // May be adjusted via MQTT using cmnd pid_manual_power
-
-  #define PID_UPDATE_SECS               0       // How often to run the pid algorithm (integer secs) or 0 to run the algorithm
-                                                // each time a new pv value is received, for most applictions specify 0.
-                                                // Otherwise set this to a time
-                                                // that is short compared to the response of the process.  For example,
-                                                // something like 15 seconds may well be appropriate for a domestic room
-                                                // heating application.
-                                                // May be adjusted via MQTT using cmnd pid_update_secs
-
-  #define PID_USE_TIMPROP               1       // To use an internal relay for a time proportioned output to drive the
-                                                // process, set this to indicate which timeprop output to use. For a device
-                                                // with just one relay then this will be 1.
-                                                // It is then also necessary to define USE_TIMEPROP and set the output up as
-                                                // explained in xdrv_91_timeprop.ino
-                                                // To disable this feature leave this undefined (undefined, not defined to nothing).
-
-  #define PID_USE_LOCAL_SENSOR                  // if defined then the local sensor will be used for pv. Leave undefined if
-                                                // this is not required.  The rate that the sensor is read is defined by TELE_PERIOD
-                                                // If not using the sensor then you can supply process values via MQTT using
-                                                // cmnd pid_pv
 
 /*********************************************************************************************\
  * Debug features
@@ -694,17 +568,17 @@
 
 /*********************************************************************************************\
  * Optional firmware configurations
- * Select none or just one for optional features and sensors as configured in sonoff_post.h
+ * Select none or just one for optional features and sensors as configured in tasmota_post.h
  * See RELEASENOTES.md for selected features
 \*********************************************************************************************/
 
-//#define FIRMWARE_BASIC                           // Create sonoff-basic with no sensors
-//#define FIRMWARE_SENSORS                         // Create sonoff-sensors with useful sensors enabled
-#define FIRMWARE_KNX_NO_EMULATION                // Create sonoff-knx with KNX but without Emulation
-//#define FIRMWARE_DISPLAYS                        // Create sonoff-display with display drivers enabled
-//#define FIRMWARE_IR                              // Create sonoff-ir with IR full protocols activated, and many sensors disabled
-//#define FIRMWARE_IR_CUSTOM                       // Create sonoff customizable with special marker to add all IR protocols
-//#define FIRMWARE_MINIMAL                         // Create sonoff-minimal as intermediate firmware for OTA-MAGIC
+//#define FIRMWARE_BASIC                           // Create tasmota-basic with no sensors
+//#define FIRMWARE_SENSORS                         // Create tasmota-sensors with useful sensors enabled
+//#define FIRMWARE_KNX_NO_EMULATION                // Create tasmota-knx with KNX but without Emulation
+//#define FIRMWARE_DISPLAYS                        // Create tasmota-display with display drivers enabled
+//#define FIRMWARE_IR                              // Create tasmota-ir with IR full protocols activated, and many sensors disabled
+//#define FIRMWARE_IR_CUSTOM                       // Create tasmota customizable with special marker to add all IR protocols
+//#define FIRMWARE_MINIMAL                         // Create tasmota-minimal as intermediate firmware for OTA-MAGIC
 
 /*********************************************************************************************\
  * No user configurable items below
