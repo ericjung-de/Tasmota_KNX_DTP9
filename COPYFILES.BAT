@@ -9,6 +9,7 @@ echo ***************************************************************
 md %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release
 cd %USERPROFILE%\Documents\GitHub\Tasmota_KNX\.pioenvs
 
+copy tasmota-minimal\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_minimal.bin
 copy tasmota-BG\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-BG.bin
 copy tasmota-BR\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-BR.bin
 copy tasmota-CN\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-CN.bin
