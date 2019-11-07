@@ -50,7 +50,7 @@
 #define PROJECT                "tasmota"         // PROJECT is used as the default topic delimiter
 
 // If not selected the default will be SONOFF_BASIC
-//#define MODULE                 SONOFF_BASIC      // [Module] Select default model from sonoff_template.h
+//#define MODULE                 SONOFF_BASIC      // [Module] Select default model from tasmota_template.h
 
 #define SAVE_DATA              1                 // [SaveData] Save changed parameters to Flash (0 = disable, 1 - 3600 seconds)
 #define SAVE_STATE             1                 // [SetOption0] Save changed power state to Flash (0 = disable, 1 = enable)
