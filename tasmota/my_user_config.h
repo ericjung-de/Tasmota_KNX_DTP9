@@ -531,7 +531,7 @@
     #define USE_IR_HVAC_FUJITSU                  // Support IRhvac Fujitsu protocol
 //    #define USE_IR_HVAC_MIDEA                    // Support IRhvac Midea/Komeco protocol
 
-  //#define USE_IR_RECEIVE                         // Support for IR receiver (+7k2 code, 264 iram)
+//  #define USE_IR_RECEIVE                         // Support for IR receiver (+7k2 code, 264 iram)
     #define IR_RCV_BUFFER_SIZE      100          // Max number of packets allowed in capture buffer (default 100 (*2 bytes ram))
     #define IR_RCV_TIMEOUT          15           // Number of milli-Seconds of no-more-data before we consider a message ended (default 15)
     #define IR_RCV_MIN_UNKNOWN_SIZE 6            // Set the smallest sized "UNKNOWN" message packets we actually care about (default 6, max 255)
