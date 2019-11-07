@@ -51,10 +51,6 @@
 
 // If not selected the default will be SONOFF_BASIC
 //#define MODULE                 SONOFF_BASIC      // [Module] Select default model from sonoff_template.h
-//#define MODULE                 WEMOS
-//#define MODULE                 SONOFF_DUAL_R2
-//#define MODULE                 SONOFF_POW_R2
-//#define MODULE                 SONOFF_BRIDGE
 
 #define SAVE_DATA              1                 // [SaveData] Save changed parameters to Flash (0 = disable, 1 - 3600 seconds)
 #define SAVE_STATE             1                 // [SetOption0] Save changed power state to Flash (0 = disable, 1 = enable)
