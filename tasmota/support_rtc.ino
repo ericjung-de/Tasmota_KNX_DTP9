@@ -198,7 +198,7 @@ String GetDateAndTime(uint8_t time_type)
       break;
   }
   String dt = GetDT(time);  // 2017-03-07T11:08:02
-  if (Settings.flag3.time_append_timezone && (DT_LOCAL == time_type)) {
+  if (Settings.flag3.time_append_timezone && (DT_LOCAL == time_type)) {  // SetOption52 - Append timezone to JSON time
     dt += GetTimeZone();    // 2017-03-07T11:08:02-07:00
   }
   return dt;  // 2017-03-07T11:08:02-07:00
@@ -283,9 +283,6 @@ void BreakTime(uint32_t time_input, TIME_T &tm)
   time -= days;              // now it is days in this year, starting at 0
   tm.day_of_year = time;
 
-  days = 0;
-  month = 0;
-  month_length = 0;
   for (month = 0; month < 12; month++) {
     if (1 == month) { // february
       if (LEAP_YEAR(year)) {

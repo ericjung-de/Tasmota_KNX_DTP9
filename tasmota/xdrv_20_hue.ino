@@ -246,7 +246,7 @@ char     prev_y_str[24] = "\0";
 uint8_t getLocalLightSubtype(uint8_t device) {
   if (light_type) {
     if (device >= Light.device) {
-      if (Settings.flag3.pwm_multi_channels) {
+      if (Settings.flag3.pwm_multi_channels) {  // SetOption68 - Enable multi-channels PWM instead of Color PWM
         return LST_SINGLE;     // If SetOption68, each channel acts like a dimmer
       } else {
         return Light.subtype;  // the actual light
@@ -361,6 +361,13 @@ void HueLightStatus1(uint8_t device, String *response)
   response->replace("{light_status}", light_status);
 }
 
+// Check whether this device should be reported to Alexa or considered hidden.
+// Any device whose friendly name start with "$" is considered hidden
+bool HueActive(uint8_t device) {
+  if (device > MAX_FRIENDLYNAMES) { device = MAX_FRIENDLYNAMES; }
+  return '$' != Settings.friendlyname[device-1][0];
+}
+
 void HueLightStatus2(uint8_t device, String *response)
 {
   *response += FPSTR(HUE_LIGHTS_STATUS_JSON2);
@@ -442,20 +449,22 @@ uint32_t findEchoGeneration(void) {
   return gen;
 }
 
-void HueGlobalConfig(String *path)
-{
+void HueGlobalConfig(String *path) {
   String response;
   uint8_t maxhue = (devices_present > MAX_HUE_DEVICES) ? MAX_HUE_DEVICES : devices_present;
 
   path->remove(0,1);                                 // cut leading / to get <id>
-  response = F("{\"lights\":{\"");
+  response = F("{\"lights\":{");
+  bool appending = false;                             // do we need to add a comma to append
   for (uint32_t i = 1; i <= maxhue; i++) {
-    response += EncodeLightId(i);
-    response += F("\":{\"state\":");
-    HueLightStatus1(i, &response);
-    HueLightStatus2(i, &response);
-    if (i < maxhue) {
-      response += ",\"";
+    if (HueActive(i)) {
+      if (appending) { response += ","; }
+      response += "\"";
+      response += EncodeLightId(i);
+      response += F("\":{\"state\":");
+      HueLightStatus1(i, &response);
+      HueLightStatus2(i, &response);
+      appending = true;
     }
   }
   response += F("},\"groups\":{},\"schedules\":{},\"config\":");
@@ -475,7 +484,7 @@ void HueAuthentication(String *path)
 void HueLights(String *path)
 {
 /*
- * http://sonoff/api/username/lights/1/state?1={"on":true,"hue":56100,"sat":254,"bri":254,"alert":"none","transitiontime":40}
+ * http://tasmota/api/username/lights/1/state?1={"on":true,"hue":56100,"sat":254,"bri":254,"alert":"none","transitiontime":40}
  */
   String response;
   int code = 200;
@@ -493,14 +502,17 @@ void HueLights(String *path)
 
   path->remove(0,path->indexOf("/lights"));          // Remove until /lights
   if (path->endsWith("/lights")) {                   // Got /lights
-    response = "{\"";
+    response = "{";
+    bool appending = false;
     for (uint32_t i = 1; i <= maxhue; i++) {
-      response += EncodeLightId(i);
-      response += F("\":{\"state\":");
-      HueLightStatus1(i, &response);
-      HueLightStatus2(i, &response);
-      if (i < maxhue) {
-        response += ",\"";
+      if (HueActive(i)) {
+        if (appending) { response += ","; }
+        response += "\"";
+        response += EncodeLightId(i);
+        response += F("\":{\"state\":");
+        HueLightStatus1(i, &response);
+        HueLightStatus2(i, &response);
+        appending = true;
       }
     }
 #ifdef USE_SCRIPT_HUE
@@ -564,7 +576,7 @@ void HueLights(String *path)
       }
 
       if (light_type && (local_light_subtype >= LST_SINGLE)) {
-        if (!Settings.flag3.pwm_multi_channels) {
+        if (!Settings.flag3.pwm_multi_channels) {  // SetOption68 - Enable multi-channels PWM instead of Color PWM
           light_state.getHSB(&hue, &sat, nullptr);
           bri = light_state.getBri();   // get the combined bri for CT and RGB, not only the RGB one
           ct = light_state.getCT();
@@ -673,7 +685,7 @@ void HueLights(String *path)
         } else
 #endif
         if (light_type && (local_light_subtype > LST_NONE)) {   // not relay
-          if (!Settings.flag3.pwm_multi_channels) {
+          if (!Settings.flag3.pwm_multi_channels) {  // SetOption68 - Enable multi-channels PWM instead of Color PWM
             if (g_gotct) {
               light_controller.changeCTB(ct, bri);
             } else {
@@ -732,7 +744,7 @@ void HueLights(String *path)
 void HueGroups(String *path)
 {
 /*
- * http://sonoff/api/username/groups?1={"name":"Woonkamer","lights":[],"type":"Room","class":"Living room"})
+ * http://tasmota/api/username/groups?1={"name":"Woonkamer","lights":[],"type":"Room","class":"Living room"})
  */
   String response = "{}";
   uint8_t maxhue = (devices_present > MAX_HUE_DEVICES) ? MAX_HUE_DEVICES : devices_present;
@@ -762,9 +774,9 @@ void HandleHueApi(String *path)
    * (c) Heiko Krupp, 2017
    *
    * Hue URL
-   * http://sonoff/api/username/lights/1/state with post data {"on":true,"hue":56100,"sat":254,"bri":254,"alert":"none","transitiontime":40}
+   * http://tasmota/api/username/lights/1/state with post data {"on":true,"hue":56100,"sat":254,"bri":254,"alert":"none","transitiontime":40}
    * is converted by webserver to
-   * http://sonoff/api/username/lights/1/state with arg plain={"on":true,"hue":56100,"sat":254,"bri":254,"alert":"none","transitiontime":40}
+   * http://tasmota/api/username/lights/1/state with arg plain={"on":true,"hue":56100,"sat":254,"bri":254,"alert":"none","transitiontime":40}
    */
 
   uint8_t args = 0;

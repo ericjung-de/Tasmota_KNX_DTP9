@@ -67,6 +67,7 @@ const uint8_t MAX_XNRG_DRIVERS = 32;        // Max number of allowed energy driv
 const uint8_t MAX_XDSP_DRIVERS = 32;        // Max number of allowed display drivers
 const uint8_t MAX_XDRV_DRIVERS = 96;        // Max number of allowed driver drivers
 const uint8_t MAX_XSNS_DRIVERS = 96;        // Max number of allowed sensor drivers
+const uint8_t MAX_I2C_DRIVERS = 96;         // Max number of allowed i2c drivers
 const uint8_t MAX_SHUTTERS = 4;             // Max number of shutters
 const uint8_t MAX_PCF8574 = 8;              // Max number of PCF8574 devices
 const uint8_t MAX_RULE_MEMS = 5;            // Max number of saved vars
@@ -249,11 +250,6 @@ enum SettingsParamIndex { P_HOLD_TIME, P_MAX_POWER_RETRY, P_BACKLOG_DELAY, P_MDN
                           P_ex_DIMMER_MAX, P_ex_TUYA_VOLTAGE_ID, P_ex_TUYA_CURRENT_ID, P_ex_TUYA_POWER_ID,  // SetOption43 .. SetOption46
                           P_ex_ENERGY_TARIFF1, P_ex_ENERGY_TARIFF2,  // SetOption47 .. SetOption48
                           P_MAX_PARAM8 };  // Max is PARAM8_SIZE (18) - SetOption32 until SetOption49
-
-enum SettingsRegister8 { R8_SPARE00, R8_SPARE01, R8_SPARE02, R8_SPARE03,
-                         R8_SPARE04, R8_SPARE05, R8_SPARE06, R8_SPARE07,
-                         R8_SPARE08, R8_SPARE09, R8_SPARE10, R8_SPARE11,
-                         R8_SPARE12, R8_SPARE13, R8_SPARE14, R8_SPARE15 };  // Max size is 16 (Settings.register8[])
 
 enum DomoticzSensors {DZ_TEMP, DZ_TEMP_HUM, DZ_TEMP_HUM_BARO, DZ_POWER_ENERGY, DZ_ILLUMINANCE, DZ_COUNT, DZ_VOLTAGE, DZ_CURRENT,
                       DZ_AIRQUALITY, DZ_P1_SMART_METER, DZ_SHUTTER, DZ_MAX_SENSORS};

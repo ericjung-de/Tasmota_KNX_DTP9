@@ -26,6 +26,7 @@
 \*********************************************************************************************/
 
 #define XSNS_14             14
+#define XI2C_15             15         // See I2CDEVICES.md
 
 #define SHT3X_ADDR_GND      0x44       // address pin low (GND)
 #define SHT3X_ADDR_VDD      0x45       // address pin high (VDD)
@@ -138,22 +139,22 @@ void Sht3xShow(bool json)
 
 bool Xsns14(uint8_t function)
 {
+  if (!I2cEnabled(XI2C_15)) { return false; }
+
   bool result = false;
 
-  if (i2c_flg) {
-    switch (function) {
-      case FUNC_INIT:
-        Sht3xDetect();
-        break;
-      case FUNC_JSON_APPEND:
-        Sht3xShow(1);
-        break;
+  switch (function) {
+    case FUNC_INIT:
+      Sht3xDetect();
+      break;
+    case FUNC_JSON_APPEND:
+      Sht3xShow(1);
+      break;
 #ifdef USE_WEBSERVER
-      case FUNC_WEB_SENSOR:
-        Sht3xShow(0);
-        break;
+    case FUNC_WEB_SENSOR:
+      Sht3xShow(0);
+      break;
 #endif  // USE_WEBSERVER
-    }
   }
   return result;
 }

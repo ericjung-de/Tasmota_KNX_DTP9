@@ -74,8 +74,8 @@ void OsWatchLoop(void)
 
 String GetResetReason(void)
 {
-  char buff[32];
   if (oswatch_blocked_loop) {
+    char buff[32];
     strncpy_P(buff, PSTR(D_JSON_BLOCKED_LOOP), sizeof(buff));
     return String(buff);
   } else {
@@ -288,12 +288,11 @@ char* ulltoa(unsigned long long value, char *str, int radix)
   char digits[64];
   char *dst = str;
   int i = 0;
-  int n = 0;
 
 //  if (radix < 2 || radix > 36) { radix = 10; }
 
   do {
-    n = value % radix;
+    int n = value % radix;
     digits[i++] = (n < 10) ? (char)n+'0' : (char)n-10+'A';
     value /= radix;
   } while (value != 0);
@@ -305,7 +304,7 @@ char* ulltoa(unsigned long long value, char *str, int radix)
 }
 
 // see https://stackoverflow.com/questions/6357031/how-do-you-convert-a-byte-array-to-a-hexadecimal-string-in-c
-// char* ToHex_P(unsigned char * in, size_t insz, char * out, size_t outsz, char inbetween = '\0'); in sonoff_post.h
+// char* ToHex_P(unsigned char * in, size_t insz, char * out, size_t outsz, char inbetween = '\0'); in tasmota_post.h
 char* ToHex_P(const unsigned char * in, size_t insz, char * out, size_t outsz, char inbetween)
 {
   // ToHex_P(in, insz, out, outz)      -> "12345667"
@@ -496,7 +495,7 @@ char IndexSeparator()
 
   return separators[Settings.flag3.use_underscore];
 */
-  if (Settings.flag3.use_underscore) {
+  if (Settings.flag3.use_underscore) {  // SetOption64 - Enable "_" instead of "-" as sensor index separator
     return '_';
   } else {
     return '-';
@@ -599,10 +598,9 @@ bool NewerVersion(char* version_str)
 
 char* GetPowerDevice(char* dest, uint32_t idx, size_t size, uint32_t option)
 {
-  char sidx[8];
-
   strncpy_P(dest, S_RSLT_POWER, size);                // POWER
   if ((devices_present + option) > 1) {
+    char sidx[8];
     snprintf_P(sidx, sizeof(sidx), PSTR("%d"), idx);  // x
     strncat(dest, sidx, size - strlen(dest) -1);      // POWERx
   }
@@ -621,8 +619,8 @@ float ConvertTemp(float c)
   global_update = uptime;
   global_temperature = c;
 
-  if (!isnan(c) && Settings.flag.temperature_conversion) {
-    result = c * 1.8 + 32;  // Fahrenheit
+  if (!isnan(c) && Settings.flag.temperature_conversion) {    // SetOption8 - Switch between Celsius or Fahrenheit
+    result = c * 1.8 + 32;                                    // Fahrenheit
   }
   return result;
 }
@@ -631,15 +629,15 @@ float ConvertTempToCelsius(float c)
 {
   float result = c;
 
-  if (!isnan(c) && Settings.flag.temperature_conversion) {
-    result = (c - 32) / 1.8;  // Celsius
+  if (!isnan(c) && Settings.flag.temperature_conversion) {    // SetOption8 - Switch between Celsius or Fahrenheit
+    result = (c - 32) / 1.8;                                  // Celsius
   }
   return result;
 }
 
 char TempUnit(void)
 {
-  return (Settings.flag.temperature_conversion) ? 'F' : 'C';
+  return (Settings.flag.temperature_conversion) ? 'F' : 'C';  // SetOption8  - Switch between Celsius or Fahrenheit
 }
 
 float ConvertHumidity(float h)
@@ -657,8 +655,8 @@ float ConvertPressure(float p)
   global_update = uptime;
   global_pressure = p;
 
-  if (!isnan(p) && Settings.flag.pressure_conversion) {
-    result = p * 0.75006375541921;  // mmHg
+  if (!isnan(p) && Settings.flag.pressure_conversion) {  // SetOption24 - Switch between hPa or mmHg pressure unit
+    result = p * 0.75006375541921;                       // mmHg
   }
   return result;
 }
@@ -885,7 +883,22 @@ void WebHexCode(uint32_t i, const char* code)
     color = w | (w << 4);                                                            // 00112233
   }
 */
-
+  uint32_t j = sizeof(Settings.web_color) / 3;          // First area contains j = 18 colors
+/*
+  if (i < j) {
+    Settings.web_color[i][0] = (color >> 16) & 0xFF;  // Red
+    Settings.web_color[i][1] = (color >> 8) & 0xFF;   // Green
+    Settings.web_color[i][2] = color & 0xFF;          // Blue
+  } else {
+    Settings.web_color2[i-j][0] = (color >> 16) & 0xFF;  // Red
+    Settings.web_color2[i-j][1] = (color >> 8) & 0xFF;   // Green
+    Settings.web_color2[i-j][2] = color & 0xFF;          // Blue
+  }
+*/
+  if (i >= j) {
+    // Calculate i to index in Settings.web_color2 - Dirty(!) but saves 128 bytes code
+    i += ((((uint8_t*)&Settings.web_color2 - (uint8_t*)&Settings.web_color) / 3) - j);
+  }
   Settings.web_color[i][0] = (color >> 16) & 0xFF;  // Red
   Settings.web_color[i][1] = (color >> 8) & 0xFF;   // Green
   Settings.web_color[i][2] = color & 0xFF;          // Blue
@@ -893,7 +906,17 @@ void WebHexCode(uint32_t i, const char* code)
 
 uint32_t WebColor(uint32_t i)
 {
+  uint32_t j = sizeof(Settings.web_color) / 3;          // First area contains j = 18 colors
+/*
+  uint32_t tcolor = (i<j)? (Settings.web_color[i][0] << 16) | (Settings.web_color[i][1] << 8) | Settings.web_color[i][2] :
+                           (Settings.web_color2[i-j][0] << 16) | (Settings.web_color2[i-j][1] << 8) | Settings.web_color2[i-j][2];
+*/
+  if (i >= j) {
+    // Calculate i to index in Settings.web_color2 - Dirty(!) but saves 128 bytes code
+    i += ((((uint8_t*)&Settings.web_color2 - (uint8_t*)&Settings.web_color) / 3) - j);
+  }
   uint32_t tcolor = (Settings.web_color[i][0] << 16) | (Settings.web_color[i][1] << 8) | Settings.web_color[i][2];
+
   return tcolor;
 }
 
@@ -1079,7 +1102,7 @@ uint8_t ValidPin(uint32_t pin, uint32_t gpio)
   if (FlashPin(pin)) {
     result = GPIO_NONE;  // Disable flash pins GPIO6, GPIO7, GPIO8 and GPIO11
   }
-  if ((WEMOS == Settings.module) && (!Settings.flag3.user_esp8285_enable)) {
+  if ((WEMOS == Settings.module) && (!Settings.flag3.user_esp8285_enable)) {  // SetOption51 - Enable ESP8285 user GPIO's
     if ((pin == 9) || (pin == 10)) { result = GPIO_NONE; }  // Disable possible flash GPIO9 and GPIO10
   }
   return result;
@@ -1483,14 +1506,23 @@ bool I2cActive(uint32_t addr)
   return false;
 }
 
-bool I2cDevice(uint8_t addr)
+bool I2cDevice(uint32_t addr)
 {
   addr &= 0x7F;         // Max I2C address is 127
   if (I2cActive(addr)) {
     return false;       // If already active report as not present;
   }
-  Wire.beginTransmission(addr);
+  Wire.beginTransmission((uint8_t)addr);
   return (0 == Wire.endTransmission());
+}
+
+bool I2cSetDevice(uint32_t addr)
+{
+  bool result = I2cDevice(addr);
+  if (result) {
+    I2cSetActive(addr, 1);
+  }
+  return result;
 }
 #endif  // USE_I2C
 
@@ -1545,7 +1577,6 @@ void GetLog(uint32_t idx, char** entry_pp, size_t* len_p)
 void Syslog(void)
 {
   // Destroys log_data
-  char syslog_preamble[64];  // Hostname + Id
 
   uint32_t current_hash = GetHash(Settings.syslog_host, strlen(Settings.syslog_host));
   if (syslog_host_hash != current_hash) {
@@ -1553,6 +1584,7 @@ void Syslog(void)
     WiFi.hostByName(Settings.syslog_host, syslog_host_addr);  // If sleep enabled this might result in exception so try to do it once using hash
   }
   if (PortUdp.beginPacket(syslog_host_addr, Settings.syslog_port)) {
+    char syslog_preamble[64];  // Hostname + Id
     snprintf_P(syslog_preamble, sizeof(syslog_preamble), PSTR("%s ESP-"), my_hostname);
     memmove(log_data + strlen(syslog_preamble), log_data, sizeof(log_data) - strlen(syslog_preamble));
     log_data[sizeof(log_data) -1] = '\0';

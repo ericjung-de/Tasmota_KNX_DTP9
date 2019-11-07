@@ -21,6 +21,7 @@
 #ifdef USE_SPS30
 
 #define XSNS_44 44
+#define XI2C_30 30  // See I2CDEVICES.md
 
 #define SPS30_ADDR 0x69
 
@@ -254,7 +255,7 @@ void SPS30_Show(bool json) {
 void CmdClean(void) {
   sps30_cmd(SPS_CMD_CLEAN);
   ResponseTime_P(PSTR(",\"SPS30\":{\"CFAN\":\"true\"}}"));
-  MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_SENSOR), Settings.flag.mqtt_sensor_retain);
+  MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_SENSOR), Settings.flag.mqtt_sensor_retain);  // CMND_SENSORRETAIN
 }
 
 bool SPS30_cmd(void) {
@@ -283,30 +284,30 @@ bool SPS30_cmd(void) {
 
 bool Xsns44(byte function)
 {
+  if (!I2cEnabled(XI2C_30)) { return false; }
+
   bool result = false;
 
-  if (i2c_flg) {
-    switch (function) {
-      case FUNC_INIT:
-        SPS30_Detect();
-        break;
-      case FUNC_EVERY_SECOND:
-        SPS30_Every_Second();
-        break;
-      case FUNC_JSON_APPEND:
-        SPS30_Show(1);
-        break;
-      case FUNC_COMMAND_SENSOR:
-        if (XSNS_44 == XdrvMailbox.index) {
-          result = SPS30_cmd();
-        }
-        break;
+  switch (function) {
+    case FUNC_INIT:
+      SPS30_Detect();
+      break;
+    case FUNC_EVERY_SECOND:
+      SPS30_Every_Second();
+      break;
+    case FUNC_JSON_APPEND:
+      SPS30_Show(1);
+      break;
+    case FUNC_COMMAND_SENSOR:
+      if (XSNS_44 == XdrvMailbox.index) {
+        result = SPS30_cmd();
+      }
+      break;
 #ifdef USE_WEBSERVER
-      case FUNC_WEB_SENSOR:
-        SPS30_Show(0);
-        break;
+    case FUNC_WEB_SENSOR:
+      SPS30_Show(0);
+      break;
 #endif  // USE_WEBSERVER
-    }
   }
   return result;
 }

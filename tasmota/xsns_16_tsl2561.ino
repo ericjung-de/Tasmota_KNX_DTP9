@@ -28,6 +28,7 @@
 \*********************************************************************************************/
 
 #define XSNS_16             16
+#define XI2C_16             16  // See I2CDEVICES.md
 
 #include <Tsl2561Util.h>
 
@@ -121,25 +122,25 @@ void Tsl2561Show(bool json)
 
 bool Xsns16(uint8_t function)
 {
+  if (!I2cEnabled(XI2C_16)) { return false; }
+
   bool result = false;
 
-  if (i2c_flg) {
-    switch (function) {
-      case FUNC_INIT:
-        Tsl2561Detect();
-        break;
-      case FUNC_EVERY_SECOND:
-        Tsl2561EverySecond();
-        break;
-      case FUNC_JSON_APPEND:
-        Tsl2561Show(1);
-        break;
+  switch (function) {
+    case FUNC_INIT:
+      Tsl2561Detect();
+      break;
+    case FUNC_EVERY_SECOND:
+      Tsl2561EverySecond();
+      break;
+    case FUNC_JSON_APPEND:
+      Tsl2561Show(1);
+      break;
 #ifdef USE_WEBSERVER
-      case FUNC_WEB_SENSOR:
-        Tsl2561Show(0);
-        break;
+    case FUNC_WEB_SENSOR:
+      Tsl2561Show(0);
+      break;
 #endif  // USE_WEBSERVER
-    }
   }
   return result;
 }

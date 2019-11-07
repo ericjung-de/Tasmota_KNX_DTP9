@@ -28,7 +28,7 @@ const char kTasmotaCommands[] PROGMEM = "|"  // No prefix
   D_CMND_FRIENDLYNAME "|" D_CMND_SWITCHMODE "|" D_CMND_INTERLOCK "|" D_CMND_TELEPERIOD "|" D_CMND_RESET "|" D_CMND_TIME "|" D_CMND_TIMEZONE "|" D_CMND_TIMESTD "|"
   D_CMND_TIMEDST "|" D_CMND_ALTITUDE "|" D_CMND_LEDPOWER "|" D_CMND_LEDSTATE "|" D_CMND_LEDMASK "|"
 #ifdef USE_I2C
-  D_CMND_I2CSCAN "|"
+  D_CMND_I2CSCAN "|" D_CMND_I2CDRIVER "|"
 #endif
   D_CMND_SENSOR "|" D_CMND_DRIVER;
 
@@ -43,7 +43,7 @@ void (* const TasmotaCommand[])(void) PROGMEM = {
   &CmndFriendlyname, &CmndSwitchMode, &CmndInterlock, &CmndTeleperiod, &CmndReset, &CmndTime, &CmndTimezone, &CmndTimeStd,
   &CmndTimeDst, &CmndAltitude, &CmndLedPower, &CmndLedState, &CmndLedMask,
 #ifdef USE_I2C
-  &CmndI2cScan,
+  &CmndI2cScan, CmndI2cDriver,
 #endif
   &CmndSensor, &CmndDriver };
 
@@ -102,7 +102,7 @@ void ExecuteCommand(const char *cmnd, uint32_t source)
   const char *start = pos;
   // Get a command. Commands can only use letters, digits and underscores
   while (*pos && (isalpha(*pos) || isdigit(*pos) || '_' == *pos || '/' == *pos)) {
-    if ('/' == *pos) {            // Skip possible cmnd/sonoff/ preamble
+    if ('/' == *pos) {            // Skip possible cmnd/tasmota/ preamble
       start = pos + 1;
     }
     pos++;
@@ -125,8 +125,8 @@ void ExecuteCommand(const char *cmnd, uint32_t source)
 /********************************************************************************************/
 
 // topicBuf:                    /power1  dataBuf: toggle  = Console command
-// topicBuf:         cmnd/sonoff/power1  dataBuf: toggle  = Mqtt command using topic
-// topicBuf:        cmnd/sonoffs/power1  dataBuf: toggle  = Mqtt command using a group topic
+// topicBuf:         cmnd/tasmota/power1  dataBuf: toggle  = Mqtt command using topic
+// topicBuf:        cmnd/tasmotas/power1  dataBuf: toggle  = Mqtt command using a group topic
 // topicBuf: cmnd/DVES_83BB10_fb/power1  dataBuf: toggle  = Mqtt command using fallback topic
 
 void CommandHandler(char* topicBuf, char* dataBuf, uint32_t data_len)
@@ -143,16 +143,16 @@ void CommandHandler(char* topicBuf, char* dataBuf, uint32_t data_len)
   bool grpflg = (strstr(topicBuf, Settings.mqtt_grptopic) != nullptr);
 
   char stemp1[TOPSZ];
-  GetFallbackTopic_P(stemp1, CMND, "");  // Full Fallback topic = cmnd/DVES_xxxxxxxx_fb/
+  GetFallbackTopic_P(stemp1, "");  // Full Fallback topic = cmnd/DVES_xxxxxxxx_fb/
   fallback_topic_flag = (!strncmp(topicBuf, stemp1, strlen(stemp1)));
 
   char *type = strrchr(topicBuf, '/');   // Last part of received topic is always the command (type)
 
-  uint32_t i = 0;
   uint32_t index = 1;
   bool user_index = false;
   if (type != nullptr) {
     type++;
+    uint32_t i;
     for (i = 0; i < strlen(type); i++) {
       type[i] = toupper(type[i]);
     }
@@ -300,7 +300,7 @@ void CmndPower(void)
     if ((XdrvMailbox.payload < POWER_OFF) || (XdrvMailbox.payload > POWER_BLINK_STOP)) {
       XdrvMailbox.payload = POWER_SHOW_STATE;
     }
-//      Settings.flag.device_index_enable = XdrvMailbox.usridx;
+//      Settings.flag.device_index_enable = XdrvMailbox.usridx;  // SetOption26 - Switch between POWER or POWER1
     ExecuteCommandPower(XdrvMailbox.index, XdrvMailbox.payload, SRC_IGNORE);
     mqtt_data[0] = '\0';
   }
@@ -324,7 +324,7 @@ void CmndStatus(void)
   // Workaround MQTT - TCP/IP stack queueing when SUB_PREFIX = PUB_PREFIX
   if (!strcmp(Settings.mqtt_prefix[0],Settings.mqtt_prefix[1]) && (!payload)) { option++; }  // TELE
 
-  if ((!Settings.flag.mqtt_enabled) && (6 == payload)) { payload = 99; }
+  if ((!Settings.flag.mqtt_enabled) && (6 == payload)) { payload = 99; }  // SetOption3 - Enable MQTT
   if (!energy_flg && (9 == payload)) { payload = 99; }
 
   if ((0 == payload) || (99 == payload)) {
@@ -346,8 +346,14 @@ void CmndStatus(void)
                           D_CMND_SWITCHMODE "\":[%s],\"" D_CMND_BUTTONRETAIN "\":%d,\"" D_CMND_SWITCHRETAIN "\":%d,\"" D_CMND_SENSORRETAIN "\":%d,\"" D_CMND_POWERRETAIN "\":%d}}"),
                           ModuleNr(), stemp, mqtt_topic,
                           Settings.button_topic, power, Settings.poweronstate, Settings.ledstate,
-                          Settings.ledmask, Settings.save_data, Settings.flag.save_state, Settings.switch_topic,
-                          stemp2, Settings.flag.mqtt_button_retain, Settings.flag.mqtt_switch_retain, Settings.flag.mqtt_sensor_retain, Settings.flag.mqtt_power_retain);
+                          Settings.ledmask, Settings.save_data,
+                          Settings.flag.save_state,           // SetOption0 - Save power state and use after restart
+                          Settings.switch_topic,
+                          stemp2,
+                          Settings.flag.mqtt_button_retain,   // CMND_BUTTONRETAIN
+                          Settings.flag.mqtt_switch_retain,   // CMND_SWITCHRETAIN
+                          Settings.flag.mqtt_sensor_retain,   // CMND_SENSORRETAIN
+                          Settings.flag.mqtt_power_retain);   // CMND_POWERRETAIN
     MqttPublishPrefixTopic_P(option, PSTR(D_CMND_STATUS));
   }
 
@@ -372,10 +378,11 @@ void CmndStatus(void)
   if ((0 == payload) || (3 == payload)) {
     Response_P(PSTR("{\"" D_CMND_STATUS D_STATUS3_LOGGING "\":{\"" D_CMND_SERIALLOG "\":%d,\"" D_CMND_WEBLOG "\":%d,\"" D_CMND_MQTTLOG "\":%d,\"" D_CMND_SYSLOG "\":%d,\""
                           D_CMND_LOGHOST "\":\"%s\",\"" D_CMND_LOGPORT "\":%d,\"" D_CMND_SSID "\":[\"%s\",\"%s\"],\"" D_CMND_TELEPERIOD "\":%d,\""
-                          D_JSON_RESOLUTION "\":\"%08X\",\"" D_CMND_SETOPTION "\":[\"%08X\",\"%s\",\"%08X\"]}}"),
+                          D_JSON_RESOLUTION "\":\"%08X\",\"" D_CMND_SETOPTION "\":[\"%08X\",\"%s\",\"%08X\",\"%08X\"]}}"),
                           Settings.seriallog_level, Settings.weblog_level, Settings.mqttlog_level, Settings.syslog_level,
                           Settings.syslog_host, Settings.syslog_port, Settings.sta_ssid[0], Settings.sta_ssid[1], Settings.tele_period,
-                          Settings.flag2.data, Settings.flag.data, ToHex_P((unsigned char*)Settings.param, PARAM8_SIZE, stemp2, sizeof(stemp2)), Settings.flag3.data);
+                          Settings.flag2.data, Settings.flag.data, ToHex_P((unsigned char*)Settings.param, PARAM8_SIZE, stemp2, sizeof(stemp2)),
+                          Settings.flag3.data, Settings.flag4.data);
     MqttPublishPrefixTopic_P(option, PSTR(D_CMND_STATUS "3"));
   }
 
@@ -403,7 +410,7 @@ void CmndStatus(void)
     MqttPublishPrefixTopic_P(option, PSTR(D_CMND_STATUS "5"));
   }
 
-  if (((0 == payload) || (6 == payload)) && Settings.flag.mqtt_enabled) {
+  if (((0 == payload) || (6 == payload)) && Settings.flag.mqtt_enabled) {  // SetOption3 - Enable MQTT
 #ifdef USE_MQTT_AWS_IOT
     Response_P(PSTR("{\"" D_CMND_STATUS D_STATUS6_MQTT "\":{\"" D_CMND_MQTTHOST "\":\"%s%s\",\"" D_CMND_MQTTPORT "\":%d,\"" D_CMND_MQTTCLIENT D_JSON_MASK "\":\"%s\",\""
                           D_CMND_MQTTCLIENT "\":\"%s\",\"" D_JSON_MQTT_COUNT "\":%d,\"MAX_PACKET_SIZE\":%d,\"KEEPALIVE\":%d}}"),
@@ -478,11 +485,11 @@ void CmndState(void)
 {
   mqtt_data[0] = '\0';
   MqttShowState();
-  if (Settings.flag3.hass_tele_on_power) {
+  if (Settings.flag3.hass_tele_on_power) {  // SetOption59 - Send tele/%topic%/STATE in addition to stat/%topic%/RESULT
     MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_STATE), MQTT_TELE_RETAIN);
   }
 #ifdef USE_HOME_ASSISTANT
-  if (Settings.flag.hass_discovery) {
+  if (Settings.flag.hass_discovery) {       // SetOption19 - Control Home Assistantautomatic discovery (See SetOption59)
     HAssPublishStatus();
   }
 #endif  // USE_HOME_ASSISTANT
@@ -525,7 +532,7 @@ void CmndOtaUrl(void)
 void CmndSeriallog(void)
 {
   if ((XdrvMailbox.payload >= LOG_LEVEL_NONE) && (XdrvMailbox.payload <= LOG_LEVEL_DEBUG_MORE)) {
-    Settings.flag.mqtt_serial = 0;
+    Settings.flag.mqtt_serial = 0;       // CMND_SERIALSEND and CMND_SERIALLOG
     SetSeriallog(XdrvMailbox.payload);
   }
   Response_P(S_JSON_COMMAND_NVALUE_ACTIVE_NVALUE, XdrvMailbox.command, Settings.seriallog_level, seriallog_level);
@@ -627,70 +634,28 @@ void CmndSavedata(void)
 
 void CmndSetoption(void)
 {
-  if (XdrvMailbox.index < 82) {
+  if (XdrvMailbox.index < 114) {
     uint32_t ptype;
     uint32_t pindex;
     if (XdrvMailbox.index <= 31) {         // SetOption0 .. 31 = Settings.flag
-      ptype = 0;
+      ptype = 2;
       pindex = XdrvMailbox.index;          // 0 .. 31
     }
     else if (XdrvMailbox.index <= 49) {    // SetOption32 .. 49 = Settings.param
-      ptype = 2;
+      ptype = 1;
       pindex = XdrvMailbox.index -32;      // 0 .. 17 (= PARAM8_SIZE -1)
     }
-    else {                     // SetOption50 .. 81 = Settings.flag3
-      ptype = 1;
+    else if (XdrvMailbox.index <= 81) {    // SetOption50 .. 81 = Settings.flag3
+      ptype = 3;
       pindex = XdrvMailbox.index -50;      // 0 .. 31
     }
+    else {                                 // SetOption82 .. 113 = Settings.flag4
+      ptype = 4;
+      pindex = XdrvMailbox.index -82;      // 0 .. 31
+    }
+
     if (XdrvMailbox.payload >= 0) {
-      if (0 == ptype) {        // SetOption0 .. 31
-        if (XdrvMailbox.payload <= 1) {
-          switch (pindex) {
-            case 5:            // mqtt_power_retain (CMND_POWERRETAIN)
-            case 6:            // mqtt_button_retain (CMND_BUTTONRETAIN)
-            case 7:            // mqtt_switch_retain (CMND_SWITCHRETAIN)
-            case 9:            // mqtt_sensor_retain (CMND_SENSORRETAIN)
-            case 14:           // interlock (CMND_INTERLOCK)
-            case 22:           // mqtt_serial (SerialSend and SerialLog)
-            case 23:           // mqtt_serial_raw (SerialSend)
-            case 25:           // knx_enabled (Web config)
-            case 27:           // knx_enable_enhancement (Web config)
-              ptype = 99;      // Command Error
-              break;           // Ignore command SetOption
-            case 3:            // mqtt
-            case 15:           // pwm_control
-              restart_flag = 2;
-            default:
-              bitWrite(Settings.flag.data, pindex, XdrvMailbox.payload);
-          }
-          if (12 == pindex) {  // stop_flash_rotate
-            stop_flash_rotate = XdrvMailbox.payload;
-            SettingsSave(2);
-          }
-#ifdef USE_HOME_ASSISTANT
-          if ((19 == pindex) || (30 == pindex)) {
-            HAssDiscover();    // Delayed execution to provide enough resources during hass_discovery or hass_light
-          }
-#endif  // USE_HOME_ASSISTANT
-        }
-      }
-      else if (1 == ptype) {     // SetOption50 .. 81
-        if (XdrvMailbox.payload <= 1) {
-          bitWrite(Settings.flag3.data, pindex, XdrvMailbox.payload);
-          if (5 == pindex) {     // SetOption55
-            if (0 == XdrvMailbox.payload) {
-              restart_flag = 2;  // Disable mDNS needs restart
-            }
-          }
-          if (10 == pindex) {    // SetOption60 enable or disable traditional sleep
-            WiFiSetSleepMode();  // Update WiFi sleep mode accordingly
-          }
-          if (18 == pindex) {    // SetOption68 for multi-channel PWM, requires a reboot
-            restart_flag = 2;
-          }
-        }
-      }
-      else {                     // SetOption32 .. 49
+      if (1 == ptype) {                    // SetOption32 .. 49
         uint32_t param_low = 0;
         uint32_t param_high = 255;
         switch (pindex) {
@@ -705,6 +670,7 @@ void CmndSetoption(void)
 #ifdef USE_LIGHT
           if (P_RGB_REMAP == pindex) {
             LightUpdateColorMapping();
+            restart_flag = 2;              // SetOption37 needs a reboot in most cases
           }
 #endif
 #if (defined(USE_IR_REMOTE) && defined(USE_IR_RECEIVE)) || defined(USE_IR_REMOTE_FULL)
@@ -712,13 +678,79 @@ void CmndSetoption(void)
             IrReceiveUpdateThreshold();
           }
 #endif
+        } else {
+          ptype = 99;                      // Command Error
+        }
+      } else {
+        if (XdrvMailbox.payload <= 1) {
+          if (2 == ptype) {                // SetOption0 .. 31
+            switch (pindex) {
+              case 5:                      // mqtt_power_retain (CMND_POWERRETAIN)
+              case 6:                      // mqtt_button_retain (CMND_BUTTONRETAIN)
+              case 7:                      // mqtt_switch_retain (CMND_SWITCHRETAIN)
+              case 9:                      // mqtt_sensor_retain (CMND_SENSORRETAIN)
+              case 14:                     // interlock (CMND_INTERLOCK)
+              case 22:                     // mqtt_serial (SerialSend and SerialLog)
+              case 23:                     // mqtt_serial_raw (SerialSend)
+              case 25:                     // knx_enabled (Web config)
+              case 27:                     // knx_enable_enhancement (Web config)
+                ptype = 99;                // Command Error
+                break;                     // Ignore command SetOption
+              case 3:                      // mqtt
+              case 15:                     // pwm_control
+                restart_flag = 2;
+              default:
+                bitWrite(Settings.flag.data, pindex, XdrvMailbox.payload);
+            }
+            if (12 == pindex) {            // stop_flash_rotate
+              stop_flash_rotate = XdrvMailbox.payload;
+              SettingsSave(2);
+            }
+  #ifdef USE_HOME_ASSISTANT
+            if ((19 == pindex) || (30 == pindex)) {
+              HAssDiscover();              // Delayed execution to provide enough resources during hass_discovery or hass_light
+            }
+  #endif  // USE_HOME_ASSISTANT
+          }
+          else if (3 == ptype) {           // SetOption50 .. 81
+            bitWrite(Settings.flag3.data, pindex, XdrvMailbox.payload);
+            switch (pindex) {
+              case 5:                      // SetOption55
+                if (0 == XdrvMailbox.payload) {
+                  restart_flag = 2;        // Disable mDNS needs restart
+                }
+                break;
+              case 10:                     // SetOption60 enable or disable traditional sleep
+                WiFiSetSleepMode();        // Update WiFi sleep mode accordingly
+                break;
+              case 18:                     // SetOption68 for multi-channel PWM, requires a reboot
+              case 25:                     // SetOption75 grouptopic change
+                restart_flag = 2;
+                break;
+            }
+          }
+          else if (4 == ptype) {           // SetOption82 .. 113
+            bitWrite(Settings.flag4.data, pindex, XdrvMailbox.payload);
+          }
+        } else {
+          ptype = 99;                      // Command Error
         }
       }
     }
+
     if (ptype < 99) {
-      char stemp1[TOPSZ];
-      if (2 == ptype) { snprintf_P(stemp1, sizeof(stemp1), PSTR("%d"), Settings.param[pindex]); }
-      ResponseCmndIdxChar((2 == ptype) ? stemp1 : (1 == ptype) ? GetStateText(bitRead(Settings.flag3.data, pindex)) : GetStateText(bitRead(Settings.flag.data, pindex)));
+      if (1 == ptype) {
+        ResponseCmndIdxNumber(Settings.param[pindex]);
+      } else {
+        uint32_t flag = Settings.flag.data;
+        if (3 == ptype) {
+          flag = Settings.flag3.data;
+        }
+        else if (4 == ptype) {
+          flag = Settings.flag4.data;
+        }
+        ResponseCmndIdxChar(GetStateText(bitRead(flag, pindex)));
+      }
     }
   }
 }
@@ -902,11 +934,10 @@ void CmndGpios(void)
 {
   myio cmodule;
   ModuleGpios(&cmodule);
-  uint32_t midx;
   uint32_t lines = 1;
   bool jsflg = false;
   for (uint32_t i = 0; i < sizeof(kGpioNiceList); i++) {
-    midx = pgm_read_byte(kGpioNiceList + i);
+    uint32_t midx = pgm_read_byte(kGpioNiceList + i);
     if ((XdrvMailbox.payload != 255) && GetUsedInModule(midx, cmodule.io)) { continue; }
     if (!jsflg) {
       Response_P(PSTR("{\"" D_CMND_GPIOS "%d\":{"), lines);
@@ -1036,8 +1067,8 @@ void CmndSerialSend(void)
 {
   if ((XdrvMailbox.index > 0) && (XdrvMailbox.index <= 5)) {
     SetSeriallog(LOG_LEVEL_NONE);
-    Settings.flag.mqtt_serial = 1;
-    Settings.flag.mqtt_serial_raw = (XdrvMailbox.index > 3) ? 1 : 0;
+    Settings.flag.mqtt_serial = 1;                                  // CMND_SERIALSEND and CMND_SERIALLOG
+    Settings.flag.mqtt_serial_raw = (XdrvMailbox.index > 3) ? 1 : 0;  // CMND_SERIALSEND3
     if (XdrvMailbox.data_len > 0) {
       if (1 == XdrvMailbox.index) {
         Serial.printf("%s\n", XdrvMailbox.data);                    // "Hello Tiger\n"
@@ -1265,7 +1296,7 @@ void CmndInterlock(void)
           if (minimal_bits < 2) { Settings.interlock[i] = 0; }  // Discard single relay as interlock
         }
       } else {
-        Settings.flag.interlock = XdrvMailbox.payload &1;                   // Enable/disable interlock
+        Settings.flag.interlock = XdrvMailbox.payload &1;       // CMND_INTERLOCK - Enable/disable interlock
         if (Settings.flag.interlock) {
           SetDevicePower(power, SRC_IGNORE);                    // Remove multiple relays if set
         }
@@ -1295,7 +1326,7 @@ void CmndInterlock(void)
     }
     ResponseAppend_P(PSTR("\"}"));
   } else {
-    Settings.flag.interlock = 0;
+    Settings.flag.interlock = 0;                                // CMND_INTERLOCK - Enable/disable interlock
     ResponseCmndStateText(Settings.flag.interlock);
   }
 }
@@ -1305,7 +1336,8 @@ void CmndTeleperiod(void)
   if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload < 3601)) {
     Settings.tele_period = (1 == XdrvMailbox.payload) ? TELE_PERIOD : XdrvMailbox.payload;
     if ((Settings.tele_period > 0) && (Settings.tele_period < 10)) Settings.tele_period = 10;   // Do not allow periods < 10 seconds
-    tele_period = Settings.tele_period;
+    tele_period = Settings.tele_period;    
+    prep_called = false;
   }
   ResponseCmndNumber(Settings.tele_period);
 }
@@ -1505,6 +1537,19 @@ void CmndI2cScan(void)
   if (i2c_flg) {
     I2cScan(mqtt_data, sizeof(mqtt_data));
   }
+}
+
+void CmndI2cDriver(void)
+{
+  if (XdrvMailbox.index < MAX_I2C_DRIVERS) {
+    if (XdrvMailbox.payload >= 0) {
+      bitWrite(Settings.i2c_drivers[XdrvMailbox.index / 32], XdrvMailbox.index % 32, XdrvMailbox.payload &1);
+      restart_flag = 2;
+    }
+  }
+  Response_P(PSTR("{\"" D_CMND_I2CDRIVER "\":"));
+  I2cDriverState();
+  ResponseJsonEnd();
 }
 #endif  // USE_I2C
 
