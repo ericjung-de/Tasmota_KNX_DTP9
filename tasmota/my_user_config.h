@@ -297,7 +297,7 @@
 //  #define USE_4K_RSA                             // Support 4096 bits certificates, instead of 2048
 
 // -- KNX IP Protocol -----------------------------
-//#define USE_KNX                                  // Enable KNX IP Protocol Support (+9.4k code, +3k7 mem)
+#define USE_KNX                                  // Enable KNX IP Protocol Support (+9.4k code, +3k7 mem)
   #define USE_KNX_WEB_MENU                       // Enable KNX WEB MENU (+8.3k code, +144 mem)
 
 // -- HTTP ----------------------------------------
@@ -310,7 +310,7 @@
   #define USE_EMULATION_WEMO                     // Enable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
 
 // -- mDNS ----------------------------------------
-//#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code or +23.5k code with core 2_5_x, +0.3k mem)
+#define USE_DISCOVERY                            // Enable mDNS for the following services (+8k code or +23.5k code with core 2_5_x, +0.3k mem)
   #define WEBSERVER_ADVERTISE                    // Provide access to webserver by name <Hostname>.local/
   #define MQTT_HOST_DISCOVERY                    // Find MQTT host server (overrides MQTT_HOST if found)
 
@@ -335,7 +335,7 @@
 #define USE_SONOFF_RF                            // Add support for Sonoff Rf Bridge (+3k2 code)
   #define USE_RF_FLASH                           // Add support for flashing the EFM8BB1 chip on the Sonoff RF Bridge. C2CK must be connected to GPIO4, C2D to GPIO5 on the PCB (+2k7 code)
 #define USE_SONOFF_SC                            // Add support for Sonoff Sc (+1k1 code)
-//#define USE_TUYA_MCU                             // Add support for Tuya Serial MCU
+#define USE_TUYA_MCU                             // Add support for Tuya Serial MCU
   #define TUYA_DIMMER_ID       0                 // Default dimmer Id
 #define USE_ARMTRONIX_DIMMERS                    // Add support for Armtronix Dimmers (+1k4 code)
 #define USE_PS_16_DZ                             // Add support for PS-16-DZ Dimmer (+2k code)
@@ -710,7 +710,7 @@
 
 //#define FIRMWARE_BASIC                           // Create tasmota-basic with no sensors
 //#define FIRMWARE_SENSORS                         // Create tasmota-sensors with useful sensors enabled
-#define FIRMWARE_KNX_NO_EMULATION                // Create tasmota-knx with KNX but without Emulation
+//#define FIRMWARE_KNX_NO_EMULATION                // Create tasmota-knx with KNX but without Emulation
 //#define FIRMWARE_DISPLAYS                        // Create tasmota-display with display drivers enabled
 //#define FIRMWARE_IR                              // Create tasmota-ir with IR full protocols activated, and many sensors disabled
 //#define FIRMWARE_IR_CUSTOM                       // Create tasmota customizable with special marker to add all IR protocols
