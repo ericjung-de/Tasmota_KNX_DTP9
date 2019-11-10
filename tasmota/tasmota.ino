@@ -790,6 +790,14 @@ bool MqttShowSensor(void)
   return json_data_available;
 }
 
+void MqttPublishSensor(void)
+{
+  mqtt_data[0] = '\0';
+  if (MqttShowSensor()) {
+    MqttPublishTeleSensor();
+  }
+}
+
 /********************************************************************************************/
 
 void PerformEverySecond(void)
@@ -851,6 +859,7 @@ void PerformEverySecond(void)
         RulesTeleperiod();  // Allow rule based HA messages
 #endif  // USE_RULES
       }
+
       XdrvCall(FUNC_AFTER_TELEPERIOD);
     }
   }
