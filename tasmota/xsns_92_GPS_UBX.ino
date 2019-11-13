@@ -27,7 +27,7 @@
                     base      - code base from arendst and              - https://www.youtube.com/watch?v=TwhCX0c8Xe0
 
 */
-#define USE_GPS_UBX
+//#define USE_GPS_UBX
 
 #define USE_FLOG
 
