@@ -52,7 +52,9 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 * [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
-* v pre-2.6.x (stage) Works fine. No known issues. **RECOMMENDED**
+* v2.6.2 Works fine. No known issues. Bigger flash usage than 2.6.1
+* v2.6.1 Works fine. No known issues. Smaller flash usage than 2.6.0 **RECOMMENDED**
+* v2.6.0 Works fine. No known issues.
 * v2.5.2 Has some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. Do not use.
 * v2.5.1 Has some wifi and **security** issues. Do not use.
 * v2.5.0 Has some wifi and **security** issues. Do not use.
@@ -64,7 +66,7 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 ## Firmware ##
 
 In the [releases](https://github.com/ascillato/Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266 devices.
-If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://github.com/arendst/Tasmota/wiki).
+If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://tasmota.github.io/docs/#/).
 
 ## Implemented Features ##
 
@@ -248,7 +250,7 @@ OPTION Value | Device Parameter
 - [x] Add commands for rules to set KNX Configurations
 - [x] Add events for rules when receiving data from KNX and read requests
 - [x] Add option for increase communication reliability (re send telegrams)
-- [ ] Add option for multicast forced reconnection (needed for some routers that have IGMP conflict with actual esp8266 lib v2.3.0 to v2.5.0, and lwIP v1.4 to v2.1 - Send a telegram to itself. If it is received, multicast is ok, if not, reconnect)
+- [ ] Add option for multicast forced reconnection (needed for some routers that have IGMP conflict with actual esp8266 lib v2.3.0 to v2.5.2, and lwIP v1.4 to v2.1 - Send a telegram to itself. If it is received, multicast is ok, if not, reconnect)
 - [ ] Add option to support KNX Snooping to debug KNX Network
 - [ ] Add option for KNXnet/IP Tunneling
 - [ ] Add option to repeat all KNX multicast broadcast (Tasmota to Tasmota communications) to KNXnet/IP Tunneling
