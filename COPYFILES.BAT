@@ -32,6 +32,9 @@ copy tasmota-SK\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\
 copy tasmota-TW\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-TW.bin
 copy tasmota-TR\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-TR.bin
 copy tasmota-UK\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-UK.bin
+copy tasmota-DE_2MB\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-DE-2MB.bin
+copy tasmota-EN_2MB\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-EN-2MB.bin
+copy tasmota-ES_2MB\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-ES-2MB.bin
 copy tasmota-DE_4MB\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-DE-4MB.bin
 copy tasmota-EN_4MB\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-EN-4MB.bin
 copy tasmota-ES_4MB\firmware.bin %USERPROFILE%\Documents\GitHub\Tasmota_KNX\release\tasmota_KNX-ES-4MB.bin
