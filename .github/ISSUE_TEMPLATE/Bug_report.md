@@ -1,11 +1,11 @@
 ---
-name: Bug report
+name: Problem report
 about: Create a report to help us improve
 ---
 
-<!-- Thanks for reporting a bug for this project. READ THIS FIRST:
+<!-- Thanks for reporting a problem for this project. READ THIS FIRST:
 
-This BUG issue template is meant to REPORT Tasmota software BUGS ONLY
+This issue template is meant to REPORT Tasmota software PROBLEMS ONLY
 
 Please DO NOT OPEN AN ISSUE:
   - If your Tasmota version is not the latest from the development branch, please update your device before submitting your issue. Your problem might already be solved. The latest precompiled binaries of Tasmota can be downloaded from http://thehackbox.org/tasmota/
@@ -20,8 +20,8 @@ Please DO NOT OPEN AN ISSUE:
 DO NOT DELETE ANY TEXT from this template! Otherwise the issue will be auto-closed.
 -->
 
-### BUG DESCRIPTION
-_A clear and concise description of what the bug is._
+### PROBLEM DESCRIPTION
+_A clear and concise description of what the problem is._
 
 
 ### REQUESTED INFORMATION
