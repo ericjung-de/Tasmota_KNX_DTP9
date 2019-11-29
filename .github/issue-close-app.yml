@@ -33,7 +33,7 @@ issueConfigs:
 # There can be several configs for different kind of issues.
 - content:
 # template 1: bug report
-  - "BUG DESCRIPTION"
+  - "PROBLEM DESCRIPTION"
   - "REQUESTED INFORMATION"
   - "TO REPRODUCE"
   - "EXPECTED BEHAVIOUR" 
