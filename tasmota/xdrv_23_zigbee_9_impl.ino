@@ -1,7 +1,7 @@
 /*
   xdrv_23_zigbee.ino - zigbee support for Tasmota
 
-  Copyright (C) 2019  Theo Arends and Stephan Hadinger
+  Copyright (C) 2020  Theo Arends and Stephan Hadinger
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,12 +31,14 @@ TasmotaSerial *ZigbeeSerial = nullptr;
 const char kZigbeeCommands[] PROGMEM = "|"
   D_CMND_ZIGBEEZNPSEND "|" D_CMND_ZIGBEE_PERMITJOIN "|"
   D_CMND_ZIGBEE_STATUS "|" D_CMND_ZIGBEE_RESET "|" D_CMND_ZIGBEE_SEND "|"
-  D_CMND_ZIGBEE_PROBE "|" D_CMND_ZIGBEE_READ ;
+  D_CMND_ZIGBEE_PROBE "|" D_CMND_ZIGBEE_READ "|" D_CMND_ZIGBEEZNPRECEIVE
+  ;
 
 void (* const ZigbeeCommand[])(void) PROGMEM = {
   &CmndZigbeeZNPSend, &CmndZigbeePermitJoin,
   &CmndZigbeeStatus, &CmndZigbeeReset, &CmndZigbeeSend,
-  &CmndZigbeeProbe, &CmndZigbeeRead };
+  &CmndZigbeeProbe, &CmndZigbeeRead, &CmndZigbeeZNPReceive
+  };
 
 int32_t ZigbeeProcessInput(class SBuffer &buf) {
   if (!zigbee.state_machine) { return -1; }     // if state machine is stopped, send 'ignore' message
@@ -191,14 +193,9 @@ void ZigbeeInput(void)
 
 			SBuffer znp_buffer = zigbee_buffer->subBuffer(2, zigbee_frame_len - 3);	// remove SOF, LEN and FCS
 
-#ifdef ZIGBEE_VERBOSE
 			ToHex_P((unsigned char*)znp_buffer.getBuffer(), znp_buffer.len(), hex_char, sizeof(hex_char));
       AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE D_JSON_ZIGBEEZNPRECEIVED " %s"),
                                  hex_char);
-	    // Response_P(PSTR("{\"" D_JSON_ZIGBEEZNPRECEIVED "\":\"%s\"}"), hex_char);
-	    // MqttPublishPrefixTopic_P(RESULT_OR_TELE, PSTR(D_JSON_ZIGBEEZNPRECEIVED));
-	    // XdrvRulesProcess();
-#endif
 
 			// now process the message
       ZigbeeProcessInput(znp_buffer);
@@ -269,11 +266,11 @@ void CmndZigbeeReset(void) {
 void CmndZigbeeStatus(void) {
   if (ZigbeeSerial) {
     String dump = zigbee_devices.dump(XdrvMailbox.index, XdrvMailbox.payload);
-    Response_P(PSTR("{\"%s%d\":%s}"), XdrvMailbox.command, XdrvMailbox.payload, dump.c_str());
+    Response_P(PSTR("{\"%s%d\":%s}"), XdrvMailbox.command, XdrvMailbox.index, dump.c_str());
   }
 }
 
-void CmndZigbeeZNPSend(void)
+void CmndZigbeeZNPSendOrReceive(bool send)
 {
   if (ZigbeeSerial && (XdrvMailbox.data_len > 0)) {
     uint8_t code;
@@ -291,9 +288,24 @@ void CmndZigbeeZNPSend(void)
       size -= 2;
       codes += 2;
     }
-		ZigbeeZNPSend(buf.getBuffer(), buf.len());
+    if (send) {
+      ZigbeeZNPSend(buf.getBuffer(), buf.len());
+    } else {
+      ZigbeeProcessInput(buf);
+    }
   }
   ResponseCmndDone();
+}
+
+// For debug purposes only, simulates a message received
+void CmndZigbeeZNPReceive(void)
+{
+  CmndZigbeeZNPSendOrReceive(false);
+}
+
+void CmndZigbeeZNPSend(void)
+{
+  CmndZigbeeZNPSendOrReceive(true);
 }
 
 void ZigbeeZNPSend(const uint8_t *msg, size_t len) {
@@ -320,15 +332,13 @@ void ZigbeeZNPSend(const uint8_t *msg, size_t len) {
 		ZigbeeSerial->write(fcs);			// finally send fcs checksum byte
 		AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZNPSend FCS %02X"), fcs);
   }
-#ifdef ZIGBEE_VERBOSE
 	// Now send a MQTT message to report the sent message
 	char hex_char[(len * 2) + 2];
   AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE D_JSON_ZIGBEEZNPSENT " %s"),
                                		ToHex_P(msg, len, hex_char, sizeof(hex_char)));
-#endif
 }
 
-void ZigbeeZCLSend(uint16_t dtsAddr, uint16_t clusterId, uint8_t endpoint, uint8_t cmdId, bool clusterSpecific, const uint8_t *msg, size_t len, bool disableDefResp = true, uint8_t transacId = 1) {
+void ZigbeeZCLSend(uint16_t dtsAddr, uint16_t clusterId, uint8_t endpoint, uint8_t cmdId, bool clusterSpecific, const uint8_t *msg, size_t len, bool disableDefResp, uint8_t transacId) {
   SBuffer buf(25+len);
   buf.add8(Z_SREQ | Z_AF);        // 24
   buf.add8(AF_DATA_REQUEST);      // 01
@@ -423,26 +433,11 @@ void zigbeeZCLSendStr(uint16_t dstAddr, uint8_t endpoint, const char *data) {
 
   // everything is good, we can send the command
   ZigbeeZCLSend(dstAddr, cluster, endpoint, cmd, clusterSpecific, buf.getBuffer(), buf.len());
+  // now set the timer, if any, to read back the state later
+  if (clusterSpecific) {
+    zigbeeSetCommandTimer(dstAddr, cluster, endpoint);
+  }
   ResponseCmndDone();
-}
-
-// Get an JSON attribute, with case insensitive key search
-JsonVariant &getCaseInsensitive(const JsonObject &json, const char *needle) {
-  // key can be in PROGMEM
-  if ((nullptr == &json) || (nullptr == needle) || (0 == pgm_read_byte(needle))) {
-    return *(JsonVariant*)nullptr;
-  }
-
-  for (auto kv : json) {
-    const char *key = kv.key;
-    JsonVariant &value = kv.value;
-
-    if (0 == strcasecmp_P(key, needle)) {
-      return value;
-    }
-  }
-  // if not found
-  return *(JsonVariant*)nullptr;
 }
 
 void CmndZigbeeSend(void) {
@@ -540,7 +535,7 @@ void CmndZigbeeSend(void) {
       // we have an unsupported command type, just ignore it and fallback to missing command
     }
 
-    AddLog_P2(LOG_LEVEL_INFO, PSTR("ZigbeeCmd_actual: ZigbeeZCLSend {\"device\":\"0x%04X\",\"endpoint\":%d,\"send\":\"%s\"}"),
+    AddLog_P2(LOG_LEVEL_DEBUG, PSTR("ZigbeeCmd_actual: ZigbeeZCLSend {\"device\":\"0x%04X\",\"endpoint\":%d,\"send\":\"%s\"}"),
               device, endpoint, cmd_str.c_str());
     zigbeeZCLSendStr(device, endpoint, cmd_str.c_str());
   } else {
@@ -553,7 +548,7 @@ void CmndZigbeeSend(void) {
 // Probe a specific device to get its endpoints and supported clusters
 void CmndZigbeeProbe(void) {
   if (zigbee.init_phase) { ResponseCmndChar(D_ZIGBEE_NOT_STARTED); return; }
-  char dataBufUc[XdrvMailbox.data_len];
+  char dataBufUc[XdrvMailbox.data_len + 1];
   UpperCase(dataBufUc, XdrvMailbox.data);
   RemoveSpace(dataBufUc);
   if (strlen(dataBufUc) < 3) { ResponseCmndChar("Invalid destination"); return; }
@@ -648,6 +643,11 @@ bool Xdrv23(uint8_t function)
 
   if (zigbee.active) {
     switch (function) {
+      case FUNC_EVERY_50_MSECOND:
+        if (!zigbee.init_phase) {
+          zigbee_devices.runTimer();
+        }
+        break;
       case FUNC_LOOP:
         if (ZigbeeSerial) { ZigbeeInput(); }
 				if (zigbee.state_machine) {
