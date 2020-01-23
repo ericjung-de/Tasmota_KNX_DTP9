@@ -65,6 +65,8 @@ The following binary downloads have been compiled with ESP8266/Arduino library c
 - Fix Display handling of hexadecimal escape characters (#7387)
 - Fix ``WakeUp <x>`` ignores provided value (#7473)
 - Fix exception 9 restart on log message in Ticker interrupt service routines NTP, Wemos and Hue emulation (#7496)
+- Fix ``PowerDelta`` zero power detection (#7515)
+- Fix ``RGBWWTable`` ignored (#7572)
 - Add command ``SetOption79 0/1`` to enable reset of counters at teleperiod time by Andre Thomas (#7355)
 - Add command ``SetOption82 0/1`` to limit the CT range for Alexa to 200..380
 - Add command ``ShutterButton <parameters>`` to control shutter(s) by to-scho (#7403)
@@ -79,3 +81,7 @@ The following binary downloads have been compiled with ESP8266/Arduino library c
 - Add support to BMP driver to enter reset state (sleep enable) when deep sleep is used in Tasmota
 - Add support for gzipped binaries
 - Add web page sliders when ``SetOption37 128`` is active allowing control of white(s)
+- Add most SetOptions as defines to my_user_config.h
+- Add SoftwareSerial to CSE7766 driver allowing different GPIOs (#7563)
+- Add optional parameter <startcolor> to command ``Scheme <scheme>, <startcolor>`` to control initial start color
+- Add rule trigger on one level deeper using syntax with two ``#`` like ``on zigbeereceived#vibration_sensor#aqaracubeside=0 do ...``
