@@ -21,7 +21,7 @@ While fallback or downgrading is common practice it was never supported due to S
 
 ## Supported Core versions
 
-This release will be supported from ESP8266/Arduino library Core version **2.6.1** due to reported security and stability issues on previous Core version.
+This release will be supported from ESP8266/Arduino library Core version **2.6.3 + 372a3ec** due to reported security and stability issues on previous Core version. This will also support gzipped binaries.
 
 Although it might still compile on previous Core versions all support will be removed in the near future.
 
@@ -35,11 +35,11 @@ For initial configuration this release supports Webserver based **WifiManager** 
 
 ## Provided Binary Downloads
 
-The following binary downloads have been compiled with ESP8266/Arduino library core version **2.6.1**.
+The following binary downloads have been compiled with ESP8266/Arduino library core version **2.6.3 + 372a3ec**.
 
-- **tasmota.bin** = The Tasmota version with sensors. **RECOMMENDED RELEASE BINARY**
+- **tasmota.bin** = The Tasmota version with most drivers. **RECOMMENDED RELEASE BINARY**
 - **tasmota-BG.bin** to **tasmota-TW.bin** = The Tasmota version in different languages.
-- **tasmota-lite.bin** = The Lite version without most sensors.
+- **tasmota-lite.bin** = The Lite version without most drivers and sensors.
 - **tasmota-knx.bin** = The Knx version without some features but adds KNX support.
 - **tasmota-sensors.bin** = The Sensors version adds more useful sensors.
 - **tasmota-ir** = The InfraRed Receiver and transmitter version allowing all available protocols provided by library IRremoteESP8266 but without most other features.
@@ -52,11 +52,13 @@ The following binary downloads have been compiled with ESP8266/Arduino library c
 
 ## Changelog
 
-### Version 8.1.0.9
+### Version 8.1.0.10
 
+- Change default my_user_config.h driver and sensor support removing most sensors and adding most drivers
+- Change DHT driver (#7468, #7717)
 - Change Lights: simplified gamma correction and 10 bits internal computation
 - Change commands ``Prefix``, ``Ssid``, ``StateText``, ``NTPServer``, and ``FriendlyName`` displaying all items
-- Change IRremoteESP8266 library updated to v2.7.3
+- Change IRremoteESP8266 library updated to v2.7.4
 - Change Zigbee command prefix from ``Zigbee*`` to ``Zb*``
 - Change MQTT message size with additional 200 characters
 - Change display of some date and time messages from "Wed Feb 19 10:45:12 2020" to "2020-02-19T10:45:12"
@@ -76,7 +78,12 @@ The following binary downloads have been compiled with ESP8266/Arduino library c
 - Fix relation between RSSI and signal strength
 - Add command ``SetOption79 0/1`` to enable reset of counters at teleperiod time by Andre Thomas (#7355)
 - Add command ``SetOption82 0/1`` to limit the CT range for Alexa to 200..380
-- Add command ``SetOption84 1`` to send AWS IoT device shadow updates (alternative to retained)
+- Add command ``SetOption84 0/1`` to send AWS IoT device shadow updates (alternative to retained)
+- Add commands ``SetOption85 0/1`` and ``DevGroupShare`` supporting UDP Group command using ``GroupTopic`` without MQTT by Paul Diem (#7790)
+- Add command ``SetOption86 0/1`` for PWM dimmer to turn brightness LED's off 5 seconds after last change
+- Add command ``SetOption87 0/1`` for PWM dimmer to turn red LED on when powered off
+- Add command ``SetOption88 0/1`` for PWM dimmer to let buttons control remote devices
+- Add command ``SetOption89 0/1`` for Zigbee distinct MQTT topics per device for SENSOR, allowing retained messages (#7835)
 - Add command ``ShutterButton <parameters>`` to control shutter(s) by to-scho (#7403)
 - Add commands ``SwitchMode 8`` ToggleMulti, ``SwitchMode 9`` FollowMulti and ``SwitchMode 10`` FollowMultiInverted (#7522)
 - Add commands ``SwitchMode 11`` PushHoldMulti and ``SwitchMode 12`` PushHoldInverted (#7603)
@@ -101,7 +108,11 @@ The following binary downloads have been compiled with ESP8266/Arduino library c
 - Add ``ZbZNPReceived``and ``ZbZCLReceived`` being published to MQTT when ``SetOption66 1``
 - Add optional Wifi AccessPoint passphrase define WIFI_AP_PASSPHRASE in my_user_config.h (#7690)
 - Add support for FiF LE-01MR energy meter by saper-2 (#7584)
-- Add new DHT driver. The old driver can still be used using define USE_DHT_OLD (#7468)
-- Add another new DHT driver based on ESPEasy. The old driver can still be used using define USE_DHT_OLD. The previous new driver can be used with define USE_DHT_V2 (#7717)
 - Add initial support for Sensors AHT10 and AHT15 by Martin Wagner (#7596)
 - Add support for Wemos Motor Shield V1 by Denis Sborets (#7764)
+- Add Zigbee enhanced commands decoding, added ``ZbPing``
+- Add Zigbee features and improvements
+- Add support for Martin Jerry/acenx/Tessan/NTONPOWER SD0x PWM dimmer switches by Paul Diem (#7791)
+- Add support for Jarolift rollers by Keeloq algorithm
+- Add support for MaxBotix HRXL-MaxSonar ultrasonic range finders by Jon Little (#7814)
+- Add support for Romanian language translations by Augustin Marti

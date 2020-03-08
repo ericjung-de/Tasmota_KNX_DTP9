@@ -53,9 +53,9 @@ const char HASS_DISCOVER_BASE[] PROGMEM =
     "\"pl_not_avail\":\"" D_OFFLINE "\"";        // Offline
 
 const char HASS_DISCOVER_RELAY[] PROGMEM =
-    ",\"cmd_t\":\"%s\","                         // cmnd/dualr2/POWER2	                           
-    "\"val_tpl\":\"{{value_json.%s}}\","         // POWER2	  
-    "\"pl_off\":\"%s\","                         // OFF	  
+    ",\"cmd_t\":\"%s\","                         // cmnd/dualr2/POWER2
+    "\"val_tpl\":\"{{value_json.%s}}\","         // POWER2
+    "\"pl_off\":\"%s\","                         // OFF
     "\"pl_on\":\"%s\"";                          // ON
 
 const char HASS_DISCOVER_BUTTON_TOGGLE[] PROGMEM =
@@ -200,8 +200,8 @@ void HAssAnnounceRelayLight(void)
       TryResponseAppend_P(HASS_DISCOVER_RELAY, command_topic, value_template, SettingsText(SET_STATE_TXT1), SettingsText(SET_STATE_TXT2));
       TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP.getChipId(), WiFi.macAddress().c_str());
 
-#ifdef USE_LIGHT
-      if (is_light)
+#if defined(USE_LIGHT) || defined(USE_PWM_DIMMER)
+      if (is_light || PWM_DIMMER == my_module_type)
       {
         char *brightness_command_topic = stemp1;
 
@@ -209,6 +209,7 @@ void HAssAnnounceRelayLight(void)
         strncpy_P(stemp3, Settings.flag.not_power_linked ? PSTR("last") : PSTR("brightness"), sizeof(stemp3)); // SetOption20 - Control power in relation to Dimmer/Color/Ct changes
         TryResponseAppend_P(HASS_DISCOVER_LIGHT_DIMMER, brightness_command_topic, state_topic, stemp3);
 
+#ifdef USE_LIGHT
         if (Light.subtype >= LST_RGB)
         {
           char *rgb_command_topic = stemp1;
@@ -234,8 +235,9 @@ void HAssAnnounceRelayLight(void)
           GetTopic_P(color_temp_command_topic, CMND, mqtt_topic, D_CMND_COLORTEMPERATURE);
           TryResponseAppend_P(HASS_DISCOVER_LIGHT_CT, color_temp_command_topic, state_topic);
         }
+#endif  // USE_LIGHT
       }
-#endif // USE_LIGHT
+#endif  // defined(USE_LIGHT) || defined(USE_PWM_DIMMER)
       TryResponseAppend_P(PSTR("}"));
     }
     MqttPublish(stopic, true);
@@ -366,7 +368,7 @@ void HAssAnnounceSensor(const char *sensorname, const char *subsensortype, const
   char unique_id[30];
 
   mqtt_data[0] = '\0'; // Clear retained message
-  // Clear or Set topic  
+  // Clear or Set topic
   char subname[20];
   NoAlNumToUnderscore(subname, MultiSubName); //Replace all non alphaumeric characters to '_' to avoid topic name issues
   snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%s"), ESP.getChipId(), sensorname, subname);
@@ -502,7 +504,7 @@ void HAssAnnounceStatusSensor(void)
     TryResponseAppend_P(HASS_DISCOVER_SENSOR_HASS_STATUS, state_topic);
     TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO, unique_id, ESP.getChipId(), WiFi.macAddress().c_str(),
                         SettingsText(SET_FRIENDLYNAME1), ModuleName().c_str(), my_version, my_image);
-  
+
     TryResponseAppend_P(PSTR("}"));
   }
   MqttPublish(stopic, true);
@@ -566,9 +568,13 @@ void HAssAnyKey(void)
     return;
   } // SetOption19 - Control Home Assistantautomatic discovery (See SetOption59)
 
-  uint32_t key = (XdrvMailbox.payload >> 16) & 0xFF;
-  uint32_t device = XdrvMailbox.payload & 0xFF;
-  uint32_t state = (XdrvMailbox.payload >> 8) & 0xFF;
+  uint32_t key = (XdrvMailbox.payload >> 16) & 0xFF;   // 0 = Button, 1 = Switch
+  uint32_t device = XdrvMailbox.payload & 0xFF;        // Device number or 1 if more Buttons than Devices
+  uint32_t state = (XdrvMailbox.payload >> 8) & 0xFF;  // 0 = Off, 1 = On, 2 = Toggle
+
+  if (!key && ButtonTopicActive()) {                   // Button and ButtonTopic is active
+    device = (XdrvMailbox.payload >> 24) & 0xFF;       // Button number
+  }
 
   char scommand[CMDSZ];
   snprintf_P(scommand, sizeof(scommand), PSTR("%s%d"), (key) ? "SWITCH" : "BUTTON", device);

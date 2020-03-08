@@ -21,8 +21,13 @@
     - Change libraries/PubSubClient/src/PubSubClient.h
         #define MQTT_MAX_PACKET_SIZE 1200
 
-    - Select IDE Tools - Flash Mode: "DOUT"
-    - Select IDE Tools - Flash Size: "1M (no SPIFFS)"
+  Arduino IDE 1.8.12 and up parameters
+    - Select IDE Tools - Board: "Generic ESP8266 Module"
+    - Select IDE Tools - Flash Mode: "DOUT (compatible)"
+    - Select IDE Tools - Flash Size: "1M (FS:none OTA:~502KB)"
+    - Select IDE Tools - LwIP Variant: "v2 Higher Bandwidth (no feature)"
+    - Select IDE Tools - VTables: "Flash"
+    - Select IDE Tools - Espressif FW: "nonos-sdk-2.2.1+100 (190703)"
   ====================================================*/
 
 // Location specific includes
@@ -154,6 +159,7 @@ bool spi_flg = false;                       // SPI configured
 bool soft_spi_flg = false;                  // Software SPI configured
 bool ntp_force_sync = false;                // Force NTP sync
 bool is_8285 = false;                       // Hardware device ESP8266EX (0) or ESP8285 (1)
+bool skip_light_fade;                       // Temporarily skip light fading
 myio my_module;                             // Active copy of Module GPIOs (17 x 8 bits)
 gpio_flag my_module_flag;                   // Active copy of Template GPIO flags
 StateBitfield global_state;                 // Global states (currently Wifi and Mqtt) (8 bits)
@@ -329,6 +335,9 @@ void loop(void)
 #ifdef ROTARY_V1
   RotaryLoop();
 #endif
+#ifdef USE_DEVICE_GROUPS
+  DeviceGroupsLoop();
+#endif  // USE_DEVICE_GROUPS
   BacklogLoop();
 
   if (TimeReached(state_50msecond)) {

@@ -424,6 +424,7 @@ bool SendKey(uint32_t key, uint32_t device, uint32_t state)
   char scommand[CMDSZ];
   char key_topic[TOPSZ];
   bool result = false;
+  uint32_t device_save = device;
 
   char *tmp = (key) ? SettingsText(SET_MQTT_SWITCH_TOPIC) : SettingsText(SET_MQTT_BUTTON_TOPIC);
   Format(key_topic, tmp, sizeof(key_topic));
@@ -459,7 +460,7 @@ bool SendKey(uint32_t key, uint32_t device, uint32_t state)
     result = XdrvRulesProcess();
   }
   int32_t payload_save = XdrvMailbox.payload;
-  XdrvMailbox.payload = key << 16 | state << 8 | device;
+  XdrvMailbox.payload = device_save << 24 | key << 16 | state << 8 | device;
   XdrvCall(FUNC_ANY_KEY);
   XdrvMailbox.payload = payload_save;
   return result;
@@ -541,6 +542,9 @@ void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source)
     case POWER_TOGGLE:
       power ^= mask;
     }
+#ifdef USE_DEVICE_GROUPS
+    if (SRC_REMOTE != source && SRC_RETRY != source) SendLocalDeviceGroupMessage(DGR_MSGTYP_UPDATE, DGR_ITEM_POWER, power);
+#endif  // USE_DEVICE_GROUPS
     SetDevicePower(power, source);
 #ifdef USE_DOMOTICZ
     DomoticzUpdatePowerState(device);
@@ -637,6 +641,12 @@ void MqttShowState(void)
         break;
       }
 #endif  // USE_SONOFF_IFAN
+#ifdef USE_PWM_DIMMER
+      if (PWM_DIMMER == my_module_type) {
+        ResponseAppend_P(PSTR(",\"" D_CMND_DIMMER "\":%d,\"" D_CMND_FADE "\":\"%s\",\"" D_CMND_SPEED "\":%d"),
+          Settings.light_dimmer, GetStateText(Settings.light_fade), Settings.light_speed);
+      }
+#endif  // USE_PWM_DIMMER
 #ifdef USE_LIGHT
     }
 #endif
@@ -686,6 +696,9 @@ bool MqttShowSensor(void)
   }
   if (strstr_P(mqtt_data, PSTR(D_JSON_TEMPERATURE)) != nullptr) {
     ResponseAppend_P(PSTR(",\"" D_JSON_TEMPERATURE_UNIT "\":\"%c\""), TempUnit());
+  }
+  if ((strstr_P(mqtt_data, PSTR(D_JSON_SPEED)) != nullptr) && Settings.flag2.speed_conversion) {
+    ResponseAppend_P(PSTR(",\"" D_JSON_SPEED_UNIT "\":\"%s\""), SpeedUnit().c_str());
   }
   ResponseJsonEnd();
 
@@ -778,6 +791,7 @@ void PerformEverySecond(void)
 #endif  // USE_RULES
         }
 
+        XsnsCall(FUNC_AFTER_TELEPERIOD);
         XdrvCall(FUNC_AFTER_TELEPERIOD);
       }
     }
@@ -908,14 +922,18 @@ void Every250mSeconds(void)
             // Replace tasmota.xyz                                     with tasmota-minimal.xyz
             // Replace tasmota.bin.gz                                  with tasmota-minimal.bin.gz
             // Replace tasmota.xyz.gz                                  with tasmota-minimal.xyz.gz
+            // Replace tasmota.ino.bin                                 with tasmota-minimal.ino.bin
+            // Replace tasmota.ino.bin.gz                              with tasmota-minimal.ino.bin.gz
             // Replace http://domus1:80/api/arduino/tasmota.bin        with http://domus1:80/api/arduino/tasmota-minimal.bin
             // Replace http://domus1:80/api/arduino/tasmota.bin.gz     with http://domus1:80/api/arduino/tasmota-minimal.bin.gz
             // Replace http://domus1:80/api/arduino/tasmota-DE.bin.gz  with http://domus1:80/api/arduino/tasmota-minimal.bin.gz
             // Replace http://domus1:80/api/ard-uino/tasmota-DE.bin.gz with http://domus1:80/api/ard-uino/tasmota-minimal.bin.gz
+            // Replace http://192.168.2.17:80/api/arduino/tasmota.bin  with http://192.168.2.17:80/api/arduino/tasmota-minimal.bin
+            // Replace http://192.168.2.17/api/arduino/tasmota.bin.gz  with http://192.168.2.17/api/arduino/tasmota-minimal.bin.gz
 
             char *bch = strrchr(mqtt_data, '/');                       // Only consider filename after last backslash prevent change of urls having "-" in it
             if (bch == nullptr) { bch = mqtt_data; }                   // No path found so use filename only
-
+/*
             char *ech = strrchr(bch, '.');                             // Find file type in filename (none, .bin or .gz)
             if ((ech != nullptr) && (0 == strncasecmp_P(ech, PSTR(".GZ"), 3))) {
               char *fch = ech;
@@ -923,9 +941,14 @@ void Every250mSeconds(void)
               ech = strrchr(bch, '.');                                 // Find file type .bin.gz
               *fch = '.';
             }
-            if (ech == nullptr) { ech = mqtt_data + strlen(mqtt_data); }
+*/
+            char *ech = strchr(bch, '.');                              // Find file type in filename (none, .ino.bin, .ino.bin.gz, .bin, .bin.gz or .gz)
+            if (ech == nullptr) { ech = mqtt_data + strlen(mqtt_data); }  // Point to '/0' at end of mqtt_data becoming an empty string
+
+//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("OTA: File type [%s]"), ech);
+
             char ota_url_type[strlen(ech) +1];
-            strncpy(ota_url_type, ech, sizeof(ota_url_type));          // Either empty, .bin or .bin.gz
+            strncpy(ota_url_type, ech, sizeof(ota_url_type));          // Either empty, .ino.bin, .ino.bin.gz, .bin, .bin.gz or .gz
 
             char *pch = strrchr(bch, '-');                             // Find last dash (-) and ignore remainder - handles tasmota-DE
             if (pch == nullptr) { pch = ech; }                         // No dash so ignore filetype

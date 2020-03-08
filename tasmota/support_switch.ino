@@ -214,22 +214,34 @@ void SwitchHandler(uint8_t mode)
           break;
         case PUSHBUTTONHOLD:
           if ((PRESSED == button) && (NOT_PRESSED == Switch.last_state[i])) {
-            Switch.hold_timer[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;
+            Switch.hold_timer[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;  // Start timer on button press
           }
           if ((NOT_PRESSED == button) && (PRESSED == Switch.last_state[i]) && (Switch.hold_timer[i])) {
-            Switch.hold_timer[i] = 0;
-            switchflag = POWER_TOGGLE;   // Toggle with pushbutton to Gnd
+            Switch.hold_timer[i] = 0;    // Button released and hold timer not expired : stop timer...
+            switchflag = POWER_TOGGLE;   // ...and Toggle
           }
           break;
         case PUSHBUTTONHOLD_INV:
           if ((NOT_PRESSED == button) && (PRESSED == Switch.last_state[i])) {
-            Switch.hold_timer[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;
+            Switch.hold_timer[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;  // Start timer on button press...
           }
           if ((PRESSED == button) && (NOT_PRESSED == Switch.last_state[i]) && (Switch.hold_timer[i])) {
-            Switch.hold_timer[i] = 0;
-            switchflag = POWER_TOGGLE;   // Toggle with pushbutton to Gnd
+            Switch.hold_timer[i] = 0;    // Button released and hold timer not expired : stop timer.
+            switchflag = POWER_TOGGLE;   // ...and Toggle
           }
           break;
+/*
+        // Reverted Fix switchmode 6 according to issue 7778 (#7831)
+        case PUSHBUTTONHOLD_INV:
+          if ((PRESSED == button) && (NOT_PRESSED == Switch.last_state[i])) {
+            Switch.hold_timer[i] = loops_per_second * Settings.param[P_HOLD_TIME] / 10;  // Start timer on button press...
+            switchflag = POWER_TOGGLE;   // ...and Toggle
+          }
+          if ((NOT_PRESSED == button) && (PRESSED == Switch.last_state[i])) {
+            Switch.hold_timer[i] = 0;   // Button released : stop timer.
+          }
+          break;
+*/
         case TOGGLEMULTI:
         case FOLLOWMULTI:
         case FOLLOWMULTI_INV:
