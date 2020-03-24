@@ -52,6 +52,7 @@
 #define D_JSON_CURRENT "Current"         // As in Voltage and Current
 #define D_JSON_DARKNESS "Darkness"
 #define D_JSON_DATA "Data"
+#define D_JSON_DEWPOINT "DewPoint"
 #define D_JSON_DISTANCE "Distance"
 #define D_JSON_DNSSERVER "DNSServer"
 #define D_JSON_DONE "Done"
@@ -303,6 +304,7 @@
   #define D_JSON_FLAG "FLAG"
   #define D_JSON_BASE "BASE"
 #define D_CMND_TEMPOFFSET "TempOffset"
+#define D_CMND_HUMOFFSET "HumOffset"
 
 // Commands xdrv_01_mqtt.ino
 #define D_CMND_MQTTLOG "MqttLog"
@@ -476,7 +478,6 @@
 #define D_ZIGBEE_NOT_STARTED "Zigbee not started (yet)"
 #define D_CMND_ZIGBEE_PERMITJOIN "PermitJoin"
 #define D_CMND_ZIGBEE_STATUS "Status"
-  #define D_JSON_ZIGBEE_Status "Status"
 #define D_CMND_ZIGBEE_RESET "Reset"
   #define D_JSON_ZIGBEE_CC2530 "CC2530"
 #define D_CMND_ZIGBEEZNPRECEIVE "ZNPReceive"      // only for debug
@@ -488,6 +489,7 @@
   #define D_JSON_ZIGBEEZCL_RAW_RECEIVED "ZbZCLRawReceived"
   #define D_JSON_ZIGBEE_DEVICE "Device"
   #define D_JSON_ZIGBEE_NAME "Name"
+  #define D_JSON_ZIGBEE_CONFIRM "ZbConfirm"
 #define D_CMND_ZIGBEE_NAME "Name"
 #define D_CMND_ZIGBEE_MODELID "ModelId"
   #define D_JSON_ZIGBEE_MODELID "ModelId"
@@ -510,6 +512,9 @@
   #define D_JSON_ZIGBEE_CMD "Command"
   #define D_JSON_ZIGBEE_STATUS "Status"
   #define D_JSON_ZIGBEE_STATUS_MSG "StatusMessage"
+#define D_CMND_ZIGBEE_LIGHT "Light"
+  #define D_JSON_ZIGBEE_LIGHT "Light"
+#define D_CMND_ZIGBEE_RESTORE "Restore"
 
 // Commands xdrv_25_A4988_Stepper.ino
 #define D_CMND_MOTOR "MOTOR"
@@ -542,13 +547,13 @@
 #define D_CMND_SHUTTER_BUTTON "Button"
 #define D_CMND_SHUTTER_LOCK "Lock"
 #define D_CMND_SHUTTER_ENABLEENDSTOPTIME "EnableEndStopTime"
+#define D_CMND_SHUTTER_INVERTWEBBUTTONS "InvertWebButtons"
 
 // Commands xdrv_32_hotplug.ino
 #define D_CMND_HOTPLUG "HotPlug"
 
 // Commands xdrv_34_pwm_dimmer.ino
 #ifdef USE_PWM_DIMMER
-#define D_CMND_BRI_MIN "BriMin"
 #define D_CMND_BRI_PRESET "BriPreset"
 #endif
 
@@ -628,7 +633,6 @@ const char S_JSON_DRIVER_INDEX_NVALUE[] PROGMEM =             "{\"" D_CMND_DRIVE
 const char S_JSON_DRIVER_INDEX_SVALUE[] PROGMEM =             "{\"" D_CMND_DRIVER "%d\":\"%s\"}";
 
 const char JSON_SNS_TEMP[] PROGMEM = ",\"%s\":{\"" D_JSON_TEMPERATURE "\":%s}";
-const char JSON_SNS_TEMPHUM[] PROGMEM = ",\"%s\":{\"" D_JSON_TEMPERATURE "\":%s,\"" D_JSON_HUMIDITY "\":%s}";
 
 const char JSON_SNS_ILLUMINANCE[] PROGMEM = ",\"%s\":{\"" D_JSON_ILLUMINANCE "\":%d}";
 const char JSON_SNS_MOISTURE[] PROGMEM = ",\"%s\":{\"" D_JSON_MOISTURE "\":%d}";
@@ -665,6 +669,7 @@ const float kSpeedConversionFactor[] = {1,            // none
 // {s} = <tr><th>, {m} = </th><td>, {e} = </td></tr>
 const char HTTP_SNS_TEMP[] PROGMEM = "{s}%s " D_TEMPERATURE "{m}%s&deg;%c{e}";
 const char HTTP_SNS_HUM[] PROGMEM = "{s}%s " D_HUMIDITY "{m}%s%%{e}";
+const char HTTP_SNS_DEW[] PROGMEM = "{s}%s " D_DEWPOINT "{m}%s&deg;%c{e}";
 const char HTTP_SNS_PRESSURE[] PROGMEM = "{s}%s " D_PRESSURE "{m}%s %s{e}";
 const char HTTP_SNS_SEAPRESSURE[] PROGMEM = "{s}%s " D_PRESSUREATSEALEVEL "{m}%s %s{e}";
 const char HTTP_SNS_ANALOG[] PROGMEM = "{s}%s " D_ANALOG_INPUT "%d{m}%d{e}";

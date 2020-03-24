@@ -38,8 +38,10 @@ extern "C" {
 void KNX_CB_Action(message_t const &msg, void *arg);
 //#endif  // USE_KNX
 
+void DomoticzTempHumPressureSensor(float temp, float hum, float baro = -1);
 char* ToHex_P(const unsigned char * in, size_t insz, char * out, size_t outsz, char inbetween = '\0');
 extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack, uint32_t stack_end);
+extern "C" void resetPins();
 
 /*********************************************************************************************\
  * Default global defines
@@ -106,19 +108,19 @@ extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack
 #ifndef TUYA_DIMMER_ID
   #define TUYA_DIMMER_ID       0                 // Default dimmer Id
 #endif
-#undef USE_ARMTRONIX_DIMMERS                     // Disable support for Armtronix Dimmers (+1k4 code)
-#define USE_PS_16_DZ                             // Add support for PS-16-DZ Dimmer (+2k code)
-#define USE_SONOFF_IFAN                          // Add support for Sonoff iFan02 and iFan03 (+2k code)
+#undef USE_ARMTRONIX_DIMMERS                    // Disable support for Armtronix Dimmers (+1k4 code)
+#undef USE_PS_16_DZ                             // Disable support for PS-16-DZ Dimmer (+2k code)
+#undef USE_SONOFF_IFAN                          // Disable support for Sonoff iFan02 and iFan03 (+2k code)
 #define USE_BUZZER                               // Add support for a buzzer (+0k6 code)
-#define USE_ARILUX_RF                            // Add support for Arilux RF remote controller (+0k8 code, 252 iram (non 2.3.0))
-#undef USE_SHUTTER                               // Disable Shutter support for up to 4 shutter with different motortypes (+6k code)
+#undef USE_ARILUX_RF                            // Disable support for Arilux RF remote controller (+0k8 code, 252 iram (non 2.3.0))
+#undef USE_SHUTTER                              // Disable Shutter support for up to 4 shutter with different motortypes (+6k code)
 #define USE_DEEPSLEEP                            // Add support for deepsleep (+1k code)
-#undef USE_EXS_DIMMER                            // Disable support for EX-Store WiFi Dimmer
-#define USE_HOTPLUG                              // Add support for sensor HotPlug
-#undef USE_DEVICE_GROUPS                         // Disable support for device groups (+5k6 code)
-#undef USE_PWM_DIMMER                            // Disable support for MJ-SD01/acenx/NTONPOWER PWM dimmers (+4k5 code)
-#undef USE_KEELOQ                                // Disable support for Jarolift rollers by Keeloq algorithm (+4k5 code)
-#define USE_SONOFF_D1                            // Add support for Sonoff D1 Dimmer (+0k7 code)
+#undef USE_EXS_DIMMER                           // Disable support for EX-Store WiFi Dimmer
+//#define USE_HOTPLUG                              // Add support for sensor HotPlug
+#undef USE_DEVICE_GROUPS                        // Disable support for device groups (+5k6 code)
+#undef USE_PWM_DIMMER                           // Disable support for MJ-SD01/acenx/NTONPOWER PWM dimmers (+4k5 code)
+#undef USE_KEELOQ                               // Disable support for Jarolift rollers by Keeloq algorithm (+4k5 code)
+#undef USE_SONOFF_D1                            // DIsable support for Sonoff D1 Dimmer (+0k7 code)
 
 // -- Optional light modules ----------------------
 #define USE_LIGHT                                // Add Dimmer/Light support
@@ -134,6 +136,7 @@ extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack
 #define USE_SM16716                              // Add support for SM16716 RGB LED controller (+0k7 code)
 #define USE_SM2135                               // Add support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #define USE_SONOFF_L1                            // Add support for Sonoff L1 led control
+#define USE_ELECTRIQ_MOODL                       // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
 
 #define USE_COUNTER                              // Enable counters
 #undef USE_ADC_VCC                               // Add Analog input on selected devices
@@ -185,6 +188,7 @@ extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack
 #define USE_WEMOS_MOTOR_V1                       // Enable Wemos motor driver V1 (I2C addresses 0x2D - 0x30) (+0k7 code)
   #define WEMOS_MOTOR_V1_ADDR  0x30              // Default I2C address 0x30
   #define WEMOS_MOTOR_V1_FREQ  1000              // Default frequency
+//#define USE_HDC1080                              // Enable HDC1080 temperature/humidity sensor
 
 #define USE_MHZ19                                // Add support for MH-Z19 CO2 sensor (+2k code)
 #define USE_SENSEAIR                             // Add support for SenseAir K30, K70 and S8 CO2 sensor (+2k3 code)
@@ -398,6 +402,7 @@ extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack
 #undef USE_SM16716                               // Disable support for SM16716 RGB LED controller (+0k7 code)
 #undef USE_SM2135                                // Disable support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
+#undef USE_ELECTRIQ_MOODL                        // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
 
 #undef USE_ENERGY_SENSOR                         // Disable energy sensors (-14k code)
   #undef USE_PZEM004T                            // Disable PZEM004T energy sensor
@@ -511,6 +516,7 @@ extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack
 #undef USE_SM16716                               // Disable support for SM16716 RGB LED controller (+0k7 code)
 #undef USE_SM2135                                // Disable support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
+#undef USE_ELECTRIQ_MOODL                        // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -631,6 +637,7 @@ extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack
 #undef USE_SM16716                               // Disable support for SM16716 RGB LED controller (+0k7 code)
 #undef USE_SM2135                                // Disable support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
+#undef USE_ELECTRIQ_MOODL                        // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices

@@ -26,7 +26,7 @@
 | USE_SCRIPT            | - | - | - | - | - | - | - |
 | USE_EXPRESSION        | - | - | - | - | - | - | - |
 | SUPPORT_IF_STATEMENT  | - | - | - | - | - | - | - |
-| USE_HOTPLUG           | - | - | - | - | x | - | - |
+| USE_HOTPLUG           | - | - | - | - | - | - | - |
 |                       |   |   |   |   |   |   |   |
 | Feature or Sensor     | minimal | lite | tasmota | knx | sensors | ir | display | Remarks
 | ROTARY_V1             | - | - | - | - | - | - | - |
@@ -35,15 +35,17 @@
 | USE_SONOFF_SC         | - | - | x | x | x | - | - |
 | USE_TUYA_MCU          | - | x | x | x | x | - | x |
 | USE_ARMTRONIX_DIMMERS | - | - | x | x | - | - | - |
-| USE_PS_16_DZ          | - | - | x | x | x | - | - |
-| USE_SONOFF_IFAN       | - | - | x | x | x | - | - |
+| USE_PS_16_DZ          | - | - | x | x | - | - | - |
+| USE_SONOFF_IFAN       | - | - | x | x | - | - | - |
 | USE_BUZZER            | - | - | x | x | x | - | - |
-| USE_ARILUX_RF         | - | - | x | x | x | - | - |
+| USE_ARILUX_RF         | - | - | x | x | - | - | - |
 | USE_SHUTTER           | - | - | x | x | - | - | - |
 | USE_DEEPSLEEP         | - | - | x | - | x | - | - |
 | USE_EXS_DIMMER        | - | - | x | x | - | - | - |
 | USE_DEVICE_GROUPS     | - | - | x | - | - | - | - |
 | USE_PWM_DIMMER        | - | - | x | x | - | - | - |
+| USE_KEELOQ            | - | - | - | - | - | - | - |
+| USE_SONOFF_D1         | - | - | x | x | - | - | - |
 |                       |   |   |   |   |   |   |   |
 | Feature or Sensor     | minimal | lite | tasmota | knx | sensors | ir | display | Remarks
 | USE_LIGHT             | - | x | x | x | x | x | x |
@@ -53,6 +55,7 @@
 | USE_SM16716           | - | - | x | x | x | - | x |
 | USE_SM2135            | - | - | x | x | x | - | x |
 | USE_SONOFF_L1         | - | - | x | x | x | - | x |
+| USE_ELECTRIQ_MOODL    | - | - | x | x | x | - | x |
 |                       |   |   |   |   |   |   |   |
 | USE_ENERGY_SENSOR     | - | x | x | x | x | - | - |
 | USE_PZEM004T          | - | - | x | x | x | - | - |
@@ -68,7 +71,7 @@
 |                       |   |   |   |   |   |   |   |
 | USE_ADC_VCC           | x | x | - | - | - | - | - |
 | USE_COUNTER           | - | - | x | x | x | x | x |
-| USE_DS18x20           | - | - | x | x | x | - | x |
+| USE_DS18x20           | - | - | x | x | x | x | x |
 | USE_DHT               | - | - | x | x | x | x | x |
 | USE_MAX31855          | - | - | - | - | x | - | - |
 | USE_MAX31865          | - | - | - | - | - | - | - |
@@ -82,7 +85,6 @@
 | USE_BH1750            | - | - | - | - | x | - | - |
 | USE_VEML6070          | - | - | - | - | x | - | - |
 | USE_ADS1115           | - | - | - | - | x | - | - |
-| USE_ADS1115_I2CDEV    | - | - | - | - | - | - | - |
 | USE_INA219            | - | - | - | - | x | - | - |
 | USE_INA226            | - | - | - | - | - | - | - |
 | USE_SHT3X             | - | - | - | - | x | - | - |
@@ -113,6 +115,7 @@
 | USE_DHT12             | - | - | - | - | x | - | - |
 | USE_DS1624            | - | - | - | - | x | - | - |
 | USE_AHT1x             | - | - | - | - | - | - | - |
+| USE_HDC1080           | - | - | - | - | - | - | - |
 | USE_WEMOS_MOTOR_V1    | - | - | - | - | x | - | - |
 |                       |   |   |   |   |   |   |   |
 | Feature or Sensor     | minimal | lite | tasmota | knx | sensors | ir | display | Remarks

@@ -641,12 +641,6 @@ void MqttShowState(void)
         break;
       }
 #endif  // USE_SONOFF_IFAN
-#ifdef USE_PWM_DIMMER
-      if (PWM_DIMMER == my_module_type) {
-        ResponseAppend_P(PSTR(",\"" D_CMND_DIMMER "\":%d,\"" D_CMND_FADE "\":\"%s\",\"" D_CMND_SPEED "\":%d"),
-          Settings.light_dimmer, GetStateText(Settings.light_fade), Settings.light_speed);
-      }
-#endif  // USE_PWM_DIMMER
 #ifdef USE_LIGHT
     }
 #endif
@@ -671,6 +665,30 @@ void MqttPublishTeleState(void)
 #if defined(USE_RULES) || defined(USE_SCRIPT)
   RulesTeleperiod();  // Allow rule based HA messages
 #endif  // USE_SCRIPT
+}
+
+void TempHumDewShow(bool json, bool pass_on, const char *types, float f_temperature, float f_humidity)
+{
+  if (json) {
+    ResponseAppend_P(PSTR(",\"%s\":{"), types);
+    ResponseAppendTHD(f_temperature, f_humidity);
+    ResponseJsonEnd();
+#ifdef USE_DOMOTICZ
+    if (pass_on) {
+      DomoticzTempHumPressureSensor(f_temperature, f_humidity);
+    }
+#endif  // USE_DOMOTICZ
+#ifdef USE_KNX
+    if (pass_on) {
+      KnxSensor(KNX_TEMPERATURE, f_temperature);
+      KnxSensor(KNX_HUMIDITY, f_humidity);
+    }
+#endif  // USE_KNX
+#ifdef USE_WEBSERVER
+  } else {
+    WSContentSend_THD(types, f_temperature, f_humidity);
+#endif  // USE_WEBSERVER
+  }
 }
 
 bool MqttShowSensor(void)
@@ -809,7 +827,6 @@ void Every100mSeconds(void)
 
   if (prepped_loglevel) {
     AddLog(prepped_loglevel);
-    prepped_loglevel = 0;
   }
 
   if (latching_relay_pulse) {
@@ -1280,6 +1297,18 @@ void SerialInput(void)
 
 /********************************************************************************************/
 
+void ResetPwm(void)
+{
+  for (uint32_t i = 0; i < MAX_PWMS; i++) {     // Basic PWM control only
+    if (pin[GPIO_PWM1 +i] < 99) {
+      analogWrite(pin[GPIO_PWM1 +i], bitRead(pwm_inverted, i) ? Settings.pwm_range : 0);
+//      analogWrite(pin[GPIO_PWM1 +i], bitRead(pwm_inverted, i) ? Settings.pwm_range - Settings.pwm_value[i] : Settings.pwm_value[i]);
+    }
+  }
+}
+
+/********************************************************************************************/
+
 void GpioInit(void)
 {
   uint32_t mpin;
@@ -1479,11 +1508,26 @@ void GpioInit(void)
     digitalWrite(pin[GPIO_LEDLNK], ledlnk_inverted);
   }
 
+#ifdef USE_PWM_DIMMER
+  if (PWM_DIMMER == my_module_type && pin[GPIO_REL1] < 99) devices_present--;
+#endif  // USE_PWM_DIMMER
+
   ButtonInit();
   SwitchInit();
 #ifdef ROTARY_V1
   RotaryInit();
 #endif
+
+  // Set any non-used GPIO to INPUT
+  for (uint32_t i = 0; i < sizeof(my_module.io); i++) {
+    mpin = ValidPin(i, my_module.io[i]);
+//    AddLog_P2(LOG_LEVEL_DEBUG, PSTR("INI: gpio pin %d, mpin %d"), i, mpin);
+    if (((i < 6) || (i > 11)) && (0 == mpin)) {  // Skip SPI flash interface
+      if (!((1 == i) || (3 == i))) {             // Skip serial
+        pinMode(i, INPUT);
+      }
+    }
+  }
 
   SetLedPower(Settings.ledstate &8);
   SetLedLink(Settings.ledstate &8);

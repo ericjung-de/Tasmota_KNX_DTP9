@@ -1,5 +1,29 @@
 ## Unreleased (development)
 
+### 8.2.0.1 20200321
+
+- Change HM-10 sensor type detection and add features (#7962)
+- Change GPIO initialization solving possible Relay toggle on (OTA) restart
+- Fix Zigbee sending wrong Sat value with Hue emulation
+- Add command ``ZbRestore`` to restore device configuration dumped with ``ZbStatus 2``
+
+## Released
+
+### 8.2.0 20200321
+
+- Release Elliot
+
+### 8.1.0.11 20200313
+
+- Change Zigbee simplification of devices probing, saving Flash and memory
+- Add HAss Discovery support for Button and Switch triggers by Federico Leoni (#7901)
+- Add support for HDC1080 Temperature and Humidity sensor by Luis Teixeira (#7888)
+- Add commands ``SwitchMode 13`` PushOn and ``SwitchMode 14`` PushOnInverted (#7912)
+- Add command ``HumOffset -10.0 .. 10.0`` to set global humidity sensor offset (#7934)
+- Add Zigbee support for Hue emulation by Stefan Hadinger
+- Add Dew Point to Temperature and Humidity sensors
+- Add support for ElectriQ iQ-wifiMOODL RGBW light by Ian King (#7947)
+
 ### 8.1.0.10 20200227
 
 - Change default my_user_config.h driver and sensor support removing most sensors and adding most drivers
@@ -9,7 +33,9 @@
 - Add Zigbee features and improvements and remove support for Zigbee commands starting with ``Zigbee...``
 - Add support for MaxBotix HRXL-MaxSonar ultrasonic range finders by Jon Little (#7814)
 - Add support for Romanian language translations by Augustin Marti
+- Add support for La Crosse TX23 Anemometer by Norbert Richter (#3146, #7765)
 - Add command ``SetOption89 0/1`` for Zigbee distinct MQTT topics per device for SENSOR, allowing retained messages (#7835)
+- Change Hue emulation code optimization
 
 ### 8.1.0.9 20200220
 
@@ -68,7 +94,7 @@
 - Add Zigbee persistence and friendly names
 - Add most SetOptions as defines to my_user_config.h
 - Add SoftwareSerial to CSE7766 driver allowing different GPIOs (#7563)
-- Add optional parameter <startcolor> to command ``Scheme <scheme>, <startcolor>`` to control initial start color
+- Add optional parameter ``<startcolor>`` to command ``Scheme <scheme>, <startcolor>`` to control initial start color
 - Add rule trigger on one level deeper using syntax with two ``#`` like ``on zigbeereceived#vibration_sensor#aqaracubeside=0 do ...``
 
 ### 8.1.0.3 20200106
@@ -106,11 +132,9 @@
 - Add support for DS1624, DS1621 Temperature sensor by Leonid Myravjev
 - Add Zigbee attribute decoder for Xiaomi Aqara Cube
 
-## Released
-
 ### 8.1.0 20191225
 
-- Release
+- Release Doris
 
 ### 8.0.0.3 20191224
 
@@ -136,7 +160,7 @@
 
 ### 7.2.0 20191221
 
-- Release
+- Release Constance
 - Change basic version string to lite (#7291)
 - Fix Arduino IDE compile error (#7277)
 - Fix restore ShutterAccuracy, MqttLog, WifiConfig, WifiPower and SerialConfig (#7281)
@@ -219,7 +243,7 @@
 
 ### 7.1.0 20191129
 
-- Release
+- Release Doris
 
 ### 7.0.0.6 20191122
 
@@ -288,7 +312,7 @@
 
 ### 6.7.1 20191026
 
-- Release
+- Release Allison
 - Fix on energy monitoring devices using PowerDelta Exception0 with epc1:0x4000dce5 = Divide by zero (#6750)
 - Fix Script array bug (#6751)
 

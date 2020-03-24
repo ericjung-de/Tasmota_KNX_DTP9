@@ -58,7 +58,7 @@ bool UdpDisconnect(void)
 
 bool UdpConnect(void)
 {
-  if (!udp_connected) {
+  if (!udp_connected && !restart_flag) {
     // Simple Service Discovery Protocol (SSDP)
     if (PortUdp.beginMulticast(WiFi.localIP(), IPAddress(239,255,255,250), 1900)) {
       AddLog_P(LOG_LEVEL_INFO, PSTR(D_LOG_UPNP D_MULTICAST_REJOINED));
@@ -86,7 +86,7 @@ void PollUdp(void)
 
       // Simple Service Discovery Protocol (SSDP)
       if (Settings.flag2.emulation) {
-#ifdef USE_SCRIPT_HUE
+#if defined(USE_SCRIPT_HUE) || defined(USE_ZIGBEE)
         if (!udp_response_mutex && (strstr_P(packet_buffer, PSTR("M-SEARCH")) != nullptr)) {
 #else
         if (devices_present && !udp_response_mutex && (strstr_P(packet_buffer, PSTR("M-SEARCH")) != nullptr)) {
