@@ -110,7 +110,7 @@ typedef union {                            // Restricted by MISRA-C Rule 18.4 bu
     uint32_t remote_device_mode : 1;       // bit 6 (v8.1.0.9)   - SetOption88 - PWM Dimmer Buttons control remote devices
     uint32_t zigbee_distinct_topics : 1;   // bit 7 (v8.1.0.10)  - SetOption89 - Distinct MQTT topics per device for Zigbee (#7835)
     uint32_t only_json_message : 1;        // bit 8 (v8.2.0.3)   - SetOption90 - Disable non-json MQTT response
-    uint32_t spare09 : 1;
+    uint32_t fade_at_startup : 1;          // bit 9 (v8.2.0.3)   - SetOption91 - Enable light fading at start/power on
     uint32_t spare10 : 1;
     uint32_t spare11 : 1;
     uint32_t spare12 : 1;
@@ -221,7 +221,7 @@ typedef struct {
 } EnergyUsage;
 
 
-typedef struct {
+typedef struct PACKED {
   uint8_t fnid = 0;
   uint8_t dpid = 0;
 } TuyaFnidDpidMap;
@@ -229,7 +229,7 @@ typedef struct {
 const uint32_t settings_text_size = 699;   // Settings.text_pool[size] = Settings.display_model (2D2) - Settings.text_pool (017)
 const uint8_t MAX_TUYA_FUNCTIONS = 16;
 
-struct SYSCFG {
+struct PACKED SYSCFG {
   uint16_t      cfg_holder;                // 000 v6 header
   uint16_t      cfg_size;                  // 002
   unsigned long save_flag;                 // 004
@@ -240,7 +240,7 @@ struct SYSCFG {
   int16_t       save_data;                 // 014
   int8_t        timezone;                  // 016
 
-  // Start of char array storing all parameter strings
+  // Start of char array storing all parameter strings ********
 
   char          text_pool[101];            // 017 - was ota_url[101] - size is settings_text_size
 
@@ -276,7 +276,7 @@ struct SYSCFG {
   char          ex_button_topic[33];       // 290
   char          ex_mqtt_grptopic[33];      // 2B1
 
-  // End of single char array of 698 chars max
+  // End of single char array of 698 chars max ****************
 
   uint8_t       display_model;             // 2D2
   uint8_t       display_mode;              // 2D3
@@ -470,8 +470,10 @@ struct SYSCFG {
   uint8_t       bri_preset_low;            // F06
   uint8_t       bri_preset_high;           // F07
   int8_t        hum_comp;                  // F08
+  uint8_t       wifi_channel;              // F09
+  uint8_t       wifi_bssid[6];             // F0A
 
-  uint8_t       free_f09[175];             // F09
+  uint8_t       free_f10[168];             // F10
 
   uint16_t      pulse_counter_debounce_low;  // FB8
   uint16_t      pulse_counter_debounce_high; // FBA

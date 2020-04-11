@@ -68,6 +68,7 @@ bool button_hold_processed[3];
 #ifdef USE_PWM_DIMMER_REMOTE
 struct remote_pwm_dimmer * remote_pwm_dimmers;
 struct remote_pwm_dimmer * active_remote_pwm_dimmer;
+uint8_t remote_pwm_dimmer_count;
 bool active_device_is_local;
 #endif  // USE_PWM_DIMMER_REMOTE
 
@@ -101,12 +102,13 @@ void PWMModulePreInit(void)
   if (Settings.flag4.remote_device_mode) {
     Settings.flag4.device_groups_enabled = true;
 
+    device_group_count = 0;
     for (uint32_t button_index = 0; button_index < MAX_KEYS; button_index++) {
       if (pin[GPIO_KEY1 + button_index] < 99) device_group_count++;
     }
 
-    if (device_group_count > 1) {
-      uint8_t remote_pwm_dimmer_count = device_group_count - 1;
+    remote_pwm_dimmer_count = device_group_count - 1;
+    if (remote_pwm_dimmer_count) {
       if ((remote_pwm_dimmers = (struct remote_pwm_dimmer *) calloc(remote_pwm_dimmer_count, sizeof(struct remote_pwm_dimmer))) == nullptr) {
         AddLog_P2(LOG_LEVEL_ERROR, PSTR("PWMDimmer: error allocating PWM dimmer array"));
         Settings.flag4.remote_device_mode = false;
@@ -169,14 +171,17 @@ void PWMDimmerSetPower(void)
 }
 
 #ifdef USE_DEVICE_GROUPS
-void PWMDimmerHandleDeviceGroupItem(void)
+void PWMDimmerHandleDevGroupItem(void)
 {
   uint32_t value = XdrvMailbox.payload;
 #ifdef USE_PWM_DIMMER_REMOTE
-  uint8_t device_group_index = XdrvMailbox.index >> 16 & 0xff;
+  uint8_t device_group_index = *(uint8_t *)XdrvMailbox.topic;
+  if (device_group_index > remote_pwm_dimmer_count) return;
   bool device_is_local = device_groups[device_group_index].local;
   struct remote_pwm_dimmer * remote_pwm_dimmer = &remote_pwm_dimmers[device_group_index];
-#endif  // USE_PWM_DIMMER_REMOTE
+#else  // USE_PWM_DIMMER_REMOTE
+  if (*(uint8_t *)XdrvMailbox.topic) return;
+#endif  // !USE_PWM_DIMMER_REMOTE
 
   switch (XdrvMailbox.command_code) {
 #ifdef USE_PWM_DIMMER_REMOTE
@@ -763,7 +768,7 @@ bool Xdrv35(uint8_t function)
 
 #ifdef USE_DEVICE_GROUPS
     case FUNC_DEVICE_GROUP_ITEM:
-      PWMDimmerHandleDeviceGroupItem();
+      PWMDimmerHandleDevGroupItem();
       break;
 #endif  // USE_DEVICE_GROUPS
 

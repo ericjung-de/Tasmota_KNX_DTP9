@@ -32,6 +32,10 @@ const char kTasmotaCommands[] PROGMEM = "|"  // No prefix
   D_CMND_I2CSCAN "|" D_CMND_I2CDRIVER "|"
 #endif
 #ifdef USE_DEVICE_GROUPS
+  D_CMND_DEVGROUP_NAME "|"
+#ifdef USE_DEVICE_GROUPS_SEND
+  D_CMND_DEVGROUP_SEND "|"
+#endif  // USE_DEVICE_GROUPS_SEND
   D_CMND_DEVGROUP_SHARE "|"
 #endif  // USE_DEVICE_GROUPS
   D_CMND_SENSOR "|" D_CMND_DRIVER;
@@ -51,6 +55,10 @@ void (* const TasmotaCommand[])(void) PROGMEM = {
   &CmndI2cScan, CmndI2cDriver,
 #endif
 #ifdef USE_DEVICE_GROUPS
+  &CmndDevGroupName,
+#ifdef USE_DEVICE_GROUPS_SEND
+  &CmndDevGroupSend,
+#endif  // USE_DEVICE_GROUPS_SEND
   &CmndDevGroupShare,
 #endif  // USE_DEVICE_GROUPS
   &CmndSensor, &CmndDriver };
@@ -174,7 +182,16 @@ void CommandHandler(char* topicBuf, char* dataBuf, uint32_t data_len)
     data_len--;
   }
 
-  bool grpflg = (strstr(topicBuf, SettingsText(SET_MQTT_GRP_TOPIC)) != nullptr);
+  bool grpflg = false;
+  uint32_t real_index = SET_MQTT_GRP_TOPIC;
+  for (uint32_t i = 0; i < MAX_GROUP_TOPICS; i++) {
+    if (1 == i) { real_index = SET_MQTT_GRP_TOPIC2 -1; }
+    char *group_topic = SettingsText(real_index +i);
+    if (*group_topic && strstr(topicBuf, group_topic) != nullptr) {
+      grpflg = true;
+      break;
+    }
+  }
 
   char stemp1[TOPSZ];
   GetFallbackTopic_P(stemp1, "");  // Full Fallback topic = cmnd/DVES_xxxxxxxx_fb/
@@ -409,7 +426,7 @@ void CmndStatus(void)
                           "\"Hardware\":\"%s\""
                           "%s}}"),
                           my_version, my_image, GetBuildDateAndTime().c_str(),
-                          ESP.getBootVersion(), ESP.getSdkVersion(),
+                          ESP_getBootVersion(), ESP.getSdkVersion(),
                           GetDeviceHardware().c_str(),
                           GetStatistics().c_str());
     MqttPublishPrefixTopic_P(option, PSTR(D_CMND_STATUS "2"));
@@ -431,7 +448,7 @@ void CmndStatus(void)
                           D_JSON_PROGRAMFLASHSIZE "\":%d,\"" D_JSON_FLASHSIZE "\":%d,\"" D_JSON_FLASHCHIPID "\":\"%06X\",\"" D_JSON_FLASHMODE "\":%d,\""
                           D_JSON_FEATURES "\":[\"%08X\",\"%08X\",\"%08X\",\"%08X\",\"%08X\",\"%08X\",\"%08X\"]"),
                           ESP.getSketchSize()/1024, ESP.getFreeSketchSpace()/1024, ESP.getFreeHeap()/1024,
-                          ESP.getFlashChipSize()/1024, ESP.getFlashChipRealSize()/1024, ESP.getFlashChipId(), ESP.getFlashChipMode(),
+                          ESP.getFlashChipSize()/1024, ESP.getFlashChipRealSize()/1024, ESP_getFlashChipId(), ESP.getFlashChipMode(),
                           LANGUAGE_LCID, feature_drv1, feature_drv2, feature_sns1, feature_sns2, feature5, feature6);
     XsnsDriverState();
     ResponseAppend_P(PSTR(",\"Sensors\":"));
@@ -563,10 +580,10 @@ void CmndSleep(void)
 {
   if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload < 251)) {
     Settings.sleep = XdrvMailbox.payload;
-    sleep = XdrvMailbox.payload;
+    ssleep = XdrvMailbox.payload;
     WiFiSetSleepMode();
   }
-  Response_P(S_JSON_COMMAND_NVALUE_ACTIVE_NVALUE, XdrvMailbox.command, Settings.sleep, sleep);
+  Response_P(S_JSON_COMMAND_NVALUE_ACTIVE_NVALUE, XdrvMailbox.command, Settings.sleep, ssleep);
 
 }
 
@@ -629,7 +646,10 @@ void CmndRestart(void)
 
 void CmndPowerOnState(void)
 {
-  if (my_module_type != MOTOR) {
+#ifdef ESP8266
+  if (my_module_type != MOTOR)
+#endif  // ESP8266
+  {
     /* 0 = Keep relays off after power on
       * 1 = Turn relays on after power on, if PulseTime set wait for PulseTime seconds, and turn relays off
       * 2 = Toggle relays after power on
@@ -1707,6 +1727,32 @@ void CmndI2cDriver(void)
 #endif  // USE_I2C
 
 #ifdef USE_DEVICE_GROUPS
+void CmndDevGroupName(void)
+{
+  if ((XdrvMailbox.index > 0) && (XdrvMailbox.index <= MAX_DEV_GROUP_NAMES)) {
+    if (XdrvMailbox.data_len > 0) {
+      if (XdrvMailbox.data_len > TOPSZ)
+        XdrvMailbox.data[TOPSZ - 1] = 0;
+      else if (1 == XdrvMailbox.data_len && ('"' == XdrvMailbox.data[0] || '0' == XdrvMailbox.data[0]))
+        XdrvMailbox.data[0] = 0;
+      SettingsUpdateText(SET_DEV_GROUP_NAME1 + XdrvMailbox.index - 1, XdrvMailbox.data);
+      restart_flag = 2;
+    }
+    ResponseCmndAll(SET_DEV_GROUP_NAME1, MAX_DEV_GROUP_NAMES);
+  }
+}
+
+#ifdef USE_DEVICE_GROUPS_SEND
+void CmndDevGroupSend(void)
+{
+  uint8_t device_group_index = (XdrvMailbox.usridx ? XdrvMailbox.index - 1 : 0);
+  if (device_group_index < device_group_count) {
+    _SendDeviceGroupMessage(device_group_index, DGR_MSGTYPE_UPDATE_COMMAND);
+    ResponseCmndChar(XdrvMailbox.data);
+  }
+}
+#endif  // USE_DEVICE_GROUPS_SEND
+
 void CmndDevGroupShare(void)
 {
   uint32_t parm[2] = { Settings.device_group_share_in, Settings.device_group_share_out };

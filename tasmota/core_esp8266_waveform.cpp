@@ -37,6 +37,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
+#ifdef ESP8266
+
 #include <core_version.h>
 #if defined(ARDUINO_ESP8266_RELEASE_2_6_1) || defined(ARDUINO_ESP8266_RELEASE_2_6_2) || defined(ARDUINO_ESP8266_RELEASE_2_6_3) || !defined(ARDUINO_ESP8266_RELEASE)
 #warning **** Tasmota is using a patched PWM Arduino version as planned ****
@@ -274,7 +276,11 @@ static ICACHE_RAM_ATTR void timer1Interrupt() {
           // cyclesToGo = -((-cyclesToGo) % (wave->nextTimeHighCycles + wave->nextTimeLowCycles));
           //
           // Alternative version with lower CPU impact:
-          // while (-cyclesToGo > wave->nextTimeHighCycles + wave->nextTimeLowCycles) { cyclesToGo += wave->nextTimeHighCycles + wave->nextTimeLowCycles)};
+          // while (-cyclesToGo > wave->nextTimeHighCycles + wave->nextTimeLowCycles) { cyclesToGo += wave->nextTimeHighCycles + wave->nextTimeLowCycles); }
+          //
+          // detect interrupt storm, for example during wifi connection.
+          // if we overshoot the cycle by more than 25%, we forget phase and keep PWM duration
+          int32_t overshoot = (-cyclesToGo) > ((wave->nextTimeHighCycles + wave->nextTimeLowCycles) >> 2);
           waveformState ^= mask;
           if (waveformState & mask) {
             if (i == 16) {
@@ -282,16 +288,26 @@ static ICACHE_RAM_ATTR void timer1Interrupt() {
             } else {
               SetGPIO(mask);
             }
-            wave->nextServiceCycle += wave->nextTimeHighCycles;
-            nextEventCycles = min_u32(nextEventCycles, max_32(wave->nextTimeHighCycles + cyclesToGo, microsecondsToClockCycles(1)));
+            if (overshoot) {
+              wave->nextServiceCycle = now + wave->nextTimeHighCycles;
+              nextEventCycles = min_u32(nextEventCycles, wave->nextTimeHighCycles);
+            } else {
+              wave->nextServiceCycle += wave->nextTimeHighCycles;
+              nextEventCycles = min_u32(nextEventCycles, max_32(wave->nextTimeHighCycles + cyclesToGo, microsecondsToClockCycles(1)));
+            }
           } else {
             if (i == 16) {
               GP16O &= ~1; // GPIO16 write slow as it's RMW
             } else {
               ClearGPIO(mask);
             }
-            wave->nextServiceCycle += wave->nextTimeLowCycles;
-            nextEventCycles = min_u32(nextEventCycles, max_32(wave->nextTimeLowCycles + cyclesToGo, microsecondsToClockCycles(1)));
+            if (overshoot) {
+              wave->nextServiceCycle = now + wave->nextTimeLowCycles;
+              nextEventCycles = min_u32(nextEventCycles, wave->nextTimeLowCycles);
+            } else {
+              wave->nextServiceCycle += wave->nextTimeLowCycles;
+              nextEventCycles = min_u32(nextEventCycles, max_32(wave->nextTimeLowCycles + cyclesToGo, microsecondsToClockCycles(1)));
+            }
           }
         } else {
           uint32_t deltaCycles = wave->nextServiceCycle - now;
@@ -328,3 +344,5 @@ static ICACHE_RAM_ATTR void timer1Interrupt() {
 };
 
 #endif  // ARDUINO_ESP8266_RELEASE
+
+#endif  // ESP8266

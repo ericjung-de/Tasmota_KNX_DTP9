@@ -389,6 +389,9 @@
   #define USE_SUNRISE                            // Add support for Sunrise and sunset tools (+16k)
     #define SUNRISE_DAWN_ANGLE DAWN_NORMAL       // Select desired Dawn Angle from (DAWN_NORMAL, DAWN_CIVIL, DAWN_NAUTIC, DAWN_ASTRONOMIC)
 
+// -- Ping ----------------------------------------
+//  #define USE_PING                                 // Enable Ping command (+3k code)
+
 // -- Rules or Script  ----------------------------
 // Select none or only one of the below defines
 #define USE_RULES                                // Add support for rules (+8k code)
@@ -416,9 +419,10 @@
 #define USE_EXS_DIMMER                           // Add support for ES-Store WiFi Dimmer (+1k5 code)
 //  #define EXS_MCU_CMNDS                          // Add command to send MCU commands (+0k8 code)
 //#define USE_HOTPLUG                              // Add support for sensor HotPlug
-#define USE_DEVICE_GROUPS                        // Add support for device groups (+5k6 code)
+#define USE_DEVICE_GROUPS                        // Add support for device groups (+5k code)
+  #define USE_DEVICE_GROUPS_SEND                 // Add support for the DevGroupSend command (+0k6 code)
 #define USE_PWM_DIMMER                           // Add support for MJ-SD01/acenx/NTONPOWER PWM dimmers (+2k5 code)
-  #define USE_PWM_DIMMER_REMOTE                  // Add support for remote switches to PWM Dimmer, also adds device groups support (+1k1 code plus device groups size)
+  #define USE_PWM_DIMMER_REMOTE                  // Add support for remote switches to PWM Dimmer, also adds device groups support (+1k code plus device groups size)
 //#define USE_KEELOQ                               // Add support for Jarolift rollers by Keeloq algorithm (+4k5 code)
 #define USE_SONOFF_D1                            // Add support for Sonoff D1 Dimmer (+0k7 code)
 
@@ -498,6 +502,7 @@
 //    #define WEMOS_MOTOR_V1_ADDR  0x30            // Default I2C address 0x30
 //    #define WEMOS_MOTOR_V1_FREQ  1000            // Default frequency
 //  #define USE_HDC1080                            // [I2cDriver45] Enable HDC1080 temperature/humidity sensor (I2C address 0x40) (+1k5 code)
+//  #define USE_IAQ                                // [I2cDriver46] Enable iAQ-core air quality sensor (I2C address 0x5a) (+0k6 code)
 
 //  #define USE_DISPLAY                            // Add I2C Display Support (+2k code)
     #define USE_DISPLAY_MODES1TO5                // Enable display mode 1 to 5 in addition to mode 0
@@ -512,6 +517,8 @@
       #define MTX_ADDRESS6     0x76              // [DisplayAddress6] I2C address of sixth 8x8 matrix module
       #define MTX_ADDRESS7     0x00              // [DisplayAddress7] I2C address of seventh 8x8 matrix module
       #define MTX_ADDRESS8     0x00              // [DisplayAddress8] I2C address of eigth 8x8 matrix module
+    #define USE_DISPLAY_SEVENSEG                 // [DisplayModel 11] [I2cDriver47] Enable sevenseg display (I2C 0x70-0x77) (<+11k code)
+      #define SEVENSEG_ADDRESS1     0x70         // [DisplayAddress1] I2C address of first sevenseg matrix module
 //    #define USE_DISPLAY_SH1106                   // [DisplayModel 7] [I2cDriver6] Enable SH1106 Oled 128x64 display (I2C addresses 0x3C and 0x3D)
 #endif  // USE_I2C
 
@@ -783,7 +790,7 @@
 
 /*********************************************************************************************\
  * Optional firmware configurations
- * Select none or just one for optional features and sensors as configured in tasmota_post.h
+ * Select none or just one for optional features and sensors as configured in tasmota_configurations.h
  * See RELEASENOTES.md for selected features
 \*********************************************************************************************/
 
