@@ -52,9 +52,10 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 * [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
+* v2.6.3 Works fine. No known issues. **(RECOMMENDED)**.
 * v2.6.2 Works fine. No known issues. Bigger flash usage than 2.6.1.
-* v2.6.1 Works fine. No known issues. Smaller flash usage than 2.6.0 **(RECOMMENDED)**.
-* v2.6.0 Works fine. No known issues. Bigger flash usage than 2.6.1.
+* v2.6.1 Works fine. No known issues. Smaller flash usage than 2.6.0 
+* v2.6.0 Works fine. No known issues.
 * v2.5.2 Has some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. Do not use.
 * v2.5.1 Has some wifi and **security** issues. Do not use.
 * v2.5.0 Has some wifi and **security** issues. Do not use.
@@ -65,7 +66,7 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 
 ## Firmware ##
 
-In the [releases](https://github.com/ascillato/Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266 devices.
+In the [releases](https://github.com/ascillato/Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266, ESP8285 and ESP32 devices.
 If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://tasmota.github.io/docs/#/).
 
 ## Implemented Features ##
