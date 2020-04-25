@@ -67,7 +67,7 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 ## Firmware ##
 
 In the [releases](https://github.com/ascillato/Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266, ESP8285 and ESP32 devices.
-If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [wiki](https://tasmota.github.io/docs/#/).
+If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [docs](https://tasmota.github.io/docs/#/).
 
 ## Implemented Features ##
 
