@@ -132,6 +132,12 @@ const char HASS_TRIGGER_TYPE[] PROGMEM =
 const char kHAssTriggerType[] PROGMEM =
   "none|button_short_press|button_long_press|button_double_press";
 
+const char kHAssTriggerTypeButtons[] PROGMEM =
+  "|button_short_press|button_double_press|button_triple_press|button_quadruple_press|button_quintuple_press|button_long_press|";
+
+const char kHAssTriggerStringButtons[] PROGMEM =
+  "|SINGLE|DOUBLE|TRIPLE|QUAD|PENTA|HOLD|";
+
 uint8_t hass_init_step = 0;
 uint8_t hass_mode = 0;
 int hass_tele_period = 0;
@@ -180,12 +186,12 @@ void HAssAnnounceRelayLight(void)
     mqtt_data[0] = '\0'; // Clear retained message
 
     // Clear "other" topic first in case the device has been reconfigured from light to switch or vice versa
-    snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%d"), ESP.getChipId(), (is_topic_light) ? "RL" : "LI", i);
+    snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%d"), ESP_getChipId(), (is_topic_light) ? "RL" : "LI", i);
     snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/%s/%s/config"),
                (is_topic_light) ? "switch" : "light", unique_id);
     MqttPublish(stopic, true);
     // Clear or Set topic
-    snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%d"), ESP.getChipId(), (is_topic_light) ? "LI" : "RL", i);
+    snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%d"), ESP_getChipId(), (is_topic_light) ? "LI" : "RL", i);
     snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/%s/%s/config"),
                (is_topic_light) ? "light" : "switch", unique_id);
 
@@ -210,7 +216,7 @@ void HAssAnnounceRelayLight(void)
 
       Response_P(HASS_DISCOVER_BASE, name, state_topic, availability_topic);
       TryResponseAppend_P(HASS_DISCOVER_RELAY, command_topic, value_template, SettingsText(SET_STATE_TXT1), SettingsText(SET_STATE_TXT2));
-      TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP.getChipId());
+      TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP_getChipId());
 
 #ifdef USE_LIGHT
       if (is_light
@@ -258,7 +264,7 @@ void HAssAnnounceRelayLight(void)
   }
 }
 
-void HAssAnnouncerTriggers(uint8_t device, uint8_t present, uint8_t key, uint8_t toggle, uint8_t hold)
+void HAssAnnouncerTriggers(uint8_t device, uint8_t present, uint8_t key, uint8_t toggle, uint8_t hold, uint8_t single, uint8_t trg_start, uint8_t trg_end)
 {
   // key 0 = button
   // key 1 = switch
@@ -266,11 +272,13 @@ void HAssAnnouncerTriggers(uint8_t device, uint8_t present, uint8_t key, uint8_t
   char stemp1[TOPSZ];
   char stemp2[TOPSZ];
   char unique_id[30];
+  char trigger2[8];
 
   mqtt_data[0] = '\0'; // Clear retained message
 
-  for (uint8_t i = 2; i <= 3; i++) {
-    snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%d_%s"), ESP.getChipId(), key ? "SW" : "BTN", device + 1, GetStateText(i));
+  for (uint8_t i = trg_start; i <= trg_end; i++) {
+    GetTextIndexed(trigger2, sizeof(trigger2), i, kHAssTriggerStringButtons);
+    snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%d_%s"), ESP_getChipId(), key ? "SW" : "BTN", device + 1, key ? GetStateText(i) : trigger2);
     snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/device_automation/%s/config"), unique_id);
 
     if (Settings.flag.hass_discovery && present) {                // SetOption19 - Control Home Assistantautomatic discovery (See SetOption59)
@@ -289,13 +297,23 @@ void HAssAnnouncerTriggers(uint8_t device, uint8_t present, uint8_t key, uint8_t
       char param[21];
       char subtype[9];
       uint8_t pload = toggle;
-
-      if ((i == 2 && toggle != 0) || (i == 3 && hold != 0)) {
-        if (i == 3) { pload = hold; }
-        GetTextIndexed(param, sizeof(param), pload, kHAssTriggerType);
-        snprintf_P(subtype, sizeof(subtype), PSTR("%s_%d"), key ? "switch" : "button", device + 1);
-        Response_P(HASS_TRIGGER_TYPE, state_topic, GetStateText(i), param, subtype, ESP.getChipId());
-      } else { mqtt_data[0] = '\0'; } // Need to be cleaned again to avoid duplicate.
+      if (key) {
+        if ((i == 2 && toggle != 0) || (i == 3 && hold != 0)) {
+          if (i == 3) { pload = hold; }
+          GetTextIndexed(param, sizeof(param), pload, kHAssTriggerType);
+          snprintf_P(subtype, sizeof(subtype), PSTR("switch_%d"), device + 1);
+          Response_P(HASS_TRIGGER_TYPE, state_topic, GetStateText(i), param, subtype, ESP_getChipId());
+        } else { mqtt_data[0] = '\0'; } // Need to be cleaned again to avoid duplicate
+      } else {
+        char trigger1[24];
+        GetTextIndexed(trigger1, sizeof(trigger1), i, kHAssTriggerTypeButtons);
+        snprintf_P(subtype, sizeof(subtype), PSTR("button_%d"), device + 1);
+        if (i > 1 && single) {
+          mqtt_data[0] = '\0';  // Need to be cleaned again to avoid duplicate
+        } else {
+          Response_P(HASS_TRIGGER_TYPE, state_topic, trigger2, trigger1, subtype, ESP_getChipId());
+        }
+      }
     }
     MqttPublish(stopic, true);
   }
@@ -310,7 +328,7 @@ void HAssAnnouncerBinSensors(uint8_t device, uint8_t present, uint8_t dual, uint
 
   mqtt_data[0] = '\0'; // Clear retained message
 
-  snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_SW_%d"), ESP.getChipId(), device + 1);
+  snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_SW_%d"), ESP_getChipId(), device + 1);
   snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/binary_sensor/%s/config"), unique_id);
 
 
@@ -335,7 +353,7 @@ void HAssAnnouncerBinSensors(uint8_t device, uint8_t present, uint8_t dual, uint
       } else {
         TryResponseAppend_P(HASS_DISCOVER_BIN_PIR, PSTR(D_RSLT_STATE), SettingsText(SET_STATE_TXT2));
       }
-      TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP.getChipId());
+      TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP_getChipId());
       TryResponseAppend_P(PSTR("}"));
     }
   }
@@ -408,12 +426,12 @@ void HAssAnnounceSwitches(void)
         case PUSHON:
         case PUSHON_INV:
           toggle = 0;
-          pir = 1;        // Binary sensor with only ON state and automatic OFF after 1 second.
+          pir = 1;        // Binary sensor with only ON state and automatic OFF after 1 second
       }
 
     } else { switch_present = 0;}
 
-    HAssAnnouncerTriggers(switch_index, switch_present, 1, toggle, hold);
+    HAssAnnouncerTriggers(switch_index, switch_present, 1, toggle, hold, 0, 2, 3);
     HAssAnnouncerBinSensors(switch_index, switch_present, dual, toggle, pir);
   }
 }
@@ -424,8 +442,7 @@ void HAssAnnounceButtons(void)
   for (uint32_t button_index = 0; button_index < MAX_KEYS; button_index++)
   {
     uint8_t button_present = 0;
-    uint8_t toggle = 1;
-    uint8_t hold = 0;
+    uint8_t single = 0;
 
 #ifdef ESP8266
     if (!button_index && ((SONOFF_DUAL == my_module_type) || (CH4 == my_module_type)))
@@ -439,43 +456,28 @@ void HAssAnnounceButtons(void)
       }
     }
 
-    // button matrix for triggers generation when buttontopic is set as custom (default TOGGLE = 1 HOLD = 0):
-    // N  SetOption1  SetOption11 SetOption13 PRESS                         DOUBLE PRESS                  HOLD                        T,H
-    // 1  0           0           0           TOGGLE (button_short_press)   NONE (toggle real relay)      NONE (reset device)         1,0
-    // 2  1           0           0           TOGGLE (button_short_press)   NONE (toggle real relay)      HOLD (button_long_press)    1,2
-    // 3  0           1           0           NONE (toggle real relay)      TOGGLE (button_double_press)  NONE (reset device)         3,0
-    // 4  1           1           0           NONE (toggle real relay)      TOGGLE (button_double_press)  HOLD (button_long_press)    3,2
-    // 5  0           0           1           TOGGLE (button_short_press)   NONE (toggle real relay)      NONE (reset device)         1,0
-    // 6  1           0           1           TOGGLE (button_short_press)   NONE (toggle real relay)      NONE (MQTT HOLD)            1,0
-    // 7  0           1           1           NONE (toggle real relay)      NONE (toggle real relay)      NONE (reset device)         0,0
-    // 8  1           1           1           NONE (toggle real relay)      NONE (toggle real relay)      NONE (MQTT HOLD)            0.0
+    // Button matrix for triggers generation when SetOption73 is enabled:
+    // N  SetOption1  SetOption11 SetOption13 PRESS                               MULTI PRESS                     HOLD
+    // 1  0           0           0           SINGLE (10 - button_short_press)    DOUBLE to PENTA                 YES (button_long_press)
+    // 2  1           0           0           SINGLE (10 - button_short_press)    DOUBLE to PENTA                 YES (button_long_press)
+    // 3  0           1           0           DOUBLE (11 - button_short_press)    SINGLE then TRIPLE TO PENTA     YES (button_long_press)
+    // 4  1           1           0           DOUBLE (11 - button_short_press)    SINGLE then TRIPLE TO PENTA     YES (button_long_press)
+    // 5  0           0           1           SINGLE (10 - button_short_press)    NONE                            NONE
+    // 6  1           0           1           SINGLE (10 - button_short_press)    NONE                            NONE
+    // 7  0           1           1           SINGLE (10 - button_short_press)    NONE                            NONE
+    // 8  1           1           1           SINGLE (10 - button_short_press)    NONE                            NONE
 
-    // Trigger types: "0 = none | 1 = button_short_press | 2 = button_long_press | 3 = button_double_press";
+    // Trigger types:  10 = button_short_press | 11 = button_double_press | 12 = button_triple_press | 13 = button_quadruple_press | 14 = button_quintuple_press | 3 = button_long_press
 
-    if (Settings.flag.button_restrict) {                  // [SetOption1]  Enable/Disable button multipress
-      if (!Settings.flag.button_single) {
-        hold = 2;                                         // Default TOGGLE (button_short_press) + HOLD (button_long_press) trigger if [SetOption13] is OFF
-      }
+    if (!Settings.flag3.mqtt_buttons) {        // Enable buttons discovery [SetOption73] - Decouple button from relay and send just mqtt topic
+      button_present = 0;
+    } else {
+      if (Settings.flag.button_single) {       // [SetOption13] Immediate action on button press, just SINGLE trigger
+        single = 1;
+        }
     }
 
-    if (Settings.flag.button_swap) {                      // [SetOption11] Swap button single and double press functionality
-        if (!Settings.flag.button_single) {
-          if (!Settings.flag.button_restrict) {
-            hold = 0;                                     // TOGGLE (button_double_press) and remove HOLD (button_long_press) trigger if [SetOption1] is OFF
-          }
-          toggle = 3;                                     // TOGGLE (button_double_press)
-        } else {toggle = 0; hold = 0;}                    // [SetOption13] Immediate action on button press, no TOGGLE or HOLD triggers
-    }
-
-    if (KeyTopicActive(0)) {                              // Enable Discovery for Buttons only if Buttontopic is set to 1 or a custom name
-
-      if (!strcmp(SettingsText(SET_MQTT_BUTTON_TOPIC), mqtt_topic)) {
-        toggle = 0;                                       // When ButtonTopic is set to 1, TOGGLE is not allowed but an HOLD trigger can be generated.
-      }
-
-    } else { button_present = 0; }
-
-    HAssAnnouncerTriggers(button_index, button_present, 0, toggle, hold);
+    HAssAnnouncerTriggers(button_index, button_present, 0, 0, 0, single, 1, 6);
   }
 }
 
@@ -491,7 +493,7 @@ void HAssAnnounceSensor(const char *sensorname, const char *subsensortype, const
 
   // Clear or Set topic
   NoAlNumToUnderscore(subname, MultiSubName); //Replace all non alphaumeric characters to '_' to avoid topic name issues
-  snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%s"), ESP.getChipId(), sensorname, subname);
+  snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_%s_%s"), ESP_getChipId(), sensorname, subname);
   snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/sensor/%s/config"), unique_id);
 
   if (Settings.flag.hass_discovery)
@@ -506,7 +508,7 @@ void HAssAnnounceSensor(const char *sensorname, const char *subsensortype, const
     GetTopic_P(availability_topic, TELE, mqtt_topic, S_LWT);
 
     Response_P(HASS_DISCOVER_BASE, name, state_topic, availability_topic);
-    TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP.getChipId());
+    TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO_SHORT, unique_id, ESP_getChipId());
 
 
     char jname[32];
@@ -621,7 +623,7 @@ void HAssAnnounceSensors(void)
   } while (hass_xsns_index != 0);
 }
 
-void HAssAnnounceStatusSensor(void)
+void HAssAnnounceDeviceInfoAndStatusSensor(void)
 {
   char stopic[TOPSZ];
   char stemp1[TOPSZ];
@@ -632,7 +634,7 @@ void HAssAnnounceStatusSensor(void)
   mqtt_data[0] = '\0'; // Clear retained message
 
   // Clear or Set topic
-  snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_status"), ESP.getChipId());
+  snprintf_P(unique_id, sizeof(unique_id), PSTR("%06X_status"), ESP_getChipId());
   snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/sensor/%s/config"), unique_id);
 
   if (Settings.flag.hass_discovery)
@@ -642,13 +644,13 @@ void HAssAnnounceStatusSensor(void)
     char *state_topic = stemp1;
     char *availability_topic = stemp2;
 
-    snprintf_P(name, sizeof(name), PSTR("%s status"), SettingsText(SET_FRIENDLYNAME1));
+    snprintf_P(name, sizeof(name), PSTR("%s status"), ModuleName().c_str());
     GetTopic_P(state_topic, TELE, mqtt_topic, PSTR(D_RSLT_HASS_STATE));
     GetTopic_P(availability_topic, TELE, mqtt_topic, S_LWT);
 
     Response_P(HASS_DISCOVER_BASE, name, state_topic, availability_topic);
     TryResponseAppend_P(HASS_DISCOVER_SENSOR_HASS_STATUS, state_topic);
-    TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO, unique_id, ESP.getChipId(), SettingsText(SET_FRIENDLYNAME1),
+    TryResponseAppend_P(HASS_DISCOVER_DEVICE_INFO, unique_id, ESP_getChipId(), ModuleName().c_str(),
                         ModuleName().c_str(), my_version, my_image);
     TryResponseAppend_P(PSTR("}"));
   }
@@ -658,7 +660,7 @@ void HAssAnnounceStatusSensor(void)
 void HAssPublishStatus(void)
 {
   Response_P(PSTR("{\"" D_JSON_VERSION "\":\"%s%s\",\"" D_JSON_BUILDDATETIME "\":\"%s\","
-                  "\"" D_JSON_COREVERSION "\":\"" ARDUINO_ESP8266_RELEASE "\",\"" D_JSON_SDKVERSION "\":\"%s\","
+                  "\"" D_JSON_COREVERSION "\":\"" ARDUINO_CORE_RELEASE "\",\"" D_JSON_SDKVERSION "\":\"%s\","
                   "\"" D_CMND_MODULE "\":\"%s\",\"" D_JSON_RESTARTREASON "\":\"%s\",\"" D_JSON_UPTIME "\":\"%s\","
                   "\"WiFi " D_JSON_LINK_COUNT "\":%d,\"WiFi " D_JSON_DOWNTIME "\":\"%s\",\"" D_JSON_MQTT_COUNT "\":%d,"
                   "\"" D_JSON_BOOTCOUNT "\":%d,\"" D_JSON_SAVECOUNT "\":%d,\"" D_CMND_IPADDRESS "\":\"%s\","
@@ -698,7 +700,7 @@ void HAssDiscovery(void)
     HAssAnnounceSensors();
 
     // Send info about status sensor
-    HAssAnnounceStatusSensor();
+    HAssAnnounceDeviceInfoAndStatusSensor();
   }
 }
 
@@ -717,7 +719,7 @@ void HAssAnyKey(void)
 
   uint32_t key = (XdrvMailbox.payload >> 16) & 0xFF;   // 0 = Button, 1 = Switch
   uint32_t device = XdrvMailbox.payload & 0xFF;        // Device number or 1 if more Buttons than Devices
-  uint32_t state = (XdrvMailbox.payload >> 8) & 0xFF;  // 0 = Off, 1 = On, 2 = Toggle, 3 = Hold
+  uint32_t state = (XdrvMailbox.payload >> 8) & 0xFF;  // 0 = Off, 1 = On, 2 = Toggle, 3 = Hold, 10,11,12,13 and 14 for Button Multipress
 
   if (!key && KeyTopicActive(0)) {                     // Button and ButtonTopic is active
     device = (XdrvMailbox.payload >> 24) & 0xFF;       // Button number
@@ -726,19 +728,26 @@ void HAssAnyKey(void)
   char scommand[CMDSZ];
   char sw_topic[TOPSZ];
   char key_topic[TOPSZ];
+  char trg_state[8];
   char *tmpbtn = SettingsText(SET_MQTT_BUTTON_TOPIC);
   char *tmpsw = SettingsText(SET_MQTT_SWITCH_TOPIC);
   uint8_t evkey = 0; // Flag to select the correct topic for a trigger or a binary_sensor
   Format(sw_topic, tmpsw, sizeof(sw_topic));
   Format(key_topic, tmpbtn, sizeof(key_topic));
 
-  if (state == 2 || state == 3 ) { evkey = 1;}
+  if (state >= 2) { evkey = 1;}
   snprintf_P(scommand, sizeof(scommand), PSTR("%s%d%s"), (key) ? "SWITCH" : "BUTTON", device, (evkey) ? "T" : "");
 
   char stopic[TOPSZ];
 
+  if (state == 3) {
+    snprintf_P(trg_state, sizeof(trg_state), GetStateText(3));
+  } else {
+    GetTextIndexed(trg_state, sizeof(trg_state), state -9, kHAssTriggerStringButtons);
+  }
+
   GetTopic_P(stopic, STAT, mqtt_topic, scommand);
-  Response_P(S_JSON_COMMAND_SVALUE, (evkey) ? "TRIG" : PSTR(D_RSLT_STATE), GetStateText(state));
+  Response_P(S_JSON_COMMAND_SVALUE, (evkey) ? "TRIG" : PSTR(D_RSLT_STATE), (key) ? GetStateText(state) : trg_state);
   MqttPublish(stopic);
 }
 

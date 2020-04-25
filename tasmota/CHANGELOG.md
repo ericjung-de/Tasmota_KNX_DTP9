@@ -1,5 +1,14 @@
 ## Unreleased (development)
 
+### 8.2.0.4 20200417
+
+- Change PWM implementation to Arduino #7231 removing support for Core versions before 2.6.3
+- Change default PWM Frequency to 223 Hz instead of 880 Hz for less interrupt pressure
+- Fix Zigbee DimmerUp/DimmerDown malformed
+- Add config version tag
+- Add command ``SetOption73 1`` for button decoupling and send multi-press and hold MQTT messages by Federico Leoni (#8235)
+- Add command ``SO`` as shortcut for command ``SetOption``
+
 ### 8.2.0.3 20200329
 
 - Change light scheme 2,3,4 cycle time speed from 24,48,72,... seconds to 4,6,12,24,36,48,... seconds (#8034)
@@ -10,20 +19,28 @@
 - Fix Zigbee crash with Occupancy sensor (#8089)
 - Add support for longer template names
 - Add Zigbee command ``ZbBindState`` and ``manuf``attribute
+- Add Zigbee command ``ZbConfig`` and configuration in Settings
 - Add commands ``CounterDebounceLow`` and ``CounterDebounceHigh`` to control debouncing (#8021)
 - Add commands ``NrfPage``, ``NrfIgnore``, ``NrfScan`` and ``NrfBeacon`` to NRF24 Bluetooth driver (#8075)
 - Add command ``SetOption90 1`` to disable non-json MQTT messages (#8044)
 - Add command ``Sensor10 0/1/2`` to control BH1750 resolution - 0 = High (default), 1 = High2, 2 = Low (#8016)
 - Add command ``Sensor10 31..254`` to control BH1750 measurement time which defaults to 69 (#8016)
+- Add command ``Sensor18 0..32000`` to control PMS5003 sensor interval to extend lifetime by Gene Ruebsamen (#8128)
 - Add command ``SetOption91 1`` to enable fading at startup / power on
 - Add command ``SetOption41 <x>`` to force sending gratuitous ARP every <x> seconds
 - Add command ``DevGroupName`` to specify up to four Device Group Names (#8087)
 - Add command ``DevGroupSend`` to send an update to a Device Group (#8093)
+- Add command ``Ping`` (#7176)
+- Add command ``Palette`` to add the ability to specify a palette of colors (#8150)
+- Add commands ``GlobalTemp`` and ``GlobalHum`` to init sensor data (#8152)
 - Add quick wifi reconnect using saved AP parameters when ``SetOption56 0`` (#3189)
 - Add more accuracy to GPS NTP server (#8088)
 - Add support for an iAQ sensor (#8107)
 - Add support for Seven Segment display using HT16K33 (#8116)
-- Add command ``Ping`` (#7176)
+- Add support for AS3935 Lightning Sensor by device111 (#8130)
+- Fix prevent multiple pings to run concurrently
+- Fix Scheme 2-4 brightness when SetOption68 1 (#8058)
+- Add ``DimmerRange`` for PWM lights (#8120)
 
 ### 8.2.0.2 20200328
 

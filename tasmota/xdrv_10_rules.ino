@@ -476,6 +476,7 @@ bool RuleSetProcess(uint8_t rule_set, String &event_saved)
         RulesVarReplace(commands, stemp, SettingsText(SET_MEM1 +i));
       }
       RulesVarReplace(commands, F("%TIME%"), String(MinutesPastMidnight()));
+      RulesVarReplace(commands, F("%UTCTIME%"), String(UtcTime()));
       RulesVarReplace(commands, F("%UPTIME%"), String(MinutesUptime()));
       RulesVarReplace(commands, F("%TIMESTAMP%"), GetDateAndTime(DT_LOCAL));
       RulesVarReplace(commands, F("%TOPIC%"), SettingsText(SET_MQTT_TOPIC));
@@ -1796,8 +1797,11 @@ void CmndEvent(void)
 {
   if (XdrvMailbox.data_len > 0) {
     strlcpy(Rules.event_data, XdrvMailbox.data, sizeof(Rules.event_data));
+#ifdef USE_DEVICE_GROUPS
+    SendLocalDeviceGroupMessage(DGR_MSGTYP_UPDATE, DGR_ITEM_EVENT, XdrvMailbox.data);
+#endif  // USE_DEVICE_GROUPS
   }
-  ResponseCmndDone();
+  if (XdrvMailbox.command) ResponseCmndDone();
 }
 
 void CmndVariable(void)

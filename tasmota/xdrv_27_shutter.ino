@@ -645,7 +645,7 @@ void ShutterButtonHandler(void)
         // 5x..7x && no SetOption1 (0) checked above
         // simultaneous or stand alone button press 5x, 6x, 7x detected
         char scmnd[20];
-        GetTextIndexed(scmnd, sizeof(scmnd), press_index -3, kCommands);
+        snprintf_P(scmnd, sizeof(scmnd), PSTR(D_CMND_WIFICONFIG " 2"));
         ExecuteCommand(scmnd, SRC_BUTTON);
         return;
       } else if ((buttonState == SHT_PRESSED_EXT_HOLD_SIMULTANEOUS) || ((shutter_index_num_buttons==1) && (buttonState == SHT_PRESSED_EXT_HOLD))){
@@ -843,6 +843,10 @@ void CmndShutterPosition(void)
         }
         if (!strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_DOWN) || !strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_CLOSE) || ((Shutter.direction[index]==0) && !strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_STOPCLOSE))) {
           CmndShutterClose();
+          return;
+        }
+        if (!strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_TOGGLE)) {
+          CmndShutterToggle();
           return;
         }
         if (!strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_STOP) || ((Shutter.direction[index]) && (!strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_STOPOPEN) || !strcasecmp(XdrvMailbox.data,D_CMND_SHUTTER_STOPCLOSE)))) {

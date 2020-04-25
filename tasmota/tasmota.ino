@@ -190,6 +190,12 @@ char web_log[WEB_LOG_SIZE] = {'\0'};        // Web log buffer
 
 void setup(void)
 {
+#ifdef ESP32
+#ifdef DISABLE_ESP32_BROWNOUT
+  DisableBrownout();      // Workaround possible weak LDO resulting in brownout detection during Wifi connection
+#endif
+#endif
+
   global_state.data = 3;  // Init global state (wifi_down, mqtt_down) to solve possible network issues
 
   RtcRebootLoad();
@@ -254,7 +260,7 @@ void setup(void)
         Settings.rule_enabled = 0;                  // Disable all rules
       }
       if (RtcReboot.fast_reboot_count > Settings.param[P_BOOT_LOOP_OFFSET] +3) {  // Restarted 5 times
-        for (uint32_t i = 0; i < sizeof(Settings.my_gp); i++) {
+        for (uint32_t i = 0; i < sizeof(Settings.my_gp.io)/sizeof(Settings.my_gp.io[0]); i++) {
           Settings.my_gp.io[i] = GPIO_NONE;         // Reset user defined GPIO disabling sensors
         }
         Settings.my_adc0 = ADC0_NONE;               // Reset user defined ADC0 disabling sensors
@@ -276,7 +282,7 @@ void setup(void)
   Format(mqtt_topic, SettingsText(SET_MQTT_TOPIC), sizeof(mqtt_topic));
   if (strstr(SettingsText(SET_HOSTNAME), "%") != nullptr) {
     SettingsUpdateText(SET_HOSTNAME, WIFI_HOSTNAME);
-    snprintf_P(my_hostname, sizeof(my_hostname)-1, SettingsText(SET_HOSTNAME), mqtt_topic, ESP.getChipId() & 0x1FFF);
+    snprintf_P(my_hostname, sizeof(my_hostname)-1, SettingsText(SET_HOSTNAME), mqtt_topic, ESP_getChipId() & 0x1FFF);
   } else {
     snprintf_P(my_hostname, sizeof(my_hostname)-1, SettingsText(SET_HOSTNAME));
   }
@@ -290,7 +296,7 @@ void setup(void)
 
   SetPowerOnState();
 
-  AddLog_P2(LOG_LEVEL_INFO, PSTR(D_PROJECT " %s %s " D_VERSION " %s%s-" ARDUINO_ESP8266_RELEASE), PROJECT, SettingsText(SET_FRIENDLYNAME1), my_version, my_image);
+  AddLog_P2(LOG_LEVEL_INFO, PSTR(D_PROJECT " %s %s " D_VERSION " %s%s-" ARDUINO_CORE_RELEASE), PROJECT, SettingsText(SET_FRIENDLYNAME1), my_version, my_image);
 #ifdef FIRMWARE_MINIMAL
   AddLog_P2(LOG_LEVEL_INFO, PSTR(D_WARNING_MINIMAL_VERSION));
 #endif  // FIRMWARE_MINIMAL

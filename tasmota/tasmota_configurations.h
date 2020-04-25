@@ -50,7 +50,7 @@
 #define USE_DEEPSLEEP                            // Add support for deepsleep (+1k code)
 #undef USE_EXS_DIMMER                           // Disable support for EX-Store WiFi Dimmer
 //#define USE_HOTPLUG                              // Add support for sensor HotPlug
-#undef USE_DEVICE_GROUPS                        // Disable support for device groups (+5k6 code)
+//#undef USE_DEVICE_GROUPS                        // Disable support for device groups (+5k6 code)
 #undef USE_PWM_DIMMER                           // Disable support for MJ-SD01/acenx/NTONPOWER PWM dimmers (+4k5 code)
 #undef USE_KEELOQ                               // Disable support for Jarolift rollers by Keeloq algorithm (+4k5 code)
 #undef USE_SONOFF_D1                            // DIsable support for Sonoff D1 Dimmer (+0k7 code)
@@ -70,6 +70,7 @@
 #define USE_SM2135                               // Add support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #define USE_SONOFF_L1                            // Add support for Sonoff L1 led control
 #define USE_ELECTRIQ_MOODL                       // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#define USE_LIGHT_PALETTE                        // Add support for color palette (+0k9 code)
 
 #define USE_COUNTER                              // Enable counters
 #undef USE_ADC_VCC                               // Add Analog input on selected devices
@@ -123,6 +124,7 @@
   #define WEMOS_MOTOR_V1_FREQ  1000              // Default frequency
 //#define USE_HDC1080                              // Enable HDC1080 temperature/humidity sensor
 #define USE_IAQ                                  // [I2cDriver46] Enable iAQ-core air quality sensor (I2C address 0x5a) (+0k6 code)
+#define USE_AS3935                               // [I2cDriver48] Enable AS3935 Franklin Lightning Sensor (I2C address 0x03) (+5k4 code)
 
 #define USE_MHZ19                                // Add support for MH-Z19 CO2 sensor (+2k code)
 #define USE_SENSEAIR                             // Add support for SenseAir K30, K70 and S8 CO2 sensor (+2k3 code)
@@ -144,7 +146,8 @@
 #define USE_RDM6300                              // Add support for RDM6300 125kHz RFID Reader (+0k8)
 #define USE_IBEACON                              // Add support for bluetooth LE passive scan of ibeacon devices (uses HM17 module)
 //#define USE_GPS                                  // Add support for GPS and NTP Server for becoming Stratus 1 Time Source (+ 3.1kb flash, +132 bytes RAM)
-#define USE_HM10                                 // Add support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#define USE_HM10                                 // (ESP8266 only) Add support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+//#define USE_MI_ESP32                             // (ESP32 only) Add support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
 #define USE_HRXL                                 // Add support for MaxBotix HRXL-MaxSonar ultrasonic range finders (+0k7)
 
 #define USE_ENERGY_SENSOR                        // Add energy sensors (-14k code)
@@ -331,7 +334,8 @@
 #undef USE_SM16716                               // Disable support for SM16716 RGB LED controller (+0k7 code)
 #undef USE_SM2135                                // Disable support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
-#undef USE_ELECTRIQ_MOODL                        // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
 
 #undef USE_ENERGY_SENSOR                         // Disable energy sensors (-14k code)
   #undef USE_PZEM004T                            // Disable PZEM004T energy sensor
@@ -364,7 +368,8 @@
 #undef USE_RDM6300                               // Disable support for RDM6300 125kHz RFID Reader (+0k8)
 #undef USE_IBEACON                               // Disable support for bluetooth LE passive scan of ibeacon devices (uses HM17 module)
 #undef USE_GPS                                   // Disable support for GPS and NTP Server for becoming Stratus 1 Time Source (+ 3.1kb flash, +132 bytes RAM)
-#undef USE_HM10                                  // Disable support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#undef USE_HM10                                  // (ESP8266 only) Disable support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#undef USE_MI_ESP32                              // (ESP32 only) Disable support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
 #undef USE_HRXL                                  // Disable support for MaxBotix HRXL-MaxSonar ultrasonic range finders (+0k7)
 
 //#define USE_DHT                                  // Add support for DHT11, AM2301 (DHT21, DHT22, AM2302, AM2321) and SI7021 Temperature and Humidity sensor
@@ -443,7 +448,8 @@
 #undef USE_SM16716                               // Disable support for SM16716 RGB LED controller (+0k7 code)
 #undef USE_SM2135                                // Disable support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
-#undef USE_ELECTRIQ_MOODL                        // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -463,7 +469,8 @@
 #undef USE_RDM6300                               // Disable support for RDM6300 125kHz RFID Reader (+0k8)
 #undef USE_IBEACON                               // Disable support for bluetooth LE passive scan of ibeacon devices (uses HM17 module)
 #undef USE_GPS                                   // Disable support for GPS and NTP Server for becoming Stratus 1 Time Source (+ 3.1kb flash, +132 bytes RAM)
-#undef USE_HM10                                  // Disable support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#undef USE_HM10                                  // (ESP8266 only) Disable support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#undef USE_MI_ESP32                              // (ESP32 only) Disable support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
 #undef USE_HRXL                                  // Disable support for MaxBotix HRXL-MaxSonar ultrasonic range finders (+0k7)
 
 //#undef USE_ENERGY_SENSOR                         // Disable energy sensors
@@ -562,7 +569,8 @@
 #undef USE_SM16716                               // Disable support for SM16716 RGB LED controller (+0k7 code)
 #undef USE_SM2135                                // Disable support for SM2135 RGBCW led control as used in Action LSC (+0k6 code)
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
-#undef USE_ELECTRIQ_MOODL                        // Add support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
+#undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -584,7 +592,8 @@
 #undef USE_RDM6300                               // Disable support for RDM6300 125kHz RFID Reader (+0k8)
 #undef USE_IBEACON                               // Disable support for bluetooth LE passive scan of ibeacon devices (uses HM17 module)
 #undef USE_GPS                                   // Disable support for GPS and NTP Server for becoming Stratus 1 Time Source (+ 3.1kb flash, +132 bytes RAM)
-#undef USE_HM10                                  // Disable support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#undef USE_HM10                                  // (ESP8266 only) Disable support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
+#undef USE_MI_ESP32                              // (ESP32 only) Disable support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
 #undef USE_HRXL                                  // Disable support for MaxBotix HRXL-MaxSonar ultrasonic range finders (+0k7)
 
 #undef USE_ENERGY_SENSOR                         // Disable energy sensors

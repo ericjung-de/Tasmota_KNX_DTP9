@@ -41,14 +41,14 @@
  * Power Type
 \*********************************************************************************************/
 
-#ifdef ESP8266
+//#ifdef ESP8266
 typedef unsigned long power_t;              // Power (Relay) type
 const uint32_t POWER_MASK = 0xffffffffUL;   // Power (Relay) full mask
-#endif  // ESP8266
-#ifdef ESP32
-typedef uint64_t power_t;                   // Power (Relay) type
-const uint64_t POWER_MASK = 0xffffffffffffffffull;  // Power (Relay) full mask
-#endif  // ESP32
+//#endif  // ESP8266
+//#ifdef ESP32
+//typedef uint64_t power_t;                   // Power (Relay) type
+//const uint64_t POWER_MASK = 0xffffffffffffffffull;  // Power (Relay) full mask
+//#endif  // ESP32
 
 /*********************************************************************************************\
  * Constants
@@ -110,7 +110,7 @@ const uint16_t WS2812_MAX_LEDS = 512;       // Max number of LEDs
 const uint32_t PWM_RANGE = 1023;            // 255..1023 needs to be devisible by 256
 //const uint16_t PWM_FREQ = 1000;             // 100..1000 Hz led refresh
 //const uint16_t PWM_FREQ = 910;              // 100..1000 Hz led refresh (iTead value)
-const uint16_t PWM_FREQ = 880;              // 100..1000 Hz led refresh (BN-SZ01 value)
+const uint16_t PWM_FREQ = 223;              // 100..4000 Hz led refresh
 const uint16_t PWM_MAX = 4000;              // [PWM_MAX] Maximum frequency - Default: 4000
 const uint16_t PWM_MIN = 100;               // [PWM_MIN] Minimum frequency - Default: 100
                                             //    For Dimmers use double of your mains AC frequecy (100 for 50Hz and 120 for 60Hz)
@@ -240,6 +240,7 @@ enum ExecuteCommandPowerOptions { POWER_OFF, POWER_ON, POWER_TOGGLE, POWER_BLINK
                                   POWER_SHOW_STATE = 16 };
 enum SendKeyPowerOptions { POWER_HOLD = 3, POWER_INCREMENT = 4, POWER_INV = 5, POWER_CLEAR = 6, CLEAR_RETAIN = 9 };
 enum SendKeyOptions { KEY_BUTTON, KEY_SWITCH };
+enum SendKeyMultiClick { SINGLE = 10, DOUBLE = 11, TRIPLE = 12, QUAD = 13, PENTA = 14};
 
 enum PowerOnStateOptions { POWER_ALL_OFF, POWER_ALL_ON, POWER_ALL_SAVED_TOGGLE, POWER_ALL_SAVED, POWER_ALL_ALWAYS_ON, POWER_ALL_OFF_PULSETIME_ON };
 
@@ -314,12 +315,13 @@ enum DevGroupItem { DGR_ITEM_EOL, DGR_ITEM_STATUS,
                     DGR_ITEM_POWER, DGR_ITEM_DIMMER_RANGE,
                     // Add new 32-bit items before this line
                     DGR_ITEM_LAST_32BIT, DGR_ITEM_MAX_32BIT = 191,
+                    DGR_ITEM_EVENT, DGR_ITEM_COMMAND,
                     // Add new string items before this line
                     DGR_ITEM_LAST_STRING, DGR_ITEM_MAX_STRING = 223,
                     DGR_ITEM_LIGHT_CHANNELS };
 
 enum DevGroupShareItem { DGR_SHARE_POWER = 1, DGR_SHARE_LIGHT_BRI = 2, DGR_SHARE_LIGHT_FADE = 4, DGR_SHARE_LIGHT_SCHEME = 8,
-                         DGR_SHARE_LIGHT_COLOR = 16, DGR_SHARE_DIMMER_SETTINGS = 32 };
+                         DGR_SHARE_LIGHT_COLOR = 16, DGR_SHARE_DIMMER_SETTINGS = 32, DGR_SHARE_EVENT = 64 };
 
 enum CommandSource { SRC_IGNORE, SRC_MQTT, SRC_RESTART, SRC_BUTTON, SRC_SWITCH, SRC_BACKLOG, SRC_SERIAL, SRC_WEBGUI, SRC_WEBCOMMAND, SRC_WEBCONSOLE, SRC_PULSETIMER,
                      SRC_TIMER, SRC_RULE, SRC_MAXPOWER, SRC_MAXENERGY, SRC_OVERTEMP, SRC_LIGHT, SRC_KNX, SRC_DISPLAY, SRC_WEMO, SRC_HUE, SRC_RETRY, SRC_REMOTE, SRC_SHUTTER,

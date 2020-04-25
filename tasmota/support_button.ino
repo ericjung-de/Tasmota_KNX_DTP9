@@ -17,13 +17,14 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define BUTTON_V1
+//#define BUTTON_V1
 #ifdef BUTTON_V1
 /*********************************************************************************************\
  * Button support
 \*********************************************************************************************/
 
 #define MAX_BUTTON_COMMANDS  5  // Max number of button commands supported
+
 const char kCommands[] PROGMEM =
   D_CMND_WIFICONFIG " 2|" D_CMND_WIFICONFIG " 2|" D_CMND_WIFICONFIG " 2|" D_CMND_RESTART " 1|" D_CMND_UPGRADE " 1";
 

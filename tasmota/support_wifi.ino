@@ -655,7 +655,7 @@ void WifiConnect(void)
   WifiSetOutputPower();
   WiFi.persistent(false);     // Solve possible wifi init errors
   Wifi.status = 0;
-  Wifi.retry_init = WIFI_RETRY_OFFSET_SEC + (ESP.getChipId() & 0xF);  // Add extra delay to stop overrun by simultanous re-connects
+  Wifi.retry_init = WIFI_RETRY_OFFSET_SEC + (ESP_getChipId() & 0xF);  // Add extra delay to stop overrun by simultanous re-connects
   Wifi.retry = Wifi.retry_init;
   Wifi.counter = 1;
 
@@ -708,8 +708,7 @@ void EspRestart(void)
   ResetPwm();
   WifiShutdown(true);
   CrashDumpClear();           // Clear the stack dump in RTC
-//  ESP.restart();            // This results in exception 3 on restarts on core 2.3.0
-  ESP_reset();
+  ESP_Restart();
 }
 
 #ifndef ARDUINO_ESP8266_RELEASE_2_3_0

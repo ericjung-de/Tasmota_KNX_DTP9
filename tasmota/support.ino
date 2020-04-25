@@ -52,7 +52,7 @@ void OsWatchTicker(void)
 
 #ifdef DEBUG_THEO
   int32_t rssi = WiFi.RSSI();
-  AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_APPLICATION D_OSWATCH " FreeRam %d, rssi %d %% (%d dBm), last_run %d"), ESP.getFreeHeap(), WifiGetRssiAsQuality(rssi), rssi, last_run);
+  AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_APPLICATION D_OSWATCH " FreeRam %d, rssi %d %% (%d dBm), last_run %d"), ESP_getFreeHeap(), WifiGetRssiAsQuality(rssi), rssi, last_run);
 #endif  // DEBUG_THEO
   if (last_run >= (OSWATCH_RESET_TIME * 1000)) {
 //    AddLog_P(LOG_LEVEL_INFO, PSTR(D_LOG_APPLICATION D_OSWATCH " " D_BLOCKED_LOOP ". " D_RESTARTING));  // Save iram space
@@ -99,7 +99,7 @@ uint32_t ResetReason(void)
     REASON_DEEP_SLEEP_AWAKE = 5,  // "Deep-Sleep Wake"         wake up from deep-sleep
     REASON_EXT_SYS_RST      = 6   // "External System"         external system reset
   */
-  return resetInfo.reason;
+  return ESP_ResetInfoReason();
 }
 
 String GetResetReason(void)
@@ -562,6 +562,7 @@ char* GetPowerDevice(char* dest, uint32_t idx, size_t size)
 
 void GetEspHardwareType(void)
 {
+#ifdef ESP8266
   // esptool.py get_efuses
   uint32_t efuse1 = *(uint32_t*)(0x3FF00050);
   uint32_t efuse2 = *(uint32_t*)(0x3FF00054);
@@ -572,16 +573,23 @@ void GetEspHardwareType(void)
   if (is_8285 && (ESP.getFlashChipRealSize() > 1048576)) {
     is_8285 = false;  // ESP8285 can only have 1M flash
   }
+#else
+  is_8285 = false;    // ESP8285 can only have 1M flash
+#endif
 }
 
 String GetDeviceHardware(void)
 {
   char buff[10];
+#ifdef ESP8266
   if (is_8285) {
     strcpy_P(buff, PSTR("ESP8285"));
   } else {
     strcpy_P(buff, PSTR("ESP8266EX"));
   }
+#else
+  strcpy_P(buff, PSTR("ESP32"));
+#endif
   return String(buff);
 }
 
@@ -1112,21 +1120,30 @@ String ModuleName(void)
 
 void ModuleGpios(myio *gp)
 {
+//#ifdef ESP8266
   uint8_t *dest = (uint8_t *)gp;
-  memset(dest, GPIO_NONE, sizeof(myio));
+  uint8_t src[sizeof(Settings.user_template.gp.io)/sizeof(Settings.user_template.gp.io[0])];
+//#else
+//  uint16_t *dest = (uint16_t *)gp;
+//  uint16_t src[sizeof(Settings.user_template.gp.io)/sizeof(Settings.user_template.gp.io[0])];
+//#endif
 
-  uint8_t src[sizeof(mycfgio)];
+  memset(dest, GPIO_NONE, sizeof(myio));
   if (USER_MODULE == Settings.module) {
     memcpy(&src, &Settings.user_template.gp, sizeof(mycfgio));
   } else {
+#ifdef ESP8266
     memcpy_P(&src, &kModules[Settings.module].gp, sizeof(mycfgio));
+#else  // ESP32
+    memcpy_P(&src, &kModules.gp, sizeof(mycfgio));
+#endif  // ESP8266 - ESP32
   }
   // 11 85 00 85 85 00 00 00 15 38 85 00 00 81
 
 //  AddLogBuffer(LOG_LEVEL_DEBUG, (uint8_t *)&src, sizeof(mycfgio));
 
   uint32_t j = 0;
-  for (uint32_t i = 0; i < sizeof(mycfgio); i++) {
+  for (uint32_t i = 0; i < sizeof(Settings.user_template.gp.io)/sizeof(Settings.user_template.gp.io[0]); i++) {
     if (6 == i) { j = 9; }
     if (8 == i) { j = 12; }
     dest[j] = src[i];
@@ -1141,11 +1158,24 @@ gpio_flag ModuleFlag(void)
 {
   gpio_flag flag;
 
+#ifdef ESP8266
   if (USER_MODULE == Settings.module) {
     flag = Settings.user_template.flag;
   } else {
     memcpy_P(&flag, &kModules[Settings.module].flag, sizeof(gpio_flag));
   }
+#else  // ESP32
+  if (USER_MODULE == Settings.module) {
+/*
+    gpio_flag gpio_adc0;
+    memcpy_P(&gpio_adc0, &Settings.user_template.gp + ADC0_PIN - MIN_FLASH_PINS, sizeof(gpio_flag));
+    flag = Settings.user_template.flag.data + gpio_adc0.data;
+*/
+    memcpy_P(&flag, &Settings.user_template.gp + ADC0_PIN - MIN_FLASH_PINS, sizeof(gpio_flag));
+  } else {
+    memcpy_P(&flag, &kModules.gp + ADC0_PIN - MIN_FLASH_PINS, sizeof(gpio_flag));
+  }
+#endif  // ESP8266 - ESP32
 
   return flag;
 }
@@ -1156,7 +1186,11 @@ void ModuleDefault(uint32_t module)
   Settings.user_template_base = module;
   char name[TOPSZ];
   SettingsUpdateText(SET_TEMPLATE_NAME, GetTextIndexed(name, sizeof(name), module, kModuleNames));
+#ifdef ESP8266
   memcpy_P(&Settings.user_template, &kModules[module], sizeof(mytmplt));
+#else  // ESP32
+  memcpy_P(&Settings.user_template, &kModules, sizeof(mytmplt));
+#endif  // ESP8266 - ESP32
 }
 
 void SetModuleType(void)
@@ -1197,7 +1231,11 @@ bool ValidAdc(void)
   return (ADC0_USER == template_adc0);
 }
 
+//#ifdef ESP8266
 bool GetUsedInModule(uint32_t val, uint8_t *arr)
+//#else
+//bool GetUsedInModule(uint32_t val, uint16_t *arr)
+//#endif
 {
   int offset = 0;
 
@@ -1264,7 +1302,11 @@ bool JsonTemplate(const char* dataBuf)
 
   if (strlen(dataBuf) < 9) { return false; }  // Workaround exception if empty JSON like {} - Needs checks
 
+#ifdef ESP8266
   StaticJsonBuffer<400> jb;  // 331 from https://arduinojson.org/v5/assistant/
+#else
+  StaticJsonBuffer<800> jb;  // 654 from https://arduinojson.org/v5/assistant/
+#endif
   JsonObject& obj = jb.parseObject(dataBuf);
   if (!obj.success()) { return false; }
 
@@ -1274,7 +1316,7 @@ bool JsonTemplate(const char* dataBuf)
     SettingsUpdateText(SET_TEMPLATE_NAME, name);
   }
   if (obj[D_JSON_GPIO].success()) {
-    for (uint32_t i = 0; i < sizeof(mycfgio); i++) {
+    for (uint32_t i = 0; i < sizeof(Settings.user_template.gp.io)/sizeof(Settings.user_template.gp.io[0]); i++) {
       Settings.user_template.gp.io[i] = obj[D_JSON_GPIO][i] | 0;
     }
   }
@@ -1293,7 +1335,7 @@ bool JsonTemplate(const char* dataBuf)
 void TemplateJson(void)
 {
   Response_P(PSTR("{\"" D_JSON_NAME "\":\"%s\",\"" D_JSON_GPIO "\":["), SettingsText(SET_TEMPLATE_NAME));
-  for (uint32_t i = 0; i < sizeof(Settings.user_template.gp); i++) {
+  for (uint32_t i = 0; i < sizeof(Settings.user_template.gp.io)/sizeof(Settings.user_template.gp.io[0]); i++) {
     ResponseAppend_P(PSTR("%s%d"), (i>0)?",":"", Settings.user_template.gp.io[i]);
   }
   ResponseAppend_P(PSTR("],\"" D_JSON_FLAG "\":%d,\"" D_JSON_BASE "\":%d}"), Settings.user_template.flag, Settings.user_template_base +1);
@@ -1778,7 +1820,7 @@ void AddLogSerial(uint32_t loglevel)
   AddLogBuffer(loglevel, (uint8_t*)serial_in_buffer, serial_in_byte_counter);
 }
 
-void AddLogMissed(char *sensor, uint32_t misses)
+void AddLogMissed(const char *sensor, uint32_t misses)
 {
   AddLog_P2(LOG_LEVEL_DEBUG, PSTR("SNS: %s missed %d"), sensor, SENSOR_MAX_MISS - misses);
 }
