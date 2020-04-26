@@ -63,9 +63,6 @@ extern "C" void resetPins();
 #ifdef USE_EMULATION_WEMO
 #define USE_EMULATION
 #endif
-#ifdef USE_DEVICE_GROUPS
-#define USE_EMULATION
-#endif
                                                // See https://github.com/esp8266/Arduino/pull/4889
 #undef NO_EXTRA_4K_HEAP                        // Allocate 4k heap for WPS in ESP8166/Arduino core v2.4.2 (was always allocated in previous versions)
 
@@ -117,15 +114,10 @@ extern "C" void resetPins();
 #define MESSZ                       (MQTT_MAX_PACKET_SIZE -TOPSZ -7)  // Max number of characters in JSON message string
 #endif
 
-#ifdef USE_PWM_DIMMER_REMOTE
-#ifdef USE_PWM_DIMMER
 #ifndef USE_DEVICE_GROUPS
-#define USE_DEVICE_GROUPS
-#endif  // USE_DEVICE_GROUPS
-#else   // USE_PWM_DIMMER
 #undef USE_PWM_DIMMER_REMOTE
-#endif  // USE_PWM_DIMMER
-#endif  // USE_PWM_DIMMER_REMOTE
+#undef USE_DGR_LIGHT_SEQUENCE
+#endif  // USE_DEVICE_GROUPS
 
 #ifndef DOMOTICZ_UPDATE_TIMER
 #define DOMOTICZ_UPDATE_TIMER       0          // [DomoticzUpdateTimer] Send relay status (0 = disable, 1 - 3600 seconds) (Optional)
@@ -326,11 +318,13 @@ const char kWebColors[] PROGMEM =
 #define STR(x) STR_HELPER(x)
 #endif
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
 #ifdef USE_DEVICE_GROUPS
 #define SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ...) _SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, __VA_ARGS__, 0)
 #define SendLocalDeviceGroupMessage(REQUEST_TYPE, ...) _SendDeviceGroupMessage(0, REQUEST_TYPE, __VA_ARGS__, 0)
-#define DEVICE_GROUP_MESSAGE "M-TASMOTA_DGR/"
-const char kDeviceGroupMessage[] PROGMEM = DEVICE_GROUP_MESSAGE;
 uint8_t device_group_count = 1;
 #endif  // USE_DEVICE_GROUPS
 

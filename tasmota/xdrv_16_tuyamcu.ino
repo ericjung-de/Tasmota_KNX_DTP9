@@ -569,7 +569,7 @@ void TuyaNormalPowerModePacketProcess(void)
         uint8_t key1_gpio = Tuya.buffer[7];
         bool key1_set = false;
         bool led1_set = false;
-        for (uint32_t i = 0; i < sizeof(Settings.my_gp.io)/sizeof(Settings.my_gp.io[0]); i++) {
+        for (uint32_t i = 0; i < ARRAY_SIZE(Settings.my_gp.io); i++) {
           if (Settings.my_gp.io[i] == GPIO_LED1) led1_set = true;
           else if (Settings.my_gp.io[i] == GPIO_KEY1) key1_set = true;
         }
@@ -596,9 +596,9 @@ void TuyaNormalPowerModePacketProcess(void)
 
 bool TuyaModuleSelected(void)
 {
-  if (!(pin[GPIO_TUYA_RX] < 99) || !(pin[GPIO_TUYA_TX] < 99)) {  // fallback to hardware-serial if not explicitly selected
-    pin[GPIO_TUYA_TX] = 1;
-    pin[GPIO_TUYA_RX] = 3;
+  if (!(Pin(GPIO_TUYA_RX) < 99) || !(Pin(GPIO_TUYA_TX) < 99)) {  // fallback to hardware-serial if not explicitly selected
+    SetPin(1, GPIO_TUYA_TX);
+    SetPin(3, GPIO_TUYA_RX);
     Settings.my_gp.io[1] = GPIO_TUYA_TX;
     Settings.my_gp.io[3] = GPIO_TUYA_RX;
     restart_flag = 2;
@@ -643,7 +643,7 @@ void TuyaInit(void)
 {
   Tuya.buffer = (char*)(malloc(TUYA_BUFFER_SIZE));
   if (Tuya.buffer != nullptr) {
-    TuyaSerial = new TasmotaSerial(pin[GPIO_TUYA_RX], pin[GPIO_TUYA_TX], 2);
+    TuyaSerial = new TasmotaSerial(Pin(GPIO_TUYA_RX), Pin(GPIO_TUYA_TX), 2);
     if (TuyaSerial->begin(9600)) {
       if (TuyaSerial->hardwareSerial()) { ClaimSerial(); }
       // Get MCU Configuration
