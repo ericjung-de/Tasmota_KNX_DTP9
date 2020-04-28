@@ -50,6 +50,17 @@ extern "C" void resetPins();
 #include "tasmota_configurations.h"            // Preconfigured configurations
 
 /*********************************************************************************************\
+ * Theo transition defines - DO NOT TOUCH
+\*********************************************************************************************/
+
+//#define LEGACY_GPIO_ARRAY                    // Uncomment to use legacy GPIO array instead of new PIN array
+
+//#define FINAL_ESP32                        // Uncomment for ESP32 16-bits PIN array
+#ifdef FINAL_ESP32
+#undef LEGACY_GPIO_ARRAY
+#endif
+
+/*********************************************************************************************\
  * Mandatory defines satisfying disabled defines
 \*********************************************************************************************/
 

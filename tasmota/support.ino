@@ -1079,19 +1079,25 @@ uint32_t Pin(uint32_t gpio, uint32_t index) ICACHE_RAM_ATTR;
 
 uint32_t Pin(uint32_t gpio, uint32_t index = 0);
 uint32_t Pin(uint32_t gpio, uint32_t index) {
-//#ifdef ESP8266
+#ifdef LEGACY_GPIO_ARRAY
   return pin[gpio + index];  // Pin number configured for gpio or 99 if not used
-/*
-#else
+#else  // No LEGACY_GPIO_ARRAY
+#ifdef ESP8266
+  uint16_t real_gpio = gpio + index;
+#else  // ESP32
+#ifndef FINAL_ESP32
+  uint16_t real_gpio = gpio + index;
+#else  // FINAL_ESP32
   uint16_t real_gpio = (gpio << 5) + index;
+#endif  // FINAL_ESP32
+#endif  // ESP8266 - ESP32
   for (uint32_t i = 0; i < ARRAY_SIZE(pin); i++) {
     if (pin[i] == real_gpio) {
       return i;              // Pin number configured for gpio
     }
   }
   return 99;                 // No pin used for gpio
-#endif
-*/
+#endif  // No LEGACY_GPIO_ARRAY
 }
 
 boolean PinUsed(uint32_t gpio, uint32_t index = 0);
@@ -1100,20 +1106,20 @@ boolean PinUsed(uint32_t gpio, uint32_t index) {
 }
 
 void SetPin(uint32_t lpin, uint32_t gpio) {
-//#ifdef ESP8266
+#ifdef LEGACY_GPIO_ARRAY
   pin[gpio] = lpin;
-/*
 #else
   pin[lpin] = gpio;
 #endif
-*/
 }
 
+#ifdef LEGACY_GPIO_ARRAY
 void InitAllPins(void) {
   for (uint32_t i = 0; i < ARRAY_SIZE(pin); i++) {
     SetPin(99, i);
   }
 }
+#endif
 
 void DigitalWrite(uint32_t gpio_pin, uint32_t index, uint32_t state)
 {
@@ -1162,13 +1168,18 @@ String ModuleName(void)
 
 void ModuleGpios(myio *gp)
 {
-//#ifdef ESP8266
+#ifdef ESP8266
   uint8_t *dest = (uint8_t *)gp;
   uint8_t src[ARRAY_SIZE(Settings.user_template.gp.io)];
-//#else
-//  uint16_t *dest = (uint16_t *)gp;
-//  uint16_t src[ARRAY_SIZE(Settings.user_template.gp.io)];
-//#endif
+#else  // ESP32
+#ifndef FINAL_ESP32
+  uint8_t *dest = (uint8_t *)gp;
+  uint8_t src[ARRAY_SIZE(Settings.user_template.gp.io)];
+#else  // FINAL_ESP32
+  uint16_t *dest = (uint16_t *)gp;
+  uint16_t src[ARRAY_SIZE(Settings.user_template.gp.io)];
+#endif
+#endif  // ESP8266 - ESP32
 
   memset(dest, GPIO_NONE, sizeof(myio));
   if (USER_MODULE == Settings.module) {
@@ -1273,11 +1284,15 @@ bool ValidAdc(void)
   return (ADC0_USER == template_adc0);
 }
 
-//#ifdef ESP8266
+#ifdef ESP8266
 bool GetUsedInModule(uint32_t val, uint8_t *arr)
-//#else
-//bool GetUsedInModule(uint32_t val, uint16_t *arr)
-//#endif
+#else  // ESP32
+#ifndef FINAL_ESP32
+bool GetUsedInModule(uint32_t val, uint8_t *arr)
+#else  // FINAL_ESP32
+bool GetUsedInModule(uint32_t val, uint16_t *arr)
+#endif  // FINAL_ESP32
+#endif  // ESP8266 - ESP32
 {
   int offset = 0;
 
