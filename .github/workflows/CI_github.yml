@@ -23,7 +23,7 @@ jobs:
         git add -f ./build_output/firmware/*.*
         git commit -m "Updating Latest Compiled Binaries"
     - name: Push changes  # push the output folder to the repo
-      uses: ad-m/github-push-action@master
+      uses: ad-m/github-push-action@development
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         force: true
