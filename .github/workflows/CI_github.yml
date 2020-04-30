@@ -20,7 +20,7 @@ jobs:
     - name: Commit files  # transfer the new binaries back into the repository
       run: |
         git config --local user.name "ascillato"
-        git add /build_output/firmware
+        git add ./build_output/firmware/*.*
         git commit -m "Updating Latest Compiled Binaries"
     - name: Push changes  # push the output folder to the repo
       uses: ad-m/github-push-action@master
