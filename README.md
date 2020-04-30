@@ -1,4 +1,4 @@
-## Tasmota KNX
+## Tasmota KNX  ![PlatformIO CI](https://github.com/ascillato/Tasmota_KNX/workflows/PlatformIO%20CI/badge.svg?branch=development)
 
 <img src="/tools/logo/TASMOTA_FullLogo_Vector.svg" alt="Logo" align="right" height="90"/>
 
