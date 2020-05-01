@@ -1,4 +1,4 @@
-## Tasmota KNX  ![PlatformIO CI](https://github.com/ascillato/Tasmota_KNX/workflows/PlatformIO%20CI/badge.svg)
+## Tasmota KNX  [![PlatformIO CI](https://github.com/ascillato/Tasmota_KNX/workflows/PlatformIO%20CI/badge.svg)](https://github.com/ascillato/Tasmota_KNX/tree/development/build_output/firmware) 
 
 <img src="/tools/logo/TASMOTA_FullLogo_Vector.svg" alt="Logo" align="right" height="90"/>
 
@@ -24,7 +24,7 @@ Any help or comment is very welcome.
 * [Development Road Map](#development-road-map)
 * [Modifications to Tasmota](#modifications-to-tasmota)
 * [Contributors](#contributors)
-* [Tasmota](#tasmota)
+* [Tasmota Readme](#tasmota-readme)
 
 ## KNX Explanation ##
 
@@ -66,11 +66,11 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 
 ## Firmware ##
 
-In the [releases](https://github.com/ascillato/Tasmota_KNX/releases) section you can download the precompiled binaries for flashing ESP8266, ESP8285 and ESP32 devices.
+You can download the precompiled binaries for flashing ESP8266, ESP8285 and ESP32 devices from:
 
-If you want the precompiled binaries from the development branch, you can find them in the [Build_Output](https://github.com/ascillato/Tasmota_KNX/tree/development/build_output/firmware) folder.
-
-If you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [docs](https://tasmota.github.io/docs/#/).
+* Latest [Release](https://github.com/ascillato/Tasmota_KNX/releases)
+* Latest development version from [Build_Output](https://github.com/ascillato/Tasmota_KNX/tree/development/build_output/firmware) folder. 
+* Or if you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [docs](https://tasmota.github.io/docs/#/).
 
 ## Implemented Features ##
 
@@ -293,6 +293,7 @@ There is **NO CONFLICT** with MQTT, Home Assistant, Web, etc. Tests show fast re
 * And many others providing testing, bug reporting and feature requests.
 
 -----------------------------------------------------------------------------------------------------------------------------------
+## Tasmota Readme ##
 
 ![Tasmota logo](/tools/logo/TASMOTA_FullLogo_Vector.svg)
 
