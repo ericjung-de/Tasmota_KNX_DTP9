@@ -1,6 +1,6 @@
 name: PlatformIO CI
 
-on: [pull_request]
+on: [push, pull_request]
 
 jobs:
   tasmota_KNX-EN:
@@ -497,3 +497,29 @@ jobs:
         platformio update
     - name: Run PlatformIO       
       run: platformio run -e tasmota32_KNX-ES
+
+  tasmota_KNX:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio BUILD"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true   
