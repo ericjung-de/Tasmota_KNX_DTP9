@@ -27,4 +27,837 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: 'development'
-        force: true
+        force: true   
+
+  tasmota-minimal:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota-minimal
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true        
+      
+  tasmota_KNX-BG:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-BG      
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-BR:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-BR
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-CN:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-CN
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+  
+  tasmota_KNX-CZ:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-CZ
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-DE:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-DE
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-ES:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-ES
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-FR:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-FR
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-GR:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-GR
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true   
+
+  tasmota_KNX-HE:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-HE
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-HU:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-HU
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-IT:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-IT
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-KO:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-KO
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-NL:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-NL
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-PL:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-PL
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-PT:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-PT
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true        
+
+  tasmota_KNX-RO:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-RO
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-RU:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-RU
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-SE:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-SE
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-SK:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-SK
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-TR:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-TR
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-TW:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-TW
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-UK:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-UK
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-DE_2MB:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-DE_2MB
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-EN_2MB:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-EN_2MB
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-ES_2MB:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-ES_2MB
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-DE_4MB:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-DE_4MB
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-EN_4MB:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-EN_4MB
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota_KNX-ES_4MB:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-ES_4MB
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota32_KNX-DE:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota32_KNX-DE
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota32_KNX-EN:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota32_KNX-EN
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+
+  tasmota32_KNX-ES:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota32_KNX-ES
+    - name: Commit files  # transfer the new binaries back into the repository
+      run: |
+        git config --local user.name "Platformio CI"
+        git add -f ./build_output/firmware/*.*
+        git commit -m "Updating Latest Compiled Binaries"
+    - name: Push changes  # push the output folder to the repo
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 'development'
+        force: true  
+        
