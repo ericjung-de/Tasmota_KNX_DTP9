@@ -19,7 +19,7 @@ jobs:
       run: platformio run -e tasmota_KNX-EN
     - name: Commit files  # transfer the new binaries back into the repository
       run: |
-        git config --local user.name "ascillato"
+        git config --local user.name "Platformio CI"
         git add -f ./build_output/firmware/*.*
         git commit -m "Updating Latest Compiled Binaries"
     - name: Push changes  # push the output folder to the repo
