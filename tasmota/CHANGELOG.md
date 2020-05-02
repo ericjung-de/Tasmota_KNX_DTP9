@@ -1,9 +1,5 @@
 ## Unreleased (development)
 
-### 8.2.0.6 20200501
-
-- Add experimental basic support for Tasmota on ESP32 based on work by Jörg Schüler-Maroldt
-
 ### 8.2.0.5 20200425
 
 - Breaking Change Device Groups multicast address and port  (#8270)
