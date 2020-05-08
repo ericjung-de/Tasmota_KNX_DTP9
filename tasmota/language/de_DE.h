@@ -482,6 +482,14 @@
 #define D_ENVIRONMENTAL_CONCENTRATION "PM"     // Environmetal Particle Matter
 #define D_PARTICALS_BEYOND "Partikel"
 
+// xsns_27_apds9960.ino
+#define D_GESTURE "Geste"
+#define D_COLOR_RED "Rot"
+#define D_COLOR_GREEN "Grün"
+#define D_COLOR_BLUE "Blau"
+#define D_CCT "CCT"
+#define D_PROXIMITY "Nähe"
+
 // xsns_32_mpu6050.ino
 #define D_AX_AXIS "Beschl. X-Achse"
 #define D_AY_AXIS "Beschl. Y-Achse"
@@ -666,6 +674,7 @@
 #define D_SENSOR_HRXL_RX       "HRXL Rx"
 #define D_SENSOR_ELECTRIQ_MOODL "MOODL Tx"
 #define D_SENSOR_AS3935        "AS3935"
+#define D_SENSOR_WINDMETER_SPEED "WindMeter Spd"
 #define D_GPIO_WEBCAM_PWDN     "CAM_PWDN"
 #define D_GPIO_WEBCAM_RESET    "CAM_RESET"
 #define D_GPIO_WEBCAM_XCLK     "CAM_XCLK"
@@ -681,12 +690,16 @@
 
 // Units
 #define D_UNIT_AMPERE "A"
+#define D_UNIT_CELSIUS "C"
 #define D_UNIT_CENTIMETER "cm"
+#define D_UNIT_DEGREE "°"
+#define D_UNIT_FAHRENHEIT "F"
 #define D_UNIT_HERTZ "Hz"
 #define D_UNIT_HOUR "h"
 #define D_UNIT_GALLONS "gal"
 #define D_UNIT_GALLONS_PER_MIN "g/m"
 #define D_UNIT_INCREMENTS "inc"
+#define D_UNIT_KELVIN "K"
 #define D_UNIT_KILOMETER "km"
 #define D_UNIT_KILOGRAM "kg"
 #define D_UNIT_KILOMETER_PER_HOUR "km/h"
@@ -704,6 +717,7 @@
 #define D_UNIT_PARTS_PER_BILLION "ppb"
 #define D_UNIT_PARTS_PER_DECILITER "ppd"
 #define D_UNIT_PARTS_PER_MILLION "ppm"
+#define D_UNIT_PERCENT "%%"
 #define D_UNIT_PRESSURE "hPa"
 #define D_UNIT_SECOND "s"
 #define D_UNIT_SECTORS "Sektoren"
@@ -784,5 +798,9 @@
 #define D_AS3935_OUTDOORS "Outdoors"
 #define D_AS3935_CAL_FAIL "Kalibrierung fehlerhaft"
 #define D_AS3935_CAL_OK "Cap gesetzt auf:"
+
+//xsns_68_opentherm.ino
+#define D_SENSOR_BOILER_OT_RX   "OpenTherm RX"
+#define D_SENSOR_BOILER_OT_TX   "OpenTherm TX"
 
 #endif  // _LANGUAGE_DE_DE_H_
