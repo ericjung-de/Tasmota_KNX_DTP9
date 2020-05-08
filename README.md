@@ -52,9 +52,9 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 * [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
-* v2.7.1 Works fine. No known issues. **(RECOMMENDED)**.
+* v2.7.1 Works fine. No known issues. **(RECOMMENDED)**
 * v2.6.3 Works fine. No known issues.
-* v2.6.2 Works fine. No known issues. Bigger flash usage than 2.6.1.
+* v2.6.2 Works fine. No known issues. Bigger flash usage than 2.6.1
 * v2.6.1 Works fine. No known issues. Smaller flash usage than 2.6.0 
 * v2.6.0 Works fine. No known issues.
 * v2.5.2 Has some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. Do not use.
