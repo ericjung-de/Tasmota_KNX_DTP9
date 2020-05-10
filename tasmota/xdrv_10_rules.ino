@@ -47,7 +47,7 @@
  *   on button1#state do publish cmnd/ring2/power %value% endon on button2#state do publish cmnd/strip1/power %value% endon
  *   on switch1#state do power2 %value% endon
  *   on analog#a0div10 do publish cmnd/ring2/dimmer %value% endon
- *   on root#loadavg<50 do power 2 endon
+ *   on loadavg<50 do power 2 endon
  *
  * Notes:
  *   Spaces after <on>, around <do> and before <endon> are mandatory
@@ -203,7 +203,7 @@ char rules_vars[MAX_RULE_VARS][33] = {{ 0 }};
  *      Rule[x][0] = 0,  if firmware is downgraded, the rule will be considered as empty
  *
  *      The second byte contains the size of uncompressed rule in 8-bytes blocks (i.e. (len+7)/8 )
- *      Maximum rule size si 2KB (2048 bytes per rule), although there is little chances compression ratio will go down to 75%
+ *      Maximum rule size is 2KB (2048 bytes per rule), although there is little chances compression ratio will go down to 75%
  *      Rule[x][1] = size uncompressed in dwords. If zero, the rule is empty.
  *
  *      The remaining bytes contain the compressed rule, NULL terminated
@@ -417,19 +417,20 @@ bool RulesRuleMatch(uint8_t rule_set, String &event, String &rule)
   char stemp[10];
 
   // Step1: Analyse rule
-  int pos = rule.indexOf('#');
-  if (pos == -1) { return false; }                     // No # sign in rule
-
-  String rule_task = rule.substring(0, pos);           // "INA219" or "SYSTEM"
+  String rule_expr = rule;                             // "TELE-INA219#CURRENT>0.100"
   if (Rules.teleperiod) {
-    int ppos = rule_task.indexOf("TELE-");             // "TELE-INA219" or "INA219"
+    int ppos = rule_expr.indexOf("TELE-");             // "TELE-INA219#CURRENT>0.100" or "INA219#CURRENT>0.100"
     if (ppos == -1) { return false; }                  // No pre-amble in rule
-    rule_task = rule.substring(5, pos);                // "INA219" or "SYSTEM"
+    rule_expr = rule.substring(5);                     // "INA219#CURRENT>0.100" or "SYSTEM#BOOT"
   }
 
-  String rule_expr = rule.substring(pos +1);           // "CURRENT>0.100" or "BOOT" or "%var1%" or "MINUTE|5"
   String rule_name, rule_param;
-  int8_t compareOperator = parseCompareExpression(rule_expr, rule_name, rule_param);    //Parse the compare expression.Return operator and the left, right part of expression
+  int8_t compareOperator = parseCompareExpression(rule_expr, rule_name, rule_param);  // Parse the compare expression.Return operator and the left, right part of expression
+
+  // rule_name  = "INA219#CURRENT"
+  // rule_param = "0.100" or "%VAR1%"
+
+//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: expr %s, name %s, param %s"), rule_expr.c_str(), rule_name.c_str(), rule_param.c_str());
 
   char rule_svalue[80] = { 0 };
   float rule_value = 0;
@@ -477,11 +478,12 @@ bool RulesRuleMatch(uint8_t rule_set, String &event, String &rule)
     if (temp_value > -1) {
       rule_value = temp_value;
     } else {
-      rule_value = CharToFloat((char*)rule_svalue);   // 0.1      - This saves 9k code over toFLoat()!
+      rule_value = CharToFloat((char*)rule_svalue);    // 0.1      - This saves 9k code over toFLoat()!
     }
   }
 
-  // Step2: Search rule_task and rule_name
+  // Step2: Search rule_name
+  int pos;
   int rule_name_idx = 0;
   if ((pos = rule_name.indexOf("[")) > 0) {            // "SUBTYPE1#CURRENT[1]"
     rule_name_idx = rule_name.substring(pos +1).toInt();
@@ -491,21 +493,10 @@ bool RulesRuleMatch(uint8_t rule_set, String &event, String &rule)
     rule_name = rule_name.substring(0, pos);           // "SUBTYPE1#CURRENT"
   }
 
-//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Find Task %s, Name %s"), rule_task.c_str(), rule_name.c_str());
-
   StaticJsonBuffer<1024> jsonBuf;
   JsonObject &root = jsonBuf.parseObject(event);
   if (!root.success()) { return false; }               // No valid JSON data
-
-  JsonObject *obj;
-  if ((rule_task.length() == 0) || rule_task.startsWith("ROOT")) {                  // Support root level
-    obj = &root;
-  } else {
-    if (!root[rule_task].success()) { return false; }  // No rule_task in JSON data
-    JsonObject &obj1 = root[rule_task];
-    obj = &obj1;
-  }
-
+  JsonObject *obj = &root;
   String subtype;
   uint32_t i = 0;
   while ((pos = rule_name.indexOf("#")) > 0) {         // "SUBTYPE1#SUBTYPE2#CURRENT"
@@ -524,8 +515,8 @@ bool RulesRuleMatch(uint8_t rule_set, String &event, String &rule)
     str_value = (*obj)[rule_name];                     // "CURRENT"
   }
 
-//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Task %s, Name %s, Value |%s|, TrigCnt %d, TrigSt %d, Source %s, Json %s"),
-//  rule_task.c_str(), rule_name.c_str(), rule_svalue, Rules.trigger_count[rule_set], bitRead(Rules.triggers[rule_set], Rules.trigger_count[rule_set]), event.c_str(), (str_value) ? str_value : "none");
+//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Name %s, Value |%s|, TrigCnt %d, TrigSt %d, Source %s, Json %s"),
+//  rule_name.c_str(), rule_svalue, Rules.trigger_count[rule_set], bitRead(Rules.triggers[rule_set], Rules.trigger_count[rule_set]), event.c_str(), (str_value) ? str_value : "none");
 
   Rules.event_value = str_value;                       // Prepare %value%
 
@@ -1996,17 +1987,26 @@ void CmndRule(void)
         }
         int32_t res = SetRule(index - 1, ('"' == XdrvMailbox.data[0]) ? "" : XdrvMailbox.data, append);
         if (res < 0) {
-          AddLog_P2(LOG_LEVEL_ERROR, PSTR("RUL: not enough space"));
+          AddLog_P2(LOG_LEVEL_ERROR, PSTR("RUL: Not enough space"));
         }
       }
       Rules.triggers[index -1] = 0;  // Reset once flag
     }
+    String rule = GetRule(index - 1);
+    size_t rule_len = rule.length();
+    if (rule_len >= MAX_RULE_SIZE) {
+      // we need to split the rule in chunks
+      rule = rule.substring(0, MAX_RULE_SIZE);
+      rule += F("...");
+    }
     // snprintf_P (mqtt_data, sizeof(mqtt_data), PSTR("{\"%s%d\":\"%s\",\"Once\":\"%s\",\"StopOnError\":\"%s\",\"Free\":%d,\"Rules\":\"%s\"}"),
     //   XdrvMailbox.command, index, GetStateText(bitRead(Settings.rule_enabled, index -1)), GetStateText(bitRead(Settings.rule_once, index -1)),
     //   GetStateText(bitRead(Settings.rule_stop, index -1)), sizeof(Settings.rules[index -1]) - strlen(Settings.rules[index -1]) -1, Settings.rules[index -1]);
-    snprintf_P (mqtt_data, sizeof(mqtt_data), PSTR("{\"%s%d\":\"%s\",\"Once\":\"%s\",\"StopOnError\":\"%s\",\"Free\":%d,\"Rules\":\"%s\"}"),
+    snprintf_P (mqtt_data, sizeof(mqtt_data), PSTR("{\"%s%d\":\"%s\",\"Once\":\"%s\",\"StopOnError\":\"%s\",\"Length\":%d,\"Free\":%d,\"Rules\":\"%s\"}"),
       XdrvMailbox.command, index, GetStateText(bitRead(Settings.rule_enabled, index -1)), GetStateText(bitRead(Settings.rule_once, index -1)),
-      GetStateText(bitRead(Settings.rule_stop, index -1)), sizeof(Settings.rules[0]) - GetRuleLenStorage(index - 1), GetRule(index - 1).c_str());
+      GetStateText(bitRead(Settings.rule_stop, index -1)),
+      rule_len, MAX_RULE_SIZE - GetRuleLenStorage(index - 1),
+      escapeJSONString(rule.c_str()).c_str());
   }
 }
 
