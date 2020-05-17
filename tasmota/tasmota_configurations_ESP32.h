@@ -1,5 +1,5 @@
 /*
-  tasmota_version.h - Version header file for Tasmota
+  tasmota_configurations_ESP32.h - ESP32 only Configurations for Tasmota
 
   Copyright (C) 2020  Theo Arends
 
@@ -17,12 +17,24 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _TASMOTA_VERSION_H_
-#define _TASMOTA_VERSION_H_
+#ifndef _TASMOTA_CONFIGURATIONS_ESP32_H_
+#define _TASMOTA_CONFIGURATIONS_ESP32_H_
 
-const uint32_t VERSION = 0x08030001;
+#ifdef ESP32
 
-// Lowest compatible version
-const uint32_t VERSION_COMPATIBLE = 0x07010006;
+/*********************************************************************************************\
+ * [tasmota32-webcam.bin]
+ * Provide an image with useful supported sensors enabled
+\*********************************************************************************************/
 
-#endif  // _TASMOTA_VERSION_H_
+#ifdef FIRMWARE_WEBCAM
+
+#undef CODE_IMAGE_STR
+#define CODE_IMAGE_STR "webcam"
+
+#define USE_WEBCAM
+#endif  // FIRMWARE_WEBCAM
+
+#endif  // ESP32
+
+#endif  // _TASMOTA_CONFIGURATIONS_ESP32_H_

@@ -461,6 +461,9 @@ void CmndStatus(void)
 
   if ((0 == payload) || (4 == payload)) {
     Response_P(PSTR("{\"" D_CMND_STATUS D_STATUS4_MEMORY "\":{\"" D_JSON_PROGRAMSIZE "\":%d,\"" D_JSON_FREEMEMORY "\":%d,\"" D_JSON_HEAPSIZE "\":%d,\""
+#ifdef ESP32
+                          D_JSON_PSRMAXMEMORY "\":%d,\"" D_JSON_PSRFREEMEMORY "\":%d,"
+#endif
                           D_JSON_PROGRAMFLASHSIZE "\":%d,\"" D_JSON_FLASHSIZE "\":%d"
 #ifdef ESP8266
                           ",\"" D_JSON_FLASHCHIPID "\":\"%06X\""
@@ -468,6 +471,9 @@ void CmndStatus(void)
                           ",\"" D_JSON_FLASHMODE "\":%d,\""
                           D_JSON_FEATURES "\":[\"%08X\",\"%08X\",\"%08X\",\"%08X\",\"%08X\",\"%08X\",\"%08X\"]"),
                           ESP_getSketchSize()/1024, ESP.getFreeSketchSpace()/1024, ESP_getFreeHeap()/1024,
+#ifdef ESP32
+                          ESP.getPsramSize()/1024, ESP.getFreePsram()/1024,
+#endif
                           ESP.getFlashChipSize()/1024, ESP.getFlashChipRealSize()/1024
 #ifdef ESP8266
                           , ESP.getFlashChipId()
@@ -1594,8 +1600,9 @@ void CmndTeleperiod(void)
   if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload < 3601)) {
     Settings.tele_period = (1 == XdrvMailbox.payload) ? TELE_PERIOD : XdrvMailbox.payload;
     if ((Settings.tele_period > 0) && (Settings.tele_period < 10)) Settings.tele_period = 10;   // Do not allow periods < 10 seconds
-    tele_period = Settings.tele_period;
+//    tele_period = Settings.tele_period;
   }
+  tele_period = Settings.tele_period;        // Show teleperiod data also on empty command
   ResponseCmndNumber(Settings.tele_period);
 }
 

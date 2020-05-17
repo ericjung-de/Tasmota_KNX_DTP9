@@ -1,5 +1,18 @@
 ## Unreleased (development)
 
+### 8.3.0.1 20200514
+
+- Change KNX pow function to approximative pow saving 5k of code space
+- Change Mutichannel Gas sensor pow function to approximative pow saving 5k of code space
+- Change Quick Power Cycle detection from 4 to 7 power interrupts (#4066)
+- Fix default state of ``SetOption73 0`` for button decoupling and send multi-press and hold MQTT messages
+
+## Released
+
+### 8.3.0 20200514
+
+- Release Fred
+
 ### 8.2.0.6 20200501
 
 - Add experimental basic support for Tasmota on ESP32 based on work by Jörg Schüler-Maroldt

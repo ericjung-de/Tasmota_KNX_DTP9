@@ -75,6 +75,7 @@
 | USE_DHT               | - | - | x | x | x | x | x |
 | USE_MAX31855          | - | - | - | - | x | - | - |
 | USE_MAX31865          | - | - | - | - | - | - | - |
+| USE_THERMOSTAT        | - | - | - | - | - | - | - |
 |                       |   |   |   |   |   |   |   |
 | Feature or Sensor     | minimal | lite | tasmota | knx | sensors | ir | display | Remarks
 | USE_I2C               | - | - | x | x | x | - | x |
@@ -169,5 +170,10 @@
 | USE_DISPLAY_ILI9488   | - | - | - | - | - | - | - |
 | USE_DISPLAY_SSD1351   | - | - | - | - | - | - | - |
 | USE_DISPLAY_RA8876    | - | - | - | - | - | - | - |
-|                       |   |   |   |   |   |   |   |
-| USE_WEBCAM            | - | - | - | - | - | - | - | ESP32 only
+
+## Additional Features and Sensors on ESP32
+
+| Feature or Sensor     | minimal | lite | tasmota | knx | sensors | ir | display | webcam | Remarks
+|-----------------------|---------|-------|--------|-----|---------|----|---------|--------|--------
+| USE_MI_ESP32          | - | - | - | - | - | - | - | - |
+| USE_WEBCAM            | - | - | - | - | - | - | - | x |
