@@ -996,6 +996,9 @@ char* ResponseGetTime(uint32_t format, char* time_str)
   case 2:
     snprintf_P(time_str, TIMESZ, PSTR("{\"" D_JSON_TIME "\":%u"), UtcTime());
     break;
+  case 3:
+    snprintf_P(time_str, TIMESZ, PSTR("{\"" D_JSON_TIME "\":\"%s.%03d\""), GetDateAndTime(DT_LOCAL).c_str(), RtcMillis());
+    break;
   default:
     snprintf_P(time_str, TIMESZ, PSTR("{\"" D_JSON_TIME "\":\"%s\""), GetDateAndTime(DT_LOCAL).c_str());
   }
@@ -1872,65 +1875,6 @@ void AddLogBufferSize(uint32_t loglevel, uint8_t *buffer, uint32_t count, uint32
     buffer += size;
   }
   AddLog(loglevel);
-}
-
-/*********************************************************************************************\
- * JSON parsing
-\*********************************************************************************************/
-
-// does the character needs to be escaped, and if so with which character
-char escapeJSONChar(char c) {
-  if ((c == '\"') || (c == '\\')) {
-    return c;
-  }
-  if (c == '\n') { return 'n'; }
-  if (c == '\t') { return 't'; }
-  if (c == '\r') { return 'r'; }
-  if (c == '\f') { return 'f'; }
-  if (c == '\b') { return 'b'; }
-  return 0;
-}
-
-String escapeJSONString(const char *str) {
-  String r("");
-  if (nullptr == str) { return r; }
-
-  bool needs_escape = false;
-  size_t len_out = 1;
-  const char * c = str;
-
-  while (*c) {
-    if (escapeJSONChar(*c)) {
-      len_out++;
-      needs_escape = true;
-    }
-    c++;
-    len_out++;
-  }
-
-  if (needs_escape) {
-    // we need to escape some chars
-    // allocate target buffer
-    r.reserve(len_out);
-    c = str;
-    char *d = r.begin();
-    while (*c) {
-      char c2 = escapeJSONChar(*c);
-      if (c2) {
-        c++;
-        *d++ = '\\';
-        *d++ = c2;
-      } else {
-        *d++ = *c++;
-      }
-    }
-    *d = 0;   // add NULL terminator
-    r = (char*) r.begin();      // assign the buffer to the string
-  } else {
-    r = str;
-  }
-
-  return r;
 }
 
 /*********************************************************************************************\
