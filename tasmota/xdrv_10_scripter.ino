@@ -26,6 +26,7 @@ uses about 17 k of flash
 
 to do
 optimize code for space
+g:var gloabal vars (via udp broadcast)
 
 remarks
 
@@ -67,28 +68,70 @@ keywords if then else endif, or, and are better readable for beginners (others m
 uint32_t EncodeLightId(uint8_t relay_id);
 uint32_t DecodeLightId(uint32_t hue_id);
 
-#ifdef USE_SCRIPT_COMPRESSION
+// solve conficting defines
+// highest priority
+#ifdef USE_SCRIPT_FATFS
+#undef LITTLEFS_SCRIPT_SIZE
+#undef EEP_SCRIPT_SIZE
+#undef USE_UNISHOX_COMPRESSION
+#if USE_SCRIPT_FATFS==-1
+#ifdef ESP32
+#error "script fat file option -1 currently not supported for ESP32"
+#else
+#pragma message "script fat file option -1 used"
+#endif
+#else
+#pragma message "script fat file SDC option used"
+#endif
+#endif // USE_SCRIPT_FATFS
+
+// lfs on esp8266 spiffs on esp32
+#ifdef LITTLEFS_SCRIPT_SIZE
+#undef EEP_SCRIPT_SIZE
+#undef USE_UNISHOX_COMPRESSION
+#pragma message "script little file system option used"
+#endif // LITTLEFS_SCRIPT_SIZE
+
+// eeprom script
+#ifdef EEP_SCRIPT_SIZE
+#undef USE_UNISHOX_COMPRESSION
+#ifdef USE_24C256
+#pragma message "script 24c256 file option used"
+#else
+#warning "EEP_SCRIPT_SIZE also needs USE_24C256"
+#define USE_24C256
+#endif
+#endif // EEP_SCRIPT_SIZE
+
+// compression last option before default
+#ifdef USE_UNISHOX_COMPRESSION
+#pragma message "script compression option used"
+#endif // USE_UNISHOX_COMPRESSION
+
+
+#ifdef USE_UNISHOX_COMPRESSION
 #include <unishox.h>
 
-//Unishox compressor;   // singleton
 #define SCRIPT_COMPRESS compressor.unishox_compress
 #define SCRIPT_DECOMPRESS compressor.unishox_decompress
 #ifndef UNISHOXRSIZE
 #define UNISHOXRSIZE 2560
 #endif
-#endif // USE_SCRIPT_COMPRESSION
+#endif // USE_UNISHOX_COMPRESSION
 
-#if (defined(LITTLEFS_SCRIPT_SIZE) && !defined(USE_24C256) && !defined(USE_SCRIPT_FATFS)) || (USE_SCRIPT_FATFS==-1)
 
+#if defined(LITTLEFS_SCRIPT_SIZE) || (USE_SCRIPT_FATFS==-1)
 #ifdef ESP32
 #include "FS.h"
 #include "SPIFFS.h"
 #else
 #include <LittleFS.h>
 #endif
-
 FS *fsp;
+#endif // LITTLEFS_SCRIPT_SIZE
 
+
+#ifdef LITTLEFS_SCRIPT_SIZE
 void SaveFile(const char *name,const uint8_t *buf,uint32_t len) {
   File file = fsp->open(name, "w");
   if (!file) return;
@@ -116,7 +159,7 @@ void LoadFile(const char *name,uint8_t *buf,uint32_t len) {
   file.read(buf, len);
   file.close();
 }
-#endif
+#endif // LITTLEFS_SCRIPT_SIZE
 
 // offsets epoch readings by 1.1.2019 00:00:00 to fit into float with second resolution
 #define EPOCH_OFFSET 1546300800
@@ -317,23 +360,10 @@ void RulesTeleperiod(void) {
 }
 
 // EEPROM MACROS
-#ifdef USE_24C256
-#ifndef USE_SCRIPT_FATFS
 // i2c eeprom
-#include <Eeprom24C128_256.h>
-#define EEPROM_ADDRESS 0x50
-// strange bug, crashes with powers of 2 ??? 4096 crashes
-#ifndef EEP_SCRIPT_SIZE
-#define EEP_SCRIPT_SIZE 4095
-#endif
+#define EEP_WRITE(A,B,C) eeprom_writeBytes(A,B,(uint8_t*)C);
+#define EEP_READ(A,B,C) eeprom_readBytes(A,B,(uint8_t*)C);
 
-static Eeprom24C128_256 eeprom(EEPROM_ADDRESS);
-// eeprom.writeBytes(address, length, buffer);
-#define EEP_WRITE(A,B,C) eeprom.writeBytes(A,B,(uint8_t*)C);
-// eeprom.readBytes(address, length, buffer);
-#define EEP_READ(A,B,C) eeprom.readBytes(A,B,(uint8_t*)C);
-#endif
-#endif
 
 #define SCRIPT_SKIP_SPACES while (*lp==' ' || *lp=='\t') lp++;
 #define SCRIPT_SKIP_EOL while (*lp==SCRIPT_EOL) lp++;
@@ -651,13 +681,7 @@ char *script;
 
 #if USE_SCRIPT_FATFS>=0
       fsp=&SD;
-
-#ifdef USE_MMC
-      if (fsp->begin()) {
-#else
       if (SD.begin(USE_SCRIPT_FATFS)) {
-#endif
-
 #else
       if (fsp->begin()) {
 #endif
@@ -738,13 +762,14 @@ float median_array(float *array,uint8_t len) {
 }
 
 
-float *Get_MFAddr(uint8_t index,uint8_t *len) {
+float *Get_MFAddr(uint8_t index,uint8_t *len,uint8_t *ipos) {
   *len=0;
   uint8_t *mp=(uint8_t*)glob_script_mem.mfilt;
   for (uint8_t count=0; count<MAXFILT; count++) {
     struct M_FILT *mflp=(struct M_FILT*)mp;
     if (count==index) {
         *len=mflp->numvals&0x7f;
+        if (ipos) *ipos=mflp->index;
         return mflp->rbuff;
     }
     mp+=sizeof(struct M_FILT)+((mflp->numvals&0x7f)-1)*sizeof(float);
@@ -935,6 +960,56 @@ if (hsv.S == 0) {
 }
 #endif
 //#endif
+
+#ifdef USE_ANGLE_FUNC
+uint32_t pulse_time_hl;
+uint32_t pulse_time_lh;
+uint32_t pulse_ltime_hl;
+uint32_t pulse_ltime_lh;
+uint8_t pt_pin;
+
+void MP_Timer(void) ICACHE_RAM_ATTR;
+
+#define MPT_DEBOUNCE 10
+
+void MP_Timer(void) {
+  uint32_t level = digitalRead(pt_pin&0x3f);
+  uint32_t ms = millis();
+  uint32_t time;
+  if (level) {
+    // rising edge
+    pulse_ltime_lh = ms;
+    time = ms - pulse_ltime_hl;
+    if (time>MPT_DEBOUNCE) pulse_time_hl = time;
+  } else {
+    // falling edge
+    pulse_ltime_hl = ms;
+    time = ms - pulse_ltime_lh;
+    if (time>MPT_DEBOUNCE) pulse_time_lh = time;
+  }
+}
+
+uint32_t MeasurePulseTime(int32_t in) {
+  if (in >= 0) {
+    // define pin;
+    pt_pin = in;
+    pinMode(pt_pin&0x3f,INPUT_PULLUP);
+    attachInterrupt(pt_pin&0x3f, MP_Timer, CHANGE);
+    pulse_ltime_lh = millis();
+    pulse_ltime_hl = millis();
+    return 0;
+  }
+  uint32_t ptime;
+  if (in==-1) {
+    ptime = pulse_time_lh;
+    pulse_time_lh = 0;
+  } else {
+    ptime = pulse_time_hl;
+    pulse_time_hl = 0;
+  }
+  return ptime;
+}
+#endif // USE_ANGLE_FUNC
 
 // vtype => ff=nothing found, fe=constant number,fd = constant string else bit 7 => 80 = string, 0 = number
 // no flash strings here for performance reasons!!!
@@ -1720,6 +1795,15 @@ chknext:
           len=0;
           goto exit;
         }
+#ifdef USE_ANGLE_FUNC
+        if (!strncmp(vname,"mpt(",4)) {
+          lp=GetNumericResult(lp+4,OPER_EQU,&fvar,0);
+          fvar=MeasurePulseTime(fvar);
+          lp++;
+          len=0;
+          goto exit;
+        }
+#endif
         if (!strncmp(vname,"micros",6)) {
           fvar=micros();
           goto exit;
@@ -1889,6 +1973,19 @@ chknext:
       case 'r':
         if (!strncmp(vname,"ram",3)) {
           fvar=glob_script_mem.script_mem_size+(glob_script_mem.script_size)+(PMEM_SIZE);
+          goto exit;
+        }
+        if (!strncmp(vname,"rnd(",4)) {
+          // tasmota switch state
+          GetNumericResult(vname+4,OPER_EQU,&fvar,0);
+          if (fvar<0) {
+            randomSeed(-fvar);
+            fvar=0;
+          } else {
+            fvar=random(fvar);
+          }
+          // skip ] bracket
+          len++;
           goto exit;
         }
         break;
@@ -3159,7 +3256,7 @@ int16_t Run_Scripter(const char *type, int8_t tlen, char *js) {
                     // numeric result
                   if (glob_script_mem.type[ind.index].bits.is_filter) {
                     uint8_t len=0;
-                    float *fa=Get_MFAddr(index,&len);
+                    float *fa=Get_MFAddr(index,&len,0);
                     //Serial.printf(">> 2 %d\n",(uint32_t)*fa);
                     if (fa && len) ws2812_set_array(fa,len,fvar);
                   }
@@ -3702,6 +3799,76 @@ const char HTTP_FORM_SDC_HREF[] PROGMEM =
 #endif
 
 
+uint8_t *script_ex_ptr;
+uint16_t uplsize;
+uint8_t sc_state;
+
+// upload script and start immediately
+void script_upload_start(void) {
+
+  //AddLog_P(LOG_LEVEL_INFO, PSTR("HTP: file upload execute"));
+
+  HTTPUpload& upload = Webserver->upload();
+  if (upload.status == UPLOAD_FILE_START) {
+    //AddLog_P(LOG_LEVEL_INFO, PSTR("HTP: upload start"));
+    script_ex_ptr=(uint8_t*)glob_script_mem.script_ram;
+    //AddLog_P2(LOG_LEVEL_INFO, PSTR("HTP: upload file %s, %d"),upload.filename.c_str(),upload.totalSize);
+
+    if (strcmp(upload.filename.c_str(),"execute_script")) {
+      Web.upload_error=1;
+      WSSend(500, CT_PLAIN, F("500: wrong filename"));
+      return;
+    }
+    if (upload.totalSize>=glob_script_mem.script_size) {
+      Web.upload_error=1;
+      WSSend(500, CT_PLAIN, F("500: file to large"));
+      return;
+    }
+    uplsize=0;
+
+    sc_state = bitRead(Settings.rule_enabled, 0);
+    bitWrite(Settings.rule_enabled,0,0);
+
+  } else if(upload.status == UPLOAD_FILE_WRITE) {
+    //AddLog_P(LOG_LEVEL_INFO, PSTR("HTP: upload write"));
+    uint32_t csiz=upload.currentSize;
+    uint32_t tsiz=glob_script_mem.script_size-1;
+    if (uplsize<tsiz) {
+      if (uplsize+csiz<tsiz) {
+        memcpy(script_ex_ptr,upload.buf,csiz);
+        script_ex_ptr+=csiz;
+        uplsize+=csiz;
+      } else {
+        csiz=tsiz-uplsize;
+        memcpy(script_ex_ptr,upload.buf,csiz);
+        script_ex_ptr+=csiz;
+        uplsize+=csiz;
+      }
+      //AddLog_P2(LOG_LEVEL_INFO, PSTR("HTP: write %d - %d"),csiz,uplsize);
+    }
+
+    //if (upload_file) upload_file.write(upload.buf,upload.currentSize);
+  } else if(upload.status == UPLOAD_FILE_END) {
+    AddLog_P(LOG_LEVEL_INFO, PSTR("HTP: upload close"));
+    //if (upload_file) upload_file.close();
+    if (Web.upload_error) {
+      AddLog_P(LOG_LEVEL_INFO, PSTR("HTP: upload error"));
+    } else {
+      *script_ex_ptr=0;
+      bitWrite(Settings.rule_enabled,0,sc_state);
+      SaveScript();
+      SaveScriptEnd();
+    }
+  } else {
+    Web.upload_error=1;
+    WSSend(500, CT_PLAIN, F("500: couldn't create file"));
+  }
+}
+
+void ScriptExecuteUploadSuccess(void) {
+  WSSend(200, CT_PLAIN, F("transfer OK"));
+}
+
 
 #ifdef USE_SCRIPT_FATFS
 
@@ -3828,6 +3995,17 @@ void Script_FileUploadConfiguration(void)
     }
   }
 
+  void ScriptFileUploadSuccess(void) {
+    WSContentStart_P(S_INFORMATION);
+    WSContentSendStyle();
+    WSContentSend_P(PSTR("<div style='text-align:center;'><b>" D_UPLOAD " <font color='#"));
+    WSContentSend_P(PSTR("%06x'>" D_SUCCESSFUL "</font></b><br/>"), WebColor(COL_TEXT_SUCCESS));
+    WSContentSend_P(PSTR("</div><br/>"));
+    WSContentSend_P(PSTR("<p><form action='%s' method='get'><button>%s</button></form></p>"),"/upl",D_UPL_DONE);
+    //WSContentSpaceButton(BUTTON_MAIN);
+    WSContentStop();
+  }
+
   WSContentStart_P(S_SCRIPT_FILE_UPLOAD);
   WSContentSendStyle();
   WSContentSend_P(HTTP_FORM_FILE_UPLOAD,D_SDCARD_DIR);
@@ -3846,18 +4024,6 @@ void Script_FileUploadConfiguration(void)
 }
 
 File upload_file;
-
-void ScriptFileUploadSuccess(void) {
-  WSContentStart_P(S_INFORMATION);
-  WSContentSendStyle();
-  WSContentSend_P(PSTR("<div style='text-align:center;'><b>" D_UPLOAD " <font color='#"));
-  WSContentSend_P(PSTR("%06x'>" D_SUCCESSFUL "</font></b><br/>"), WebColor(COL_TEXT_SUCCESS));
-  WSContentSend_P(PSTR("</div><br/>"));
-  WSContentSend_P(PSTR("<p><form action='%s' method='get'><button>%s</button></form></p>"),"/upl",D_UPL_DONE);
-  //WSContentSpaceButton(BUTTON_MAIN);
-  WSContentStop();
-}
-
 
 
 void script_upload(void) {
@@ -4006,8 +4172,31 @@ void HandleScriptConfiguration(void) {
     WSContentSend_P(HTTP_SCRIPT_FORM_END);
     WSContentSpaceButton(BUTTON_CONFIGURATION);
     WSContentStop();
-  }
+}
 
+void SaveScript(void) {
+
+#ifdef EEP_SCRIPT_SIZE
+  if (glob_script_mem.flags&1) {
+    EEP_WRITE(0,EEP_SCRIPT_SIZE,glob_script_mem.script_ram);
+  }
+#endif // EEP_SCRIPT_SIZE
+
+#ifdef USE_SCRIPT_FATFS
+  if (glob_script_mem.flags&1) {
+    fsp->remove(FAT_SCRIPT_NAME);
+    File file=fsp->open(FAT_SCRIPT_NAME,FILE_WRITE);
+    file.write((const uint8_t*)glob_script_mem.script_ram,FAT_SCRIPT_SIZE);
+    file.close();
+  }
+#endif // USE_SCRIPT_FATFS
+
+#ifdef LITTLEFS_SCRIPT_SIZE
+  if (glob_script_mem.flags&1) {
+    SaveFile("/script.txt",(uint8_t*)glob_script_mem.script_ram,LITTLEFS_SCRIPT_SIZE);
+  }
+#endif // LITTLEFS_SCRIPT_SIZE
+}
 
 void ScriptSaveSettings(void) {
 
@@ -4064,29 +4253,14 @@ void ScriptSaveSettings(void) {
       bitWrite(Settings.rule_enabled, 0, 0);
     }
 
+    SaveScript();
 
-#if defined(USE_24C256) && !defined(USE_SCRIPT_FATFS)
-    if (glob_script_mem.flags&1) {
-      EEP_WRITE(0,EEP_SCRIPT_SIZE,glob_script_mem.script_ram);
-    }
-#endif
-
-#if !defined(USE_24C256) && defined(USE_SCRIPT_FATFS)
-    if (glob_script_mem.flags&1) {
-      fsp->remove(FAT_SCRIPT_NAME);
-      File file=fsp->open(FAT_SCRIPT_NAME,FILE_WRITE);
-      file.write((const uint8_t*)glob_script_mem.script_ram,FAT_SCRIPT_SIZE);
-      file.close();
-    }
-#endif
-
-#if defined(LITTLEFS_SCRIPT_SIZE) && !defined(USE_24C256) && !defined(USE_SCRIPT_FATFS)
-    if (glob_script_mem.flags&1) {
-      SaveFile("/script.txt",(uint8_t*)glob_script_mem.script_ram,LITTLEFS_SCRIPT_SIZE);
-    }
-#endif
   }
 
+  SaveScriptEnd();
+}
+
+void SaveScriptEnd(void) {
   if (glob_script_mem.script_mem) {
     Scripter_save_pvars();
     free(glob_script_mem.script_mem);
@@ -4094,24 +4268,16 @@ void ScriptSaveSettings(void) {
     glob_script_mem.script_mem_size=0;
   }
 
-#ifdef USE_SCRIPT_COMPRESSION
-#ifndef USE_24C256
-#ifndef USE_SCRIPT_FATFS
-#ifndef LITTLEFS_SCRIPT_SIZE
-
+#ifdef USE_UNISHOX_COMPRESSION
   //AddLog_P2(LOG_LEVEL_INFO,PSTR("in string: %s len = %d"),glob_script_mem.script_ram,strlen(glob_script_mem.script_ram));
   uint32_t len_compressed = SCRIPT_COMPRESS(glob_script_mem.script_ram, strlen(glob_script_mem.script_ram), Settings.rules[0], MAX_SCRIPT_SIZE-1);
   if (len_compressed > 0) {
     Settings.rules[0][len_compressed] = 0;
-    AddLog_P2(LOG_LEVEL_INFO,PSTR("script compressed to %d %%"),len_compressed * 100 / strlen(glob_script_mem.script_ram));
+    AddLog_P2(LOG_LEVEL_INFO,PSTR("script compressed to %d bytes = %d %%"),len_compressed,len_compressed * 100 / strlen(glob_script_mem.script_ram));
   } else {
     AddLog_P2(LOG_LEVEL_INFO, PSTR("script compress error: %d"), len_compressed);
   }
-
-#endif
-#endif
-#endif
-#endif // USE_SCRIPT_COMPRESSION
+#endif // USE_UNISHOX_COMPRESSION
 
   if (bitRead(Settings.rule_enabled, 0)) {
     int16_t res=Init_Scripter();
@@ -4128,8 +4294,6 @@ void ScriptSaveSettings(void) {
 
 
 #if defined(USE_SCRIPT_HUE) && defined(USE_WEBSERVER) && defined(USE_EMULATION) && defined(USE_EMULATION_HUE) && defined(USE_LIGHT)
-
-
 #define HUE_DEV_MVNUM 5
 #define HUE_DEV_NSIZE 16
 struct HUE_SCRIPT {
@@ -5068,10 +5232,11 @@ const char SCRIPT_MSG_GTE1[] PROGMEM = "'%s'";
 
 #define MAX_GARRAY 4
 
-char *gc_get_arrays(char *lp, float **arrays, uint8_t *ranum, uint8_t *rentries) {
+char *gc_get_arrays(char *lp, float **arrays, uint8_t *ranum, uint8_t *rentries, uint8_t *ipos) {
 struct T_INDEX ind;
 uint8_t vtype;
 uint8 entries=0;
+uint8_t cipos=0;
 
   uint8_t anum=0;
   while (anum<MAX_GARRAY) {
@@ -5088,10 +5253,12 @@ uint8 entries=0;
         if (glob_script_mem.type[ind.index].bits.is_filter) {
           //Serial.printf("numeric array\n");
           uint8_t len=0;
-          float *fa=Get_MFAddr(index,&len);
+          float *fa=Get_MFAddr(index,&len,&cipos);
           //Serial.printf(">> 2 %d\n",(uint32_t)*fa);
           if (fa && len>=entries) {
-            if (!entries) {entries = len;}
+            if (!entries) {
+              entries = len;
+            }
             // add array to list
             arrays[anum]=fa;
             anum++;
@@ -5111,6 +5278,7 @@ uint8 entries=0;
   //Serial.printf(">> %d - %d - %d\n",anum,entries,(uint32_t)*arrays[0]);
   *ranum=anum;
   *rentries=entries;
+  *ipos=cipos;
   return lp;
 }
 
@@ -5409,7 +5577,8 @@ void ScriptWebShow(char mc) {
               float *arrays[MAX_GARRAY];
               uint8_t anum=0;
               uint8 entries=0;
-              lp=gc_get_arrays(lp, &arrays[0], &anum, &entries);
+              uint8 ipos=0;
+              lp=gc_get_arrays(lp, &arrays[0], &anum, &entries, &ipos);
 
               if (anum>nanum) {
                 goto nextwebline;
@@ -5456,28 +5625,38 @@ void ScriptWebShow(char mc) {
                 int8_t todflg=-1;
                 if (!strncmp(label,"cnt",3)) {
                   todflg=atoi(&label[3]);
+                  if (todflg>=entries) todflg=entries-1;
                 }
 
+                uint32_t aind=ipos;
+                if (aind>=entries) aind=entries-1;
                 for (uint32_t cnt=0; cnt<entries; cnt++) {
                   WSContentSend_PD("['");
                   char lbl[16];
                   if (todflg>=0) {
                     sprintf(lbl,"%d",todflg);
                     todflg++;
+                    if (todflg>=entries) {
+                      todflg=0;
+                    }
                   } else {
-                    GetTextIndexed(lbl, sizeof(lbl), cnt, label);
+                    GetTextIndexed(lbl, sizeof(lbl), aind, label);
                   }
                   WSContentSend_PD(lbl);
                   WSContentSend_PD("',");
                   for (uint32_t ind=0; ind<anum; ind++) {
                     char acbuff[32];
                     float *fp=arrays[ind];
-                    dtostrfd(fp[cnt],glob_script_mem.script_dprec,acbuff);
+                    dtostrfd(fp[aind],glob_script_mem.script_dprec,acbuff);
                     WSContentSend_PD("%s",acbuff);
                     if (ind<anum-1) { WSContentSend_PD(","); }
                   }
                   WSContentSend_PD("]");
                   if (cnt<entries-1) { WSContentSend_PD(","); }
+                  aind++;
+                  if (aind>=entries) {
+                    aind=0;
+                  }
                 }
 
                 // get header
@@ -5647,7 +5826,9 @@ void script_task1(void *arg) {
     //if (time<esp32_tasks[1].task_timer) {delay(time); }
     //if (time<=esp32_tasks[0].task_timer) {vTaskDelay( pdMS_TO_TICKS( time ) ); }
     delay(esp32_tasks[0].task_timer);
-    Run_Scripter(">t1",3,0);
+    if (bitRead(Settings.rule_enabled, 0)) {
+      Run_Scripter(">t1",3,0);
+    }
   }
 }
 
@@ -5661,7 +5842,9 @@ void script_task2(void *arg) {
     //if (time<esp32_tasks[1].task_timer) {delay(time); }
     //if (time<=esp32_tasks[1].task_timer) {vTaskDelay( pdMS_TO_TICKS( time ) ); }
     delay(esp32_tasks[1].task_timer);
-    Run_Scripter(">t2",3,0);
+    if (bitRead(Settings.rule_enabled, 0)) {
+      Run_Scripter(">t2",3,0);
+    }
   }
 }
 uint32_t scripter_create_task(uint32_t num, uint32_t time, uint32_t core) {
@@ -5722,7 +5905,7 @@ uint32_t scripter_create_task(uint32_t num, uint32_t time, uint32_t core) {
 /*********************************************************************************************\
  * Interface
 \*********************************************************************************************/
-
+//const esp_partition_t *esp32_part;
 
 bool Xdrv10(uint8_t function)
 {
@@ -5739,10 +5922,7 @@ bool Xdrv10(uint8_t function)
       glob_script_mem.script_pram=(uint8_t*)Settings.script_pram[0];
       glob_script_mem.script_pram_size=PMEM_SIZE;
 
-#ifdef USE_SCRIPT_COMPRESSION
-#ifndef USE_24C256
-#ifndef USE_SCRIPT_FATFS
-#ifndef LITTLEFS_SCRIPT_SIZE
+#ifdef USE_UNISHOX_COMPRESSION
       int32_t len_decompressed;
       sprt=(char*)calloc(UNISHOXRSIZE+8,1);
       if (!sprt) { break; }
@@ -5751,10 +5931,7 @@ bool Xdrv10(uint8_t function)
       len_decompressed = SCRIPT_DECOMPRESS(Settings.rules[0], strlen(Settings.rules[0]), glob_script_mem.script_ram, glob_script_mem.script_size);
       if (len_decompressed>0) glob_script_mem.script_ram[len_decompressed]=0;
       //AddLog_P2(LOG_LEVEL_INFO, PSTR("decompressed script len %d"),len_decompressed);
-#endif
-#endif
-#endif
-#endif // USE_SCRIPT_COMPRESSION
+#endif // USE_UNISHOX_COMPRESSION
 
 #ifdef USE_BUTTON_EVENT
       for (uint32_t cnt=0;cnt<MAX_KEYS;cnt++) {
@@ -5762,10 +5939,8 @@ bool Xdrv10(uint8_t function)
       }
 #endif
 
-#ifdef USE_24C256
-#ifndef USE_SCRIPT_FATFS
-	  if (I2cEnabled(XI2C_37)) {
-	    if (I2cSetDevice(EEPROM_ADDRESS)) {
+#ifdef EEP_SCRIPT_SIZE
+      if (eeprom_init(EEP_SCRIPT_SIZE)) {
           // found 32kb eeprom
           char *script;
           script=(char*)calloc(EEP_SCRIPT_SIZE+4,1);
@@ -5782,34 +5957,26 @@ bool Xdrv10(uint8_t function)
           glob_script_mem.script_pram_size=MAX_SCRIPT_SIZE;
 
           glob_script_mem.flags=1;
-          I2cSetActiveFound(EEPROM_ADDRESS, "EEPROM");
-        }
       }
-#endif
-#endif
+#endif // EEP_SCRIPT_SIZE
 
 
 #ifdef USE_SCRIPT_FATFS
 
 #if USE_SCRIPT_FATFS>=0
-      fsp = &SD;
-
-#ifdef USE_MMC
-      if (fsp->begin()) {
-#else
-
+      // fs on SD card
 #ifdef ESP32
       if (PinUsed(GPIO_SPI_MOSI) && PinUsed(GPIO_SPI_MISO) && PinUsed(GPIO_SPI_CLK)) {
-        SPI.begin(Pin(GPIO_SPI_CLK),Pin(GPIO_SPI_MISO),Pin(GPIO_SPI_MOSI), -1);
+          SPI.begin(Pin(GPIO_SPI_CLK),Pin(GPIO_SPI_MISO),Pin(GPIO_SPI_MOSI), -1);
       }
-#endif
+#endif // ESP32
+      fsp = &SD;
       if (SD.begin(USE_SCRIPT_FATFS)) {
-#endif
-
 #else
-        fsp = &LittleFS;
-        if (fsp->begin()) {
-#endif
+        // fs on flash
+      fsp = &LittleFS;
+      if (fsp->begin()) {
+#endif // USE_SCRIPT_FATFS>=0
 
         //fsp->dateTimeCallback(dateTime);
 
@@ -5834,14 +6001,18 @@ bool Xdrv10(uint8_t function)
       } else {
         glob_script_mem.script_sd_found=0;
       }
-#endif
+#endif // USE_SCRIPT_FATFS
 
 
-#if defined(LITTLEFS_SCRIPT_SIZE) && !defined(USE_24C256) && !defined(USE_SCRIPT_FATFS)
+#ifdef LITTLEFS_SCRIPT_SIZE
 
 #ifdef ESP32
+    // spiffs on esp32
     fsp = &SPIFFS;
+    //esp32_part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,NULL);
+    //Serial.printf("address %d - %d - %s\n",esp32_part->address,esp32_part->size, esp32_part->label);
 #else
+    // lfs on esp8266
     fsp = &LittleFS;
 #endif
     char *script;
@@ -5856,7 +6027,7 @@ bool Xdrv10(uint8_t function)
     glob_script_mem.script_pram=(uint8_t*)Settings.rules[0];
     glob_script_mem.script_pram_size=MAX_SCRIPT_SIZE;
     glob_script_mem.flags=1;
-#endif
+#endif // LITTLEFS_SCRIPT_SIZE
 
     // a valid script MUST start with >D
     if (glob_script_mem.script_ram[0]!='>' && glob_script_mem.script_ram[1]!='D') {
@@ -5918,6 +6089,8 @@ bool Xdrv10(uint8_t function)
     case FUNC_WEB_ADD_HANDLER:
       Webserver->on("/" WEB_HANDLE_SCRIPT, HandleScriptConfiguration);
       Webserver->on("/ta",HTTP_POST, HandleScriptTextareaConfiguration);
+      Webserver->on("/exs", HTTP_POST,[]() { Webserver->sendHeader("Location","/exs");Webserver->send(303);},script_upload_start);
+      Webserver->on("/exs", HTTP_GET,ScriptExecuteUploadSuccess);
 
 #ifdef USE_SCRIPT_FATFS
       Webserver->on("/u3", HTTP_POST,[]() { Webserver->sendHeader("Location","/u3");Webserver->send(303);},script_upload);
