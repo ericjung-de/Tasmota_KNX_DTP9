@@ -28,3 +28,5 @@ It doesn't mean that all of them are supported by current module/library.
 | HVAC                               | 1 Byte              | DPT 20     | DPT 20     | 0..255                       |
 | Unlimited string 8859_1            | .                   | DPT 24     | DPT 24     |                              |
 | List 3-byte value                  | 3 Byte              | DPT 232    | DPT 232    | RGB[0,0,0]...[255,255,255]   |
+
+More info at https://de.wikipedia.org/wiki/KNX-Standard
