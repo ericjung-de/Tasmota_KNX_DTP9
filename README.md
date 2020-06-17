@@ -228,7 +228,8 @@ OPTION Value | Device Parameter
 27 | KNX_SLOT2              
 28 | KNX_SLOT3              
 29 | KNX_SLOT4              
-30 | KNX_SLOT5              
+30 | KNX_SLOT5           
+31 | KNX_SCENE   
 255 | EMPTY
 
 ## Development Road Map ##
@@ -255,12 +256,13 @@ OPTION Value | Device Parameter
 - [x] Add commands for rules to set KNX Configurations
 - [x] Add events for rules when receiving data from KNX and read requests
 - [x] Add option for increase communication reliability (re send telegrams)
-- [ ] Add option for multicast forced reconnection (needed for some routers that have IGMP conflict with actual esp8266 lib v2.3.0 to v2.5.2, and lwIP v1.4 to v2.1 - Send a telegram to itself. If it is received, multicast is ok, if not, reconnect)
-- [ ] Add option to support KNX Snooping to debug KNX Network
-- [ ] Add option for KNXnet/IP Tunneling
-- [ ] Add option to repeat all KNX multicast broadcast (Tasmota to Tasmota communications) to KNXnet/IP Tunneling
+- [x] Add Scenes support
+- [ ] Add Dimmer support
+- [ ] Add Color support
+- [ ] Add Shutthers support
+- [ ] Optimize code to reduce Flash and RAM - Refactor Driver and Library
 - [ ] Add option to support ETS Programming
-- [ ] Optimize code to reduce Flash and RAM
+- [ ] Add option for KNXnet/IP Tunneling
 
 ## Modifications to Tasmota ##
 
