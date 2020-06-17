@@ -32,6 +32,7 @@
  * GPIO27 - EMAC_RX_CRS_DV
  *
  * {"NAME":"Olimex ESP32-PoE","GPIO":[65504,65504,65504,65504,65504,65504,0,0,5536,65504,65504,65504,65504,0,5600,0,0,0,0,5568,0,0,0,0,0,0,0,0,65504,65504,65504,65504,65504,0,0,65504],"FLAG":0,"BASE":1}
+ * {"NAME":"wESP32","GPIO":[65504,65504,65504,65504,65504,65504,0,0,0,65504,65504,65504,5568,5600,0,0,0,0,0,0,0,0,0,0,0,0,0,0,65504,65504,65504,65504,65504,0,0,65504],"FLAG":0,"BASE":1}
  *
 \*********************************************************************************************/
 
@@ -95,6 +96,9 @@ void EthernetEvent(WiFiEvent_t event) {
       Serial.print(ETH.linkSpeed());
       Serial.println("Mbps");
 */
+      Settings.ip_address[1] = (uint32_t)ETH.gatewayIP();
+      Settings.ip_address[2] = (uint32_t)ETH.subnetMask();
+      Settings.ip_address[3] = (uint32_t)ETH.dnsIP();
       global_state.eth_down = 0;
       break;
     case SYSTEM_EVENT_ETH_DISCONNECTED:
