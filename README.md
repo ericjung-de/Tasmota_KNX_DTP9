@@ -259,7 +259,7 @@ OPTION Value | Device Parameter
 - [x] Add Scenes support
 - [ ] Add Dimmer support
 - [ ] Add Color support
-- [ ] Add Shutthers support
+- [ ] Add Shutters support
 - [ ] Optimize code to reduce Flash and RAM - Refactor Driver and Library
 - [ ] Add option to support ETS Programming
 - [ ] Add option for KNXnet/IP Tunneling
