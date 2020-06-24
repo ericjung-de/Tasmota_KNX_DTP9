@@ -40,7 +40,7 @@ const char kTasmotaCommands[] PROGMEM = "|"  // No prefix
 #endif  // USE_DEVICE_GROUPS
   D_CMND_SENSOR "|" D_CMND_DRIVER
 #ifdef ESP32
-   "|" D_CMND_TOUCH_CAL "|" D_CMND_TOUCH_THRES "|" D_CMND_TOUCH_NUM
+   "|" D_CMND_TOUCH_CAL "|" D_CMND_TOUCH_THRES "|" D_CMND_TOUCH_NUM "|" D_CMND_CPU_FREQUENCY
 #endif //ESP32
   ;
 
@@ -67,7 +67,7 @@ void (* const TasmotaCommand[])(void) PROGMEM = {
 #endif  // USE_DEVICE_GROUPS
   &CmndSensor, &CmndDriver
 #ifdef ESP32
-  ,&CmndTouchCal, &CmndTouchThres, &CmndTouchNum
+  ,&CmndTouchCal, &CmndTouchThres, &CmndTouchNum, &CmndCpuFrequency
 #endif //ESP32
   };
 
@@ -1113,10 +1113,8 @@ void CmndGpio(void)
           }
         }
         char sindex[4] = { 0 };
-#ifdef ESP8266
-        uint32_t sensor_name_idx = sensor_type;
-#else  // ESP32
-        uint32_t sensor_name_idx = sensor_type >> 5;
+        uint32_t sensor_name_idx = BGPIO(sensor_type);
+#ifdef ESP32
         uint32_t nice_list_search = sensor_type & 0xFFE0;
         for (uint32_t j = 0; j < ARRAY_SIZE(kGpioNiceList); j++) {
           uint32_t nls_idx = pgm_read_word(kGpioNiceList + j);
@@ -1125,7 +1123,7 @@ void CmndGpio(void)
             break;
           }
         }
-#endif  // ESP8266 - ESP32
+#endif  // ESP32
         const char *sensor_names = kSensorNames;
         if (sensor_name_idx > GPIO_FIX_START) {
           sensor_name_idx = sensor_name_idx - GPIO_FIX_START -1;
@@ -1156,7 +1154,7 @@ void CmndGpios(void)
     uint32_t ridx = midx;
 #else  // ESP32
     uint32_t ridx = pgm_read_word(kGpioNiceList + i) & 0xFFE0;
-    uint32_t midx = ridx >> 5;
+    uint32_t midx = BGPIO(ridx);
 #endif  // ESP8266 - ESP32
     if ((XdrvMailbox.payload != 255) && GetUsedInModule(midx, cmodule.io)) { continue; }
     if (!jsflg) {
@@ -1275,7 +1273,7 @@ void CmndButtonDebounce(void)
 
 void CmndSwitchDebounce(void)
 {
-  if ((XdrvMailbox.payload > 39) && (XdrvMailbox.payload < 1001)) {
+  if ((XdrvMailbox.payload > 39) && (XdrvMailbox.payload < 1010)) {
     Settings.switch_debounce = XdrvMailbox.payload;
   }
   ResponseCmndNumber(Settings.switch_debounce);
@@ -1627,7 +1625,8 @@ void CmndInterlock(void)
     }
     ResponseAppend_P(PSTR("\"}"));
   } else {
-    Settings.flag.interlock = 0;                                // CMND_INTERLOCK - Enable/disable interlock
+    // never ever reset interlock mode inadvertently if we forced it upon compilation
+    Settings.flag.interlock = APP_INTERLOCK_MODE;               // CMND_INTERLOCK - Enable/disable interlock
     ResponseCmndStateText(Settings.flag.interlock);
   }
 }
@@ -1977,6 +1976,14 @@ void CmndDriver(void)
 }
 
 #ifdef ESP32
+
+void CmndCpuFrequency(void) {
+  if ((80 == XdrvMailbox.payload) || (160 == XdrvMailbox.payload) || (240 == XdrvMailbox.payload)) {
+    setCpuFrequencyMhz(XdrvMailbox.payload);
+  }
+  ResponseCmndNumber(getCpuFrequencyMhz());
+}
+
 void CmndTouchCal(void)
 {
   if (XdrvMailbox.payload >= 0) {

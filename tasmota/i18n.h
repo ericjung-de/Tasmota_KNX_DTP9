@@ -322,10 +322,12 @@
 #define D_CMND_HUMOFFSET "HumOffset"
 #define D_CMND_GLOBAL_TEMP "GlobalTemp"
 #define D_CMND_GLOBAL_HUM "GlobalHum"
+
 #ifdef ESP32
 #define D_CMND_TOUCH_CAL "TouchCal"
 #define D_CMND_TOUCH_THRES "TouchThres"
 #define D_CMND_TOUCH_NUM "TouchNum"
+#define D_CMND_CPU_FREQUENCY "CpuFrequency"
 #endif //ESP32
 
 // Commands xdrv_01_mqtt.ino
@@ -506,13 +508,16 @@
   #define D_JSON_ZIGBEE_CC2530 "CC2530"
 #define D_CMND_ZIGBEEZNPRECEIVE "ZNPReceive"      // only for debug
 #define D_CMND_ZIGBEE_EZSP_RECEIVE "EZSPReceive"      // only for debug
+#define D_CMND_ZIGBEE_EZSP_RECEIVE_RAW "EZSPReceiveRaw"      // only for debug
 #define D_CMND_ZIGBEEZNPSEND "ZNPSend"
 #define D_CMND_ZIGBEE_EZSP_SEND "EZSPSend"
+#define D_CMND_ZIGBEE_EZSP_SEND_RAW "EZSPSendRaw"
   #define D_JSON_ZIGBEE_STATE "ZbState"
   #define D_JSON_ZIGBEEZNPRECEIVED "ZbZNPReceived"
   #define D_JSON_ZIGBEE_EZSP_RECEIVED "ZbEZSPReceived"
   #define D_JSON_ZIGBEEZNPSENT "ZbZNPSent"
   #define D_JSON_ZIGBEE_EZSP_SENT "ZbEZSPSent"
+  #define D_JSON_ZIGBEE_EZSP_SENT_RAW "ZbEZSPSentRaw"
   #define D_JSON_ZIGBEEZCL_RECEIVED "ZbZCLReceived"
   #define D_JSON_ZIGBEEZCL_RAW_RECEIVED "ZbZCLRawReceived"
   #define D_JSON_ZIGBEE_DEVICE "Device"

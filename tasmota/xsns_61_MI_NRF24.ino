@@ -21,6 +21,10 @@
   Version yyyymmdd  Action    Description
   --------------------------------------------------------------------------------------------
 
+  0.9.7.0 20200624  integrate - use BEARSSL-lib for decryption as default, make decryption optional
+  ---
+  0.9.6.1 20200622  integrate - use BEARSSL-lib for decryption as default, make decryption optional
+  ---
   0.9.6.0 20200618  integrate - add decryption for LYWSD03
   ---
   0.9.5.0 20200328  integrate - add dew point, multi-page-web ui, refactoring, command interface,
@@ -53,7 +57,7 @@
   #define MINRF_LOG_BUFFER(x)
 #endif
 
-
+#define USE_MI_DECRYPTION
 /*********************************************************************************************\
 * MINRF
 * BLE-Sniffer/Bridge for MIJIA/XIAOMI Temperatur/Humidity-Sensor, Mi Flora, LYWSD02, GCx
@@ -64,7 +68,9 @@
 #define XSNS_61             61
 
 #include <vector>
-#include <mbedtls/ccm.h>
+#ifdef USE_MI_DECRYPTION
+#include <bearssl/bearssl_block.h>
+#endif //USE_MI_DECRYPTION
 
 #define FLORA       1
 #define MJ_HT_V1    2
@@ -72,12 +78,20 @@
 #define LYWSD03     4
 #define CGG1        5
 #define CGD1        6
+#define NLIGHT      7
+#define MJYD2S      8
+
+#define MI_TYPES    8 //count this manually
 
 #define D_CMND_NRF "NRF"
 
 const char S_JSON_NRF_COMMAND_NVALUE[] PROGMEM = "{\"" D_CMND_NRF "%s\":%d}";
 const char S_JSON_NRF_COMMAND[] PROGMEM        = "{\"" D_CMND_NRF "%s\":\"%s\"}";
-const char kNRF_Commands[] PROGMEM             = "Ignore|Page|Scan|Beacon|Chan|Key";
+const char kNRF_Commands[] PROGMEM             = "Ignore|Page|Scan|Beacon|Chan|Nlight"
+#ifdef USE_MI_DECRYPTION
+                                                  "|Key"
+#endif //USE_MI_DECRYPTION
+                                                  ;
 
 enum NRF_Commands {          // commands useable in console or rules
   CMND_NRF_IGNORE,           // ignore specific sensor type (1-6)
@@ -85,15 +99,20 @@ enum NRF_Commands {          // commands useable in console or rules
   CMND_NRF_SCAN,             // simplified passive BLE adv scan
   CMND_NRF_BEACON,           // even more simplified Beacon, reports time since last sighting
   CMND_NRF_CHAN,             // ignore channel 0-2 (translates to 37-39)
-  CMND_NRF_KEY               // add bind_key to a MAC for payload decryption
+  CMND_NRF_NLIGHT             // add Philips night light via MAC
+#ifdef USE_MI_DECRYPTION
+  ,  CMND_NRF_KEY            // add bind_key to a MAC for payload decryption
+#endif //USE_MI_DECRYPTION
   };
 
-const uint16_t kMINRFSlaveID[6]={ 0x0098, // Flora
+const uint16_t kMINRFSlaveID[8]={ 0x0098, // Flora
                                   0x01aa, // MJ_HT_V1
                                   0x045b, // LYWSD02
                                   0x055b, // LYWSD03
                                   0x0347, // CGG1
-                                  0x0576  // CGD1
+                                  0x0576, // CGD1
+                                  0x03dd, // NLIGHT
+                                  0x07f6  // MJYD2S
                                   };
 
 const char kMINRFSlaveType1[] PROGMEM = "Flora";
@@ -102,7 +121,9 @@ const char kMINRFSlaveType3[] PROGMEM = "LYWSD02";
 const char kMINRFSlaveType4[] PROGMEM = "LYWSD03";
 const char kMINRFSlaveType5[] PROGMEM = "CGG1";
 const char kMINRFSlaveType6[] PROGMEM = "CGD1";
-const char * kMINRFSlaveType[] PROGMEM = {kMINRFSlaveType1,kMINRFSlaveType2,kMINRFSlaveType3,kMINRFSlaveType4,kMINRFSlaveType5,kMINRFSlaveType6};
+const char kMINRFSlaveType7[] PROGMEM = "NLIGHT";
+const char kMINRFSlaveType8[] PROGMEM = "MJYD2S";
+const char * kMINRFSlaveType[] PROGMEM = {kMINRFSlaveType1,kMINRFSlaveType2,kMINRFSlaveType3,kMINRFSlaveType4,kMINRFSlaveType5,kMINRFSlaveType6,kMINRFSlaveType7,kMINRFSlaveType8};
 
 // PDU's or different channels 37-39
 const uint32_t kMINRFFloPDU[3] = {0x3eaa857d,0xef3b8730,0x71da7b46};
@@ -112,6 +133,7 @@ const uint32_t kMINRFL3PDU[3]  = {0x4760dd78,0xdbcc1ccd,0x33049deb}; //encrypted
 // const uint32_t kMINRFL3PDU[3]  = {0x4760cb78,0xdbcc0acd,0x33048beb}; //unencrypted  - 30 58
 const uint32_t kMINRFCGGPDU[3]  = {0x4760cd6e,0xdbcc0cdb,0x33048dfd};
 const uint32_t kMINRFCGDPDU[3]  = {0x5da0d752,0xc10c16e7,0x29c497c1};
+// const uint32_t kMINRFNLIPDU[3]  = {0x4760C56E,0xDBCC04DB,0x0330485FD}; //NLIGHT
 
 // start-LSFR for different channels 37-39
 const uint8_t kMINRFlsfrList_A[3] = {0x4b,0x17,0x23};  // Flora, LYWSD02
@@ -159,6 +181,7 @@ struct bleAdvPacket_t { // for nRF24L01 max 32 bytes = 2+6+24
   uint8_t mac[6];
 };
 
+#ifdef USE_MI_DECRYPTION
 struct encPayload_t {
   uint8_t cipher[5];
   uint8_t ExtCnt[3];
@@ -180,7 +203,7 @@ union mi_bindKey_t{
     };
   uint8_t buf[22];
 };
-
+#endif //USE_MI_DECRYPTION
 union FIFO_t{
   bleAdvPacket_t bleAdv;
   mi_beacon_t miBeacon;
@@ -195,13 +218,14 @@ struct {
   const uint8_t frequency[3] = { 2,26,80};  // real frequency (2400+x MHz)
 
   uint16_t timer;
+  uint16_t ignore = 0; //bitfield: 2^sensor type
   uint8_t currentChan=0;
-  uint8_t ignore = 0; //bitfield: 2^sensor type
   uint8_t channelIgnore = 0; //bitfield: 2^channel (0=37,1=38,2=39)
   uint8_t confirmedSensors = 0;
   uint8_t packetMode; // 0 - normal BLE-advertisements, 1 - 6 "special" sensor packets
   uint8_t perPage = 4;
   uint8_t firstUsedPacketMode = 1;
+  uint8_t activeNlight = 0;
 
   FIFO_t buffer;
 
@@ -239,6 +263,17 @@ struct mi_sensor_t{
   };
 };
 
+struct mi_nlight_t{
+  uint8_t MAC[6];
+  uint32_t PDU[3];
+  uint8_t type; // NLIGHT=7
+  struct {
+    uint16_t events; //"alarms" since boot
+    uint8_t lastCnt; //device generated counter of the packet
+  };
+};
+
+
 struct scan_entry_t {
   uint8_t mac[6];
   uint16_t cid;
@@ -249,7 +284,10 @@ struct scan_entry_t {
 
 std::vector<mi_sensor_t> MIBLEsensors;
 std::vector<scan_entry_t> MINRFscanResult;
+#ifdef USE_MI_DECRYPTION
 std::vector<mi_bindKey_t> MIBLEbindKeys;
+#endif //USE_MI_DECRYPTION
+std::vector<mi_nlight_t> MIBLEnlights;
 
 static union{
   scan_entry_t MINRFdummyEntry;
@@ -350,6 +388,9 @@ bool MINRFreceivePacket(void)
       break;
       case 6:
       MINRFwhiten((uint8_t *)&MINRF.buffer, sizeof(MINRF.buffer),  kMINRFlsfrList_B[MINRF.currentChan]); // "CGD1" mode
+      break;
+      case 7:
+      MINRFwhiten((uint8_t *)&MINRF.buffer, sizeof(MINRF.buffer),  MINRF.channel[MINRF.currentChan] | 0x40); // "NLIGHT" mode
       break;
     }
     // DEBUG_SENSOR_LOG(PSTR("MINRF: LSFR:%x"),_lsfr);
@@ -565,13 +606,17 @@ bool MINRFhandleBeacon(scan_entry_t * entry, uint32_t offset){
  * @brief increase beacon timer every second and process the result
  *
  */
-void MINRFbeaconCounter(void){
-  if(MINRF.beacon.active) {
+void MINRFbeaconCounter(void) {
+  if (MINRF.beacon.active) {
     MINRF.beacon.time++;
+/*
     char stemp[20];
     snprintf_P(stemp, sizeof(stemp),PSTR("{%s:{\"Beacon\": %u}}"),D_CMND_NRF, MINRF.beacon.time);
     AddLog_P2(LOG_LEVEL_DEBUG, stemp);
     RulesProcessEvent(stemp);
+*/
+    Response_P(PSTR("{%s:{\"Beacon\":%u}}"), D_CMND_NRF, MINRF.beacon.time);
+    XdrvRulesProcess();
   }
 }
 
@@ -579,24 +624,29 @@ void MINRFbeaconCounter(void){
  * @brief compute "PDU" from MAC for each possible channel and store it globally
  *
  */
-void MINRFcomputeBeaconPDU(void){
+void MINRFcomputeBeaconPDU(uint8_t (&_mac)[6], uint32_t (&PDU)[3]){
+  uint32_t _PDU[3];
   for (uint32_t i = 0; i<3; i++){
     bleAdvPacket_t packet;
-    memcpy((uint8_t *)&packet.mac, (uint8_t *)&MINRF.beacon.mac, sizeof(packet.mac));
+    memcpy((uint8_t *)&packet.mac, (uint8_t *)&_mac, sizeof(packet.mac));
     MINRFreverseMAC(packet.mac);
     MINRFwhiten((uint8_t *)&packet, sizeof(packet), MINRF.channel[i] | 0x40);
     MINRFswapbuf((uint8_t*)&packet,sizeof(packet));
     uint32_t pdu = packet.mac[0]<<24 | packet.mac[1]<<16 | packet.mac[2]<<8 | packet.mac[3];
-    MINRF.beacon.PDU[i] = pdu;
+    _PDU[i] = pdu;
   }
+  memcpy(PDU,_PDU,sizeof(_PDU));
 }
 
+#ifdef USE_MI_DECRYPTION
 int MINRFdecryptPacket(char *_buf){
   encPacket_t *packet = (encPacket_t*)_buf;
   // AddLog_P2(LOG_LEVEL_DEBUG,PSTR("to decrypt: %02x %02x %02x %02x %02x %02x %02x %02x"),(uint8_t)_buf[0],(uint8_t)_buf[1],(uint8_t)_buf[2],(uint8_t)_buf[3],(uint8_t)_buf[4],(uint8_t)_buf[5],(uint8_t)_buf[6],(uint8_t)_buf[7]);
+  // AddLog_P2(LOG_LEVEL_DEBUG,PSTR("          : %02x %02x %02x %02x %02x %02x %02x %02x"),(uint8_t)_buf[8],(uint8_t)_buf[9],(uint8_t)_buf[10],(uint8_t)_buf[11],(uint8_t)_buf[12],(uint8_t)_buf[13],(uint8_t)_buf[14],(uint8_t)_buf[15]);
+  // AddLog_P2(LOG_LEVEL_DEBUG,PSTR("          : %02x %02x %02x %02x %02x               "),(uint8_t)_buf[16],(uint8_t)_buf[17],(uint8_t)_buf[18],(uint8_t)_buf[19],(uint8_t)_buf[20]);
 
   int ret = 0;
-  unsigned char output[10] = {0};
+  unsigned char output[16] = {0};
   uint8_t nonce[12];
   const unsigned char authData[1] = {0x11};
 
@@ -620,31 +670,25 @@ int MINRFdecryptPacket(char *_buf){
     // AddLog_P2(LOG_LEVEL_DEBUG,PSTR("Mac in vector: %02x  %02x  %02x  %02x  %02x  %02x"), MIBLEbindKeys[i].MAC[0], MIBLEbindKeys[i].MAC[1], MIBLEbindKeys[i].MAC[2], MIBLEbindKeys[i].MAC[3], MIBLEbindKeys[i].MAC[4], MIBLEbindKeys[i].MAC[5]);
     // }
   }
-  // init
-  mbedtls_ccm_context ctx;
-  mbedtls_ccm_init(&ctx);
 
- // set bind key
-  ret = mbedtls_ccm_setkey(&ctx,
-    MBEDTLS_CIPHER_ID_AES,
-    _bindkey,
-    16 * 8 //bits
-  );
+  memcpy(output,packet->payload.cipher, sizeof(packet->payload.cipher));
 
-  ret = mbedtls_ccm_auth_decrypt(&ctx,5,
-    (const unsigned char*)&nonce, sizeof(nonce),
-    authData, sizeof(authData),
-    packet->payload.cipher, output,
-    packet->payload.tag,sizeof(packet->payload.tag));
+  br_aes_small_ctrcbc_keys keyCtx;
+  br_aes_small_ctrcbc_init(&keyCtx, _bindkey, sizeof(_bindkey));
 
-  AddLog_P2(LOG_LEVEL_DEBUG,PSTR("Err:%i, Decrypted : %02x  %02x  %02x  %02x  %02x "), ret, output[0],output[1],output[2],output[3],output[4]);
-  // put decrypted data in place
+  br_ccm_context ctx;
+  br_ccm_init(&ctx, &keyCtx.vtable);
+  br_ccm_reset(&ctx, nonce, sizeof(nonce), sizeof(authData),sizeof(packet->payload.cipher),sizeof(packet->payload.tag));
+	br_ccm_aad_inject(&ctx, authData, sizeof(authData));
+	br_ccm_flip(&ctx);
+  br_ccm_run(&ctx, 0, output, sizeof(packet->payload.cipher));
+
+  ret = br_ccm_check_tag(&ctx, packet->payload.tag);
+  AddLog_P2(LOG_LEVEL_DEBUG,PSTR("BEARSSL: Err:%i, Decrypted : %02x  %02x  %02x  %02x  %02x "), ret, output[0],output[1],output[2],output[3],output[4]);
   memcpy((uint8_t*)(packet->payload.cipher)+1,output,sizeof(packet->payload.cipher));
-  // clean up
-  mbedtls_ccm_free(&ctx);
-  return ret;
+  return (ret-1);
 }
-
+#endif //USE_MI_DECRYPTION
 
 /*********************************************************************************************\
  * helper functions
@@ -662,7 +706,7 @@ void MINRFreverseMAC(uint8_t _mac[]){
   }
   memcpy(_mac,_reversedMAC, sizeof(_reversedMAC));
 }
-
+#ifdef USE_MI_DECRYPTION
 void MINRFAddKey(char* payload){
   mi_bindKey_t keyMAC;
   memset(keyMAC.buf,0,sizeof(keyMAC));
@@ -681,10 +725,10 @@ void MINRFAddKey(char* payload){
 }
 
 /**
- * @brief Convert combined key-MAC-string to 
+ * @brief Convert combined key-MAC-string to
  *
  * @param _string input string in format: AABBCCDDEEFF... (upper case!), must be 44 chars!!
- * @param _mac  target byte array with fixed size of 16 + 6 
+ * @param _mac  target byte array with fixed size of 16 + 6
  */
 void MINRFKeyMACStringToBytes(char* _string,uint8_t _keyMac[]) { //uppercase
     uint32_t index = 0;
@@ -702,7 +746,7 @@ void MINRFKeyMACStringToBytes(char* _string,uint8_t _keyMac[]) { //uppercase
     DEBUG_SENSOR_LOG(PSTR("MINRF:  key-array: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"),_keyMac[0],_keyMac[1],_keyMac[2],_keyMac[3],_keyMac[4],_keyMac[5],_keyMac[6],_keyMac[7],_keyMac[8],_keyMac[9],_keyMac[10],_keyMac[11],_keyMac[12],_keyMac[13],_keyMac[14],_keyMac[15]);
     DEBUG_SENSOR_LOG(PSTR("MINRF: MAC-array: %02X%02X%02X%02X%02X%02X"),_keyMac[16],_keyMac[17],_keyMac[18],_keyMac[19],_keyMac[20],_keyMac[21]);
 }
-
+#endif //USE_MI_DECRYPTION
 /**
  * @brief
  *
@@ -729,11 +773,11 @@ void MINRFMACStringToBytes(char* _string, uint8_t _mac[]) { //uppercase
  *
  */
 void MINRFcomputefirstUsedPacketMode(void){
-  for (uint32_t i = 0; i<CGD1; i++){
+  for (uint32_t i = 0; i<MI_TYPES; i++){
     if (!bitRead(MINRF.ignore,i+1)) {
       DEBUG_SENSOR_LOG(PSTR("MINRF: FPM: %u"),i+1);
       MINRF.firstUsedPacketMode = i+1;
-      if(MINRF.firstUsedPacketMode>CGD1) MINRF.firstUsedPacketMode=0;
+      if(MINRF.firstUsedPacketMode>MI_TYPES) MINRF.firstUsedPacketMode=0;
       break;
     }
   }
@@ -769,6 +813,11 @@ void MINRFchangePacketModeTo(uint8_t _mode) {
     break;
     case 6: // special CGD1 packet
       NRF24radio.openReadingPipe(0,kMINRFCGDPDU[_nextchannel]); // cd fd 08 0c -> CGD1
+    break;
+    case 7: // MAC based NLIGHT packet
+      if (MIBLEnlights.size()==0) break;
+      NRF24radio.openReadingPipe(0,MIBLEnlights[MINRF.activeNlight].PDU[_nextchannel]); // computed from MAC -> NLIGHT
+      MINRF.activeNlight++;
     break;
   }
   // DEBUG_SENSOR_LOG(PSTR("MINRF: Change Mode to %u"),_mode);
@@ -884,12 +933,13 @@ void MINRFhandleMiBeaconPacket(void){
     memcpy(MINRFtempBuf,(uint8_t*)&MINRF.buffer.miBeacon.spare, 32-9); // shift by one byte for the MJ_HT_V1 and CGG1
     memcpy((uint8_t*)&MINRF.buffer.miBeacon.type,MINRFtempBuf, 32-9);  // shift by one byte for the MJ_HT_V1 and CGG1
   }
+#ifdef USE_MI_DECRYPTION
   if(_sensorVec->type==LYWSD03){
     int decryptRet = -1;
     decryptRet = MINRFdecryptPacket((char*)&MINRF.buffer); //start with PID
     if(decryptRet==0) _sensorVec->showedUp=255; // if decryption worked, this must be a valid sensor
   }
-
+#endif //USE_MI_DECRYPTION
   DEBUG_SENSOR_LOG(PSTR("%s at slot %u"), kNRFSlaveType[_sensorVec->type-1],_slot);
   switch(MINRF.buffer.miBeacon.type){
     case 0x04:
@@ -988,6 +1038,44 @@ void MINRFhandleCGD1Packet(void){ // no MiBeacon
   }
 }
 
+void MINRFhandleNlightPacket(void){ // no MiBeacon
+  uint32_t offset = 6;
+  uint8_t _buf[32+offset];
+  MINRFwhiten((uint8_t *)&MINRF.buffer, sizeof(MINRF.buffer), MINRF.channel[MINRF.currentChan] | 0x40);
+  MINRFswapbuf((uint8_t*)&MINRF.buffer,sizeof(MINRF.buffer));
+  memcpy((uint8_t*)&_buf+offset,MINRF.buffer.raw,32);
+  MINRFswapbuf((uint8_t*)&_buf,sizeof(_buf));
+  MINRFwhiten((uint8_t *)&_buf, sizeof(_buf), MINRF.channel[MINRF.currentChan] | 0x40);
+  if (offset == 6) MINRFreverseMAC((uint8_t*)&_buf[2]);
+  // AddLog_P2(LOG_LEVEL_INFO,PSTR("MINRF: NLIGHT: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x"),_buf[0],_buf[1],_buf[2],_buf[3],_buf[4],_buf[5],_buf[6],_buf[7],_buf[8],_buf[9],_buf[10],_buf[11],_buf[12],_buf[13],_buf[14],_buf[15],_buf[16],_buf[17],_buf[18]);
+  uint32_t _frame_PID = _buf[15]<<24 | _buf[16]<<16 | _buf[17]<<8 | _buf[18];
+  if(_frame_PID!=0x4030dd03) return;
+  AddLog_P2(LOG_LEVEL_INFO,PSTR("MINRF: NLIGHT:%x"),_frame_PID);
+  uint32_t _idx = MINRF.activeNlight-1;
+  if(_buf[19]!=MIBLEnlights[_idx].lastCnt){
+    MIBLEnlights[_idx].lastCnt = _buf[19];
+    MIBLEnlights[_idx].events++;
+    AddLog_P2(LOG_LEVEL_INFO,PSTR("MINRF: NLIGHT %u: events: %u, Cnt:%u"), _idx,MIBLEnlights[_idx].events, MIBLEnlights[_idx].lastCnt);
+  }
+}
+
+void MINRFaddNlight(uint8_t _mac[]){ // no MiBeacon
+  for(uint32_t i=0; i<MIBLEnlights.size(); i++){
+    if(memcmp(_mac,MIBLEnlights[i].MAC,sizeof(MIBLEnlights[i].MAC))==0){
+      // AddLog_P2(LOG_LEVEL_INFO,PSTR("MINRF: NLIGHT: Known MAC!!"));
+      return;
+    }
+  }
+  mi_nlight_t _nlight;
+  memcpy(_nlight.MAC,_mac,sizeof(_nlight.MAC));
+  MINRFcomputeBeaconPDU(_nlight.MAC,_nlight.PDU);
+  _nlight.type=7;
+  _nlight.events=0;
+  _nlight.lastCnt=0;
+  MIBLEnlights.push_back(_nlight);
+  AddLog_P2(LOG_LEVEL_INFO,PSTR("MINRF: new %s at slot: %u"),kMINRFSlaveType[NLIGHT-1], MIBLEnlights.size()-1);
+}
+
 /*********************************************************************************************\
  * Main loop of the driver
 \*********************************************************************************************/
@@ -1019,6 +1107,9 @@ void MINRF_EVERY_50_MSECOND() { // Every 50mseconds
       case CGD1:
         MINRFhandleCGD1Packet();
         break;
+      case NLIGHT:
+        MINRFhandleNlightPacket();
+        break;
       default:
         break;
     }
@@ -1027,12 +1118,20 @@ void MINRF_EVERY_50_MSECOND() { // Every 50mseconds
     MINRF.firstUsedPacketMode=0;
   }
 
-  MINRF.packetMode = (MINRF.packetMode+1>CGD1) ? MINRF.firstUsedPacketMode : MINRF.packetMode+1;
-  for (uint32_t i = MINRF.packetMode; i<CGD1+1; i++){
-    if (bitRead(MINRF.ignore,i)) {
-      MINRF.packetMode++;
+    if(MINRF.packetMode==NLIGHT){
+    if(MINRF.activeNlight+1>MIBLEnlights.size()){
+      MINRF.activeNlight=0;
+      MINRF.packetMode=MINRF.firstUsedPacketMode;
     }
-    else break;
+  }
+  else{  
+    MINRF.packetMode = (MINRF.packetMode+1>MI_TYPES) ? MINRF.firstUsedPacketMode : MINRF.packetMode+1;
+    for (uint32_t i = MINRF.packetMode; i<MI_TYPES+1; i++){
+      if (bitRead(MINRF.ignore,i)) {
+        MINRF.packetMode++;
+      }
+      else break;
+    }
   }
 
   if (MINRF.activeScan) MINRF.packetMode=0;
@@ -1072,7 +1171,7 @@ bool NRFCmd(void) {
             if (XdrvMailbox.payload == 0){
               MINRF.ignore = 0;
             }
-            else if (XdrvMailbox.payload < CGD1+1) {
+            else if (XdrvMailbox.payload < MI_TYPES+1) {
               bitSet(MINRF.ignore,XdrvMailbox.payload);
               MINRFcomputefirstUsedPacketMode();
               MINRF.timer = 5900;
@@ -1122,7 +1221,17 @@ bool NRFCmd(void) {
               MINRF.beacon.active=true;
               Response_P(S_JSON_NRF_COMMAND, command, XdrvMailbox.data);
             }
-            MINRFcomputeBeaconPDU();
+            MINRFcomputeBeaconPDU(MINRF.beacon.mac,MINRF.beacon.PDU);
+          }
+        break;
+      case CMND_NRF_NLIGHT:
+          if (XdrvMailbox.data_len > 0) {
+            if (XdrvMailbox.data_len==12){  // a MAC-string
+              uint8_t _mac[6] = {0};
+              MINRFMACStringToBytes(XdrvMailbox.data, _mac);
+              Response_P(S_JSON_NRF_COMMAND, command, XdrvMailbox.data);         
+              MINRFaddNlight(_mac);
+            }
           }
         break;
         case CMND_NRF_CHAN:
@@ -1135,12 +1244,14 @@ bool NRFCmd(void) {
           }
           Response_P(S_JSON_NRF_COMMAND_NVALUE, command, MINRF.channelIgnore);
         break;
+#ifdef USE_MI_DECRYPTION
       case CMND_NRF_KEY:
         if (XdrvMailbox.data_len==44){  // a KEY-MAC-string
           MINRFAddKey(XdrvMailbox.data);
           Response_P(S_JSON_NRF_COMMAND, command, XdrvMailbox.data);
         }
         break;
+#endif //USE_MI_DECRYPTION
       default:
         // else for Unknown command
         serviced = false;
@@ -1257,6 +1368,13 @@ void MINRFShow(bool json)
         WSContentSend_PD(HTTP_MINRF_MAC, F("Beacon"), D_MAC_ADDRESS, MINRF.beacon.mac[0], MINRF.beacon.mac[1],MINRF.beacon.mac[2],MINRF.beacon.mac[3],MINRF.beacon.mac[4],MINRF.beacon.mac[5]);
         WSContentSend_PD(PSTR("{s}Beacon Time{m}%u seconds{e}"),MINRF.beacon.time);
       }
+
+      for(uint32_t i=0; i<MIBLEnlights.size(); i++){
+        WSContentSend_PD(HTTP_MINRF_HL);
+        WSContentSend_PD(HTTP_MINRF_MAC, F("NLIGHT"), D_MAC_ADDRESS, MIBLEnlights[i].MAC[0], MIBLEnlights[i].MAC[1],MIBLEnlights[i].MAC[2],MIBLEnlights[i].MAC[3],MIBLEnlights[i].MAC[4],MIBLEnlights[i].MAC[5]);
+        WSContentSend_PD(PSTR("{s}Events {m}%u (Cnt: %u){e}"),MIBLEnlights[i].events, MIBLEnlights[i].lastCnt);
+      }
+
       if(counter>3) {
         _page++;
         counter = 0;

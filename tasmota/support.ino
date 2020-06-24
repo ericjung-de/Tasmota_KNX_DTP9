@@ -1099,9 +1099,17 @@ uint32_t Pin(uint32_t gpio, uint32_t index) {
   return 99;                 // No pin used for gpio
 }
 
-boolean PinUsed(uint32_t gpio, uint32_t index = 0);
-boolean PinUsed(uint32_t gpio, uint32_t index) {
+bool PinUsed(uint32_t gpio, uint32_t index = 0);
+bool PinUsed(uint32_t gpio, uint32_t index) {
   return (Pin(gpio, index) < 99);
+}
+
+uint32_t GetPin(uint32_t lpin) {
+  if (lpin < ARRAY_SIZE(gpio_pin)) {
+    return gpio_pin[lpin];
+  } else {
+    return GPIO_NONE;
+  }
 }
 
 void SetPin(uint32_t lpin, uint32_t gpio) {
@@ -1257,11 +1265,7 @@ uint32_t ValidPin(uint32_t pin, uint32_t gpio)
 
 bool ValidGPIO(uint32_t pin, uint32_t gpio)
 {
-#ifdef ESP8266
-  return (GPIO_USER == ValidPin(pin, gpio));  // Only allow GPIO_USER pins
-#else  // ESP32
-  return (GPIO_USER == ValidPin(pin, gpio >> 5));  // Only allow GPIO_USER pins
-#endif  // ESP8266 - ESP32
+  return (GPIO_USER == ValidPin(pin, BGPIO(gpio)));  // Only allow GPIO_USER pins
 }
 
 #ifdef ESP8266
