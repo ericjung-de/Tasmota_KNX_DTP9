@@ -47,9 +47,9 @@ If you use the ETS (KNX Configurator Software) you can add any Tasmota KNX as a 
 
 ## Requirements ##
 
-All the libraries required for Tasmota are [here](https://github.com/ascillato/Tasmota_KNX/tree/development/lib) along with the extra required for the KNX Driver:
+All the libraries required for Tasmota are [here](https://github.com/ascillato/Tasmota_KNX/tree/KNX_development/lib) along with the extra required for the KNX Driver:
 
-* [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
+* [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/KNX_development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
 * v2.7.1 Works fine. No known issues. **(RECOMMENDED)**
@@ -70,7 +70,7 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 You can download the precompiled binaries for flashing ESP8266, ESP8285 and ESP32 devices from:
 
 * Latest [Release](https://github.com/ascillato/Tasmota_KNX/releases)
-* Latest development version from [Build_Output](https://github.com/ascillato/Tasmota_KNX/tree/development/build_output/firmware) folder. 
+* Latest development version from [Build_Output](https://github.com/ascillato/Tasmota_KNX/tree/KNX_development/build_output/firmware) folder. 
 * Or if you need any other feature enabled or disabled, or a different Arduino core, you can use [TasmoCompiler](https://gitpod.io/#https://github.com/benzino77/tasmocompiler) ([readme](https://github.com/benzino77/tasmocompiler)) or you can modify the **my_user_config.h** file and build your firmware as explained in the [docs](https://tasmota.github.io/docs/#/).
 
 ## Implemented Features ##
@@ -103,8 +103,8 @@ There are multiple possible configurations. Here are explained just a few as exa
 
 To configure KNX, enter on the Configuration Menu of Tasmota and select Configure KNX.
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/Config_Menu.jpg" />
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/KNX_menu.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/Config_Menu.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/KNX_menu.jpg" />
 
 _Note on KNX communication enhancement option: As Wifi Multicast communication is not reliable in some wifi router due to IGMP problems or Snooping, an enhancement was implemented. This option increase the reliability by reducing the chances of losing telegrams, sending the same telegram 3 times. In practice it works really good and it is enough for normal home use. When this option is on, Tasmota will ignore toggle commands by KNX if those are sent more than 1 toggle per second. Just 1 toggle per second is working fine._
 
@@ -115,11 +115,11 @@ In this case, so as to inform the status of all the relays to the Automation Sys
 
 DEVICE 1
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/1.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/1.jpg" />
 
 DEVICE 2
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/2.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/2.jpg" />
 
 **2) Setting 2 Tasmotas to be linked as stair lights:**
 
@@ -127,11 +127,11 @@ We can set one device to send the status of its output and another to read that 
 
 DEVICE 1
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/3.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/3.jpg" />
 
 DEVICE 2
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/4.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/4.jpg" />
 
 **3) Setting a button as initiator of a scene:**
 
@@ -139,17 +139,17 @@ Just setting one device to send the push of a button, and the rest just use that
 
 DEVICE 1
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/5.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/5.jpg" />
 
 DEVICE 2
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/6.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/6.jpg" />
 
 **4) Setting a Temperature sensor:**
 
 We can configure to send the value of temperature or humidity every teleperiod. This teleperiod can be configured. See Tasmota [wiki](https://github.com/arendst/Tasmota/wiki/Commands). It is recommended also to set the reply temperature address.
 
-<img src="https://github.com/ascillato/Tasmota_KNX/blob/development/.github/7.jpg" />
+<img src="https://github.com/ascillato/Tasmota_KNX/blob/KNX_development/.github/7.jpg" />
 
 **5) Using rules:**
 
