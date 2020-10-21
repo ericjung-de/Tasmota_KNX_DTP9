@@ -49,7 +49,6 @@ struct BUTTON {
   uint8_t touch_hits[MAX_KEYS] = { 0 };      // Hits in a row to filter out noise
 #endif // ESP32
   uint8_t present = 0;                       // Number of buttons found flag
-  uint8_t adc = 99;                          // ADC0 button number
 } Button;
 
 #ifdef ESP32
@@ -88,14 +87,17 @@ void ButtonInit(void)
   for (uint32_t i = 0; i < MAX_KEYS; i++) {
     if (PinUsed(GPIO_KEY1, i)) {
       Button.present++;
+#ifdef ESP8266
       pinMode(Pin(GPIO_KEY1, i), bitRead(Button.no_pullup_mask, i) ? INPUT : ((16 == Pin(GPIO_KEY1, i)) ? INPUT_PULLDOWN_16 : INPUT_PULLUP));
+#else  // ESP32
+      pinMode(Pin(GPIO_KEY1, i), bitRead(Button.no_pullup_mask, i) ? INPUT : INPUT_PULLUP);
+#endif
     }
-#ifndef USE_ADC_VCC
-    else if ((99 == Button.adc) && ((ADC0_BUTTON == my_adc0) || (ADC0_BUTTON_INV == my_adc0))) {
+#ifdef USE_ADC
+    else if (PinUsed(GPIO_ADC_BUTTON, i) || PinUsed(GPIO_ADC_BUTTON_INV, i)) {
       Button.present++;
-      Button.adc = i;
     }
-#endif  // USE_ADC_VCC
+#endif  // USE_ADC
   }
 }
 
@@ -155,16 +157,11 @@ void ButtonHandler(void)
         }
         Button.dual_code = 0;
       }
-    }
-    else {
-      if (PinUsed(GPIO_KEY1, button_index)) {
-        button_present = 1;
-        button = (digitalRead(Pin(GPIO_KEY1, button_index)) != bitRead(Button.inverted_mask, button_index));
-      }
-    }
-#else
+    } else
+#endif  // ESP8266
     if (PinUsed(GPIO_KEY1, button_index)) {
       button_present = 1;
+#ifdef ESP32
       if (bitRead(Button.touch_mask, button_index)) {          // Touch
         uint32_t _value = touchRead(Pin(GPIO_KEY1, button_index));
         button = NOT_PRESSED;
@@ -184,22 +181,22 @@ void ButtonHandler(void)
         if (bitRead(TOUCH_BUTTON.calibration, button_index+1)) {
           AddLog_P2(LOG_LEVEL_INFO, PSTR("PLOT: %u, %u, %u,"), button_index+1, _value, Button.touch_hits[button_index]);  // Button number (1..4), value, continuous hits under threshold
         }
-      } else {                                                 // Normal button
+      } else
+#endif  // ESP32
+      {                                                 // Normal button
         button = (digitalRead(Pin(GPIO_KEY1, button_index)) != bitRead(Button.inverted_mask, button_index));
       }
     }
-#endif  // ESP8266
-#ifndef USE_ADC_VCC
-    if (Button.adc == button_index) {
+#ifdef USE_ADC
+    else if (PinUsed(GPIO_ADC_BUTTON, button_index)) {
       button_present = 1;
-      if (ADC0_BUTTON_INV == my_adc0) {
-        button = (AdcRead(1) < 128);
-      }
-      else if (ADC0_BUTTON == my_adc0) {
-        button = (AdcRead(1) > 128);
-      }
+      button = AdcGetButton(Pin(GPIO_ADC_BUTTON, button_index));
     }
-#endif  // USE_ADC_VCC
+    else if (PinUsed(GPIO_ADC_BUTTON_INV, button_index)) {
+      button_present = 1;
+      button = AdcGetButton(Pin(GPIO_ADC_BUTTON_INV, button_index));
+    }
+#endif  // USE_ADC
     if (button_present) {
       XdrvMailbox.index = button_index;
       XdrvMailbox.payload = button;
@@ -302,8 +299,8 @@ void ButtonHandler(void)
                   }
                 }
               }
-#if defined(USE_LIGHT) && defined(ROTARY_V1)
-              if (!((0 == button_index) && RotaryButtonPressed())) {
+#ifdef ROTARY_V1
+              if (!RotaryButtonPressed(button_index)) {
 #endif
                 if (!Settings.flag3.mqtt_buttons && single_press && SendKey(KEY_BUTTON, button_index + Button.press_counter[button_index], POWER_TOGGLE)) {  // Execute Toggle command via MQTT if ButtonTopic is set
                   // Success
@@ -333,7 +330,7 @@ void ButtonHandler(void)
                     }
 
                   } else {    // 6 press start wificonfig 2
-                    if (!Settings.flag.button_restrict) {
+                    if (!Settings.flag.button_restrict) {  // SetOption1  - Control button multipress
                       snprintf_P(scmnd, sizeof(scmnd), PSTR(D_CMND_WIFICONFIG " 2"));
                       ExecuteCommand(scmnd, SRC_BUTTON);
                     }
@@ -344,7 +341,7 @@ void ButtonHandler(void)
                     }
                   }
                 }
-#if defined(USE_LIGHT) && defined(ROTARY_V1)
+#ifdef ROTARY_V1
               }
 #endif
               Button.press_counter[button_index] = 0;

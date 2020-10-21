@@ -23,6 +23,7 @@
 \*********************************************************************************************/
 
 #define XDRV_08                    8
+#define HARDWARE_FALLBACK          2
 
 const uint8_t SERIAL_BRIDGE_BUFFER_SIZE = 130;
 
@@ -93,8 +94,7 @@ void SerialBridgeInput(void)
     }
     ResponseJsonEnd();
 
-    MqttPublishPrefixTopic_P(RESULT_OR_TELE, PSTR(D_JSON_SSERIALRECEIVED));
-    XdrvRulesProcess();
+    MqttPublishPrefixTopicRulesProcess_P(RESULT_OR_TELE, PSTR(D_JSON_SSERIALRECEIVED));
     serial_bridge_in_byte_counter = 0;
   }
 }
@@ -105,7 +105,7 @@ void SerialBridgeInit(void)
 {
   serial_bridge_active = false;
   if (PinUsed(GPIO_SBR_RX) && PinUsed(GPIO_SBR_TX)) {
-    SerialBridgeSerial = new TasmotaSerial(Pin(GPIO_SBR_RX), Pin(GPIO_SBR_TX));
+    SerialBridgeSerial = new TasmotaSerial(Pin(GPIO_SBR_RX), Pin(GPIO_SBR_TX), HARDWARE_FALLBACK);
     if (SerialBridgeSerial->begin(Settings.sbaudrate * 300)) {  // Baud rate is stored div 300 so it fits into 16 bits
       if (SerialBridgeSerial->hardwareSerial()) {
         ClaimSerial();
@@ -125,7 +125,7 @@ void SerialBridgeInit(void)
 
 void CmndSSerialSend(void)
 {
-  if ((XdrvMailbox.index > 0) && (XdrvMailbox.index <= 5)) {
+  if ((XdrvMailbox.index > 0) && (XdrvMailbox.index <= 6)) {
     serial_bridge_raw = (XdrvMailbox.index > 3);
     if (XdrvMailbox.data_len > 0) {
       if (1 == XdrvMailbox.index) {
@@ -152,6 +152,15 @@ void CmndSSerialSend(void)
           SerialBridgeSerial->write(code);                                  // "AA004566" as hex values
           size -= 2;
           codes += 2;
+        }
+      }
+      else if (6 == XdrvMailbox.index) {
+        char *p;
+        uint8_t code;
+        char *values = XdrvMailbox.data;
+        for (char* str = strtok_r(values, ",", &p); str; str = strtok_r(nullptr, ",", &p)) {
+          code = (uint8_t)atoi(str);
+          SerialBridgeSerial->write(code);                                  // "72,101,108,108"
         }
       }
       ResponseCmndDone();

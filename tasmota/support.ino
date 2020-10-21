@@ -116,6 +116,30 @@ String GetResetReason(void)
 /*********************************************************************************************\
  * Miscellaneous
 \*********************************************************************************************/
+/*
+String GetBinary(const void* ptr, size_t count) {
+  uint32_t value = *(uint32_t*)ptr;
+  value <<= (32 - count);
+  String result;
+  result.reserve(count + 1);
+  for (uint32_t i = 0; i < count; i++) {
+    result += (value &0x80000000) ? '1' : '0';
+    value <<= 1;
+  }
+  return result;
+}
+*/
+String GetBinary8(uint8_t value, size_t count) {
+  if (count > 8) { count = 8; }
+  value <<= (8 - count);
+  String result;
+  result.reserve(count + 1);
+  for (uint32_t i = 0; i < count; i++) {
+    result += (value &0x80) ? '1' : '0';
+    value <<= 1;
+  }
+  return result;
+}
 
 // Get span until single character in string
 size_t strchrspn(const char *str1, int character)
@@ -125,6 +149,18 @@ size_t strchrspn(const char *str1, int character)
   char *end = strchr(str1, character);
   if (end) ret = end - start;
   return ret;
+}
+
+uint32_t ChrCount(const char *str, const char *delim) {
+  uint32_t count = 0;
+  char* read = (char*)str;
+  char ch = '.';
+
+  while (ch != '\0') {
+    ch = *read++;
+    if (ch == *delim) { count++; }
+  }
+  return count;
 }
 
 // Function to return a substring defined by a delimiter at an index
@@ -152,6 +188,8 @@ float CharToFloat(const char *str)
 
   strlcpy(strbuf, str, sizeof(strbuf));
   char *pt = strbuf;
+  if (*pt == '\0') { return 0.0; }
+
   while ((*pt != '\0') && isblank(*pt)) { pt++; }  // Trim leading spaces
 
   signed char sign = 1;
@@ -321,8 +359,8 @@ char* Unescape(char* buffer, uint32_t* size)
   return buffer;
 }
 
-char* RemoveSpace(char* p)
-{
+char* RemoveSpace(char* p) {
+  // Remove white-space character (' ','\t','\n','\v','\f','\r')
   char* write = p;
   char* read = p;
   char ch = '.';
@@ -333,12 +371,27 @@ char* RemoveSpace(char* p)
       *write++ = ch;
     }
   }
-//  *write = '\0';  // Removed 20190223 as it buffer overflows on no isspace found - no need either
   return p;
 }
 
-char* ReplaceCommaWithDot(char* p)
-{
+char* RemoveControlCharacter(char* p) {
+  // Remove control character (0x00 .. 0x1F and 0x7F)
+  char* write = p;
+  char* read = p;
+  char ch = '.';
+
+  while (ch != '\0') {
+    ch = *read++;
+    if (!iscntrl(ch)) {
+      *write++ = ch;
+    }
+  }
+  *write++ = '\0';
+  return p;
+}
+
+char* ReplaceCommaWithDot(char* p) {
+  // Replace character ',' with '.'
   char* write = (char*)p;
   char* read = (char*)p;
   char ch = '.';
@@ -394,14 +447,17 @@ char* UpperCase_P(char* dest, const char* source)
 
 char* Trim(char* p)
 {
-  while ((*p != '\0') && isblank(*p)) { p++; }  // Trim leading spaces
-  char* q = p + strlen(p) -1;
-  while ((q >= p) && isblank(*q)) { q--; }   // Trim trailing spaces
-  q++;
-  *q = '\0';
+  if (*p != '\0') {
+    while ((*p != '\0') && isblank(*p)) { p++; }  // Trim leading spaces
+    char* q = p + strlen(p) -1;
+    while ((q >= p) && isblank(*q)) { q--; }   // Trim trailing spaces
+    q++;
+    *q = '\0';
+  }
   return p;
 }
 
+/*
 char* RemoveAllSpaces(char* p)
 {
   // remove any white space from the base64
@@ -418,6 +474,7 @@ char* RemoveAllSpaces(char* p)
   }
   return p;
 }
+*/
 
 char* NoAlNumToUnderscore(char* dest, const char* source)
 {
@@ -601,7 +658,7 @@ float ConvertTemp(float c)
   float result = c;
 
   global_update = uptime;
-  global_temperature = c;
+  global_temperature_celsius = c;
 
   if (!isnan(c) && Settings.flag.temperature_conversion) {    // SetOption8 - Switch between Celsius or Fahrenheit
     result = c * 1.8 + 32;                                    // Fahrenheit
@@ -661,7 +718,7 @@ float ConvertPressure(float p)
   float result = p;
 
   global_update = uptime;
-  global_pressure = p;
+  global_pressure_hpa = p;
 
   if (!isnan(p) && Settings.flag.pressure_conversion) {  // SetOption24 - Switch between hPa or mmHg pressure unit
     result = p * 0.75006375541921;                       // mmHg
@@ -690,9 +747,9 @@ void ResetGlobalValues(void)
 {
   if ((uptime - global_update) > GLOBAL_VALUES_VALID) {  // Reset after 5 minutes
     global_update = 0;
-    global_temperature = NAN;
+    global_temperature_celsius = NAN;
     global_humidity = 0.0f;
-    global_pressure = 0.0f;
+    global_pressure_hpa = 0.0f;
   }
 }
 
@@ -828,8 +885,7 @@ int GetStateNumber(char *state_text)
   return state_number;
 }
 
-String GetSerialConfig(void)
-{
+String GetSerialConfig(void) {
   // Settings.serial_config layout
   // b000000xx - 5, 6, 7 or 8 data bits
   // b00000x00 - 1 or 2 stop bits
@@ -845,16 +901,14 @@ String GetSerialConfig(void)
   return String(config);
 }
 
-void SetSerialBegin()
-{
-  uint32_t baudrate = Settings.baudrate * 300;
+void SetSerialBegin(void) {
+  baudrate = Settings.baudrate * 300;
   AddLog_P2(LOG_LEVEL_INFO, PSTR(D_LOG_SERIAL "Set to %s %d bit/s"), GetSerialConfig().c_str(), baudrate);
   Serial.flush();
   Serial.begin(baudrate, (SerialConfig)pgm_read_byte(kTasmotaSerialConfig + Settings.serial_config));
 }
 
-void SetSerialConfig(uint32_t serial_config)
-{
+void SetSerialConfig(uint32_t serial_config) {
   if (serial_config > TS_SERIAL_8O2) {
     serial_config = TS_SERIAL_8N1;
   }
@@ -864,29 +918,29 @@ void SetSerialConfig(uint32_t serial_config)
   }
 }
 
-void SetSerialBaudrate(uint32_t baudrate)
-{
+void SetSerialBaudrate(uint32_t ubaudrate) {
+  baudrate = ubaudrate;
   Settings.baudrate = baudrate / 300;
   if (Serial.baudRate() != baudrate) {
     SetSerialBegin();
   }
 }
 
-void SetSerial(uint32_t baudrate, uint32_t serial_config)
-{
+void SetSerial(uint32_t ubaudrate, uint32_t serial_config) {
   Settings.flag.mqtt_serial = 0;  // CMND_SERIALSEND and CMND_SERIALLOG
   Settings.serial_config = serial_config;
+  baudrate = ubaudrate;
   Settings.baudrate = baudrate / 300;
   SetSeriallog(LOG_LEVEL_NONE);
   SetSerialBegin();
 }
 
-void ClaimSerial(void)
-{
+void ClaimSerial(void) {
   serial_local = true;
   AddLog_P(LOG_LEVEL_INFO, PSTR("SNS: Hardware Serial"));
   SetSeriallog(LOG_LEVEL_NONE);
-  Settings.baudrate = Serial.baudRate() / 300;
+  baudrate = Serial.baudRate();
+  Settings.baudrate = baudrate / 300;
 }
 
 void SerialSendRaw(char *codes)
@@ -903,6 +957,17 @@ void SerialSendRaw(char *codes)
     Serial.write(code);
     size -= 2;
     codes += 2;
+  }
+}
+
+// values is a comma-delimited string: e.g. "72,101,108,108,111,32,87,111,114,108,100,33,10"
+void SerialSendDecimal(char *values)
+{
+  char *p;
+  uint8_t code;
+  for (char* str = strtok_r(values, ",", &p); str; str = strtok_r(nullptr, ",", &p)) {
+    code = (uint8_t)atoi(str);
+    Serial.write(code);
   }
 }
 
@@ -1080,19 +1145,101 @@ int ResponseJsonEndEnd(void)
  * GPIO Module and Template management
 \*********************************************************************************************/
 
-#ifndef ARDUINO_ESP8266_RELEASE_2_3_0  // Fix core 2.5.x ISR not in IRAM Exception
-uint32_t Pin(uint32_t gpio, uint32_t index) ICACHE_RAM_ATTR;
-#endif
-
-uint32_t Pin(uint32_t gpio, uint32_t index = 0);
-uint32_t Pin(uint32_t gpio, uint32_t index) {
 #ifdef ESP8266
-  uint16_t real_gpio = gpio + index;
-#else  // ESP32
-  uint16_t real_gpio = (gpio << 5) + index;
-#endif  // ESP8266 - ESP32
+uint16_t GpioConvert(uint8_t gpio) {
+  if (gpio > ARRAY_SIZE(kGpioConvert)) {
+    return AGPIO(GPIO_USER);
+  }
+  return pgm_read_word(kGpioConvert + gpio);
+}
+
+uint16_t Adc0Convert(uint8_t adc0) {
+  if (adc0 > 7) {
+    return AGPIO(GPIO_USER);
+  }
+  else if (0 == adc0) {
+    return GPIO_NONE;
+  }
+  return AGPIO(GPIO_ADC_INPUT + adc0 -1);
+}
+
+void TemplateConvert(uint8_t template8[], uint16_t template16[]) {
+  for (uint32_t i = 0; i < (sizeof(mytmplt) / 2) -2; i++) {
+    template16[i] = GpioConvert(template8[i]);
+  }
+  template16[(sizeof(mytmplt) / 2) -2] = Adc0Convert(template8[sizeof(mytmplt8285) -1]);
+
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("FNC: TemplateConvert"));
+//  AddLogBuffer(LOG_LEVEL_DEBUG, template8, sizeof(mytmplt8285));
+//  AddLogBufferSize(LOG_LEVEL_DEBUG, (uint8_t*)template16, sizeof(mytmplt) / 2, 2);
+}
+
+void ConvertGpios(void) {
+  if (Settings.gpio16_converted != 0xF5A0) {
+    // Convert 8-bit user template
+    TemplateConvert((uint8_t*)&Settings.ex_user_template8, (uint16_t*)&Settings.user_template);
+
+    for (uint32_t i = 0; i < sizeof(Settings.ex_my_gp8.io); i++) {
+      Settings.my_gp.io[i] = GpioConvert(Settings.ex_my_gp8.io[i]);
+    }
+    Settings.my_gp.io[(sizeof(myio) / 2) -1] = Adc0Convert(Settings.ex_my_adc0);
+    Settings.gpio16_converted = 0xF5A0;
+
+//    AddLog_P2(LOG_LEVEL_DEBUG, PSTR("FNC: ConvertGpios"));
+//    AddLogBuffer(LOG_LEVEL_DEBUG, (uint8_t *)&Settings.ex_my_gp8.io, sizeof(myio8));
+//    AddLogBufferSize(LOG_LEVEL_DEBUG, (uint8_t *)&Settings.my_gp.io, sizeof(myio) / 2, 2);
+  }
+}
+
+/*
+void DumpConvertTable(void) {
+  bool jsflg = false;
+  uint32_t lines = 1;
+  for (uint32_t i = 0; i < ARRAY_SIZE(kGpioConvert); i++) {
+    uint32_t data = pgm_read_word(kGpioConvert + i);
+    if (!jsflg) {
+      Response_P(PSTR("{\"GPIOConversion%d\":{"), lines);
+    } else {
+      ResponseAppend_P(PSTR(","));
+    }
+    jsflg = true;
+    if ((ResponseAppend_P(PSTR("\"%d\":\"%d\""), i, data) > (LOGSZ - TOPSZ)) || (i == ARRAY_SIZE(kGpioConvert) -1)) {
+      ResponseJsonEndEnd();
+      MqttPublishPrefixTopic_P(RESULT_OR_STAT, XdrvMailbox.command);
+      jsflg = false;
+      lines++;
+    }
+  }
+  for (uint32_t i = 0; i < ARRAY_SIZE(kAdcNiceList); i++) {
+    uint32_t data = pgm_read_word(kAdcNiceList + i);
+    if (!jsflg) {
+      Response_P(PSTR("{\"ADC0Conversion%d\":{"), lines);
+    } else {
+      ResponseAppend_P(PSTR(","));
+    }
+    jsflg = true;
+    if ((ResponseAppend_P(PSTR("\"%d\":\"%d\""), i, data) > (LOGSZ - TOPSZ)) || (i == ARRAY_SIZE(kAdcNiceList) -1)) {
+      ResponseJsonEndEnd();
+      MqttPublishPrefixTopic_P(RESULT_OR_STAT, XdrvMailbox.command);
+      jsflg = false;
+      lines++;
+    }
+  }
+  mqtt_data[0] = '\0';
+}
+*/
+#endif  // ESP8266
+
+uint32_t ICACHE_RAM_ATTR Pin(uint32_t gpio, uint32_t index = 0);
+uint32_t ICACHE_RAM_ATTR Pin(uint32_t gpio, uint32_t index) {
+  uint16_t real_gpio = gpio << 5;
+  uint16_t mask = 0xFFE0;
+  if (index < GPIO_ANY) {
+    real_gpio += index;
+    mask = 0xFFFF;
+  }
   for (uint32_t i = 0; i < ARRAY_SIZE(gpio_pin); i++) {
-    if (gpio_pin[i] == real_gpio) {
+    if ((gpio_pin[i] & mask) == real_gpio) {
       return i;              // Pin number configured for gpio
     }
   }
@@ -1171,22 +1318,58 @@ String ModuleName(void)
   return AnyModuleName(Settings.module);
 }
 
+#ifdef ESP8266
+void GetInternalTemplate(void* ptr, uint32_t module, uint32_t option) {
+  uint8_t module_template = pgm_read_byte(kModuleTemplateList + module);
+
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("DBG: Template %d, Option %d"), module_template, option);
+
+  // template8 = GPIO 0,1,2,3,4,5,9,10,12,13,14,15,16,Adc
+  uint8_t template8[sizeof(mytmplt8285)] = { GPIO_NONE };
+  if (module_template < TMP_WEMOS) {
+    memcpy_P(&template8, &kModules8266[module_template], 6);
+    memcpy_P(&template8[8], &kModules8266[module_template].gp.io[6], 6);
+  } else {
+    memcpy_P(&template8, &kModules8285[module_template - TMP_WEMOS], sizeof(template8));
+  }
+
+//  AddLogBuffer(LOG_LEVEL_DEBUG, (uint8_t *)&template8, sizeof(mytmplt8285));
+
+  // template16  = GPIO 0,1,2,3,4,5,9,10,12,13,14,15,16,Adc,Flg
+  uint16_t template16[(sizeof(mytmplt) / 2)] = { GPIO_NONE };
+  TemplateConvert(template8, template16);
+
+  uint32_t index = 0;
+  uint32_t size = sizeof(mycfgio);      // template16[module_template].gp
+  switch (option) {
+    case 2: {
+      index = (sizeof(mytmplt) / 2) -1; // template16[module_template].flag
+      size = 2;
+      break;
+    }
+    case 3: {
+      size = sizeof(mytmplt);           // template16[module_template]
+      break;
+    }
+  }
+  memcpy(ptr, &template16[index], size);
+
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("FNC: GetInternalTemplate option %d"), option);
+//  AddLogBufferSize(LOG_LEVEL_DEBUG, (uint8_t *)ptr, size / 2, 2);
+}
+#endif  // ESP8266
+
 void ModuleGpios(myio *gp)
 {
-#ifdef ESP8266
-  uint8_t *dest = (uint8_t *)gp;
-  uint8_t src[ARRAY_SIZE(Settings.user_template.gp.io)];
-#else  // ESP32
   uint16_t *dest = (uint16_t *)gp;
   uint16_t src[ARRAY_SIZE(Settings.user_template.gp.io)];
-#endif  // ESP8266 - ESP32
 
   memset(dest, GPIO_NONE, sizeof(myio));
   if (USER_MODULE == Settings.module) {
     memcpy(&src, &Settings.user_template.gp, sizeof(mycfgio));
   } else {
 #ifdef ESP8266
-    memcpy_P(&src, &kModules[Settings.module].gp, sizeof(mycfgio));
+    GetInternalTemplate(&src, Settings.module, 1);
 #else  // ESP32
     memcpy_P(&src, &kModules.gp, sizeof(mycfgio));
 #endif  // ESP8266 - ESP32
@@ -1215,7 +1398,7 @@ gpio_flag ModuleFlag(void)
     flag = Settings.user_template.flag;
   } else {
 #ifdef ESP8266
-    memcpy_P(&flag, &kModules[Settings.module].flag, sizeof(gpio_flag));
+    GetInternalTemplate(&flag, Settings.module, 2);
 #else  // ESP32
     memcpy_P(&flag, &kModules.flag, sizeof(gpio_flag));
 #endif  // ESP8266 - ESP32
@@ -1231,7 +1414,7 @@ void ModuleDefault(uint32_t module)
   char name[TOPSZ];
   SettingsUpdateText(SET_TEMPLATE_NAME, GetTextIndexed(name, sizeof(name), module, kModuleNames));
 #ifdef ESP8266
-  memcpy_P(&Settings.user_template, &kModules[module], sizeof(mytmplt));
+  GetInternalTemplate(&Settings.user_template, module, 3);
 #else  // ESP32
   memcpy_P(&Settings.user_template, &kModules, sizeof(mytmplt));
 #endif  // ESP8266 - ESP32
@@ -1255,7 +1438,7 @@ uint32_t ValidPin(uint32_t pin, uint32_t gpio)
 
 //  if (!is_8285 && !Settings.flag3.user_esp8285_enable) {  // SetOption51 - Enable ESP8285 user GPIO's
   if ((WEMOS == Settings.module) && !Settings.flag3.user_esp8285_enable) {  // SetOption51 - Enable ESP8285 user GPIO's
-    if ((pin == 9) || (pin == 10)) {
+    if ((9 == pin) || (10 == pin)) {
       return GPIO_NONE;  // Disable possible flash GPIO9 and GPIO10
     }
   }
@@ -1265,23 +1448,15 @@ uint32_t ValidPin(uint32_t pin, uint32_t gpio)
 
 bool ValidGPIO(uint32_t pin, uint32_t gpio)
 {
+#ifdef ESP8266
+#ifdef USE_ADC_VCC
+  if (ADC0_PIN == pin) { return false; }  // ADC0 = GPIO17
+#endif
+#endif
   return (GPIO_USER == ValidPin(pin, BGPIO(gpio)));  // Only allow GPIO_USER pins
 }
 
-#ifdef ESP8266
-bool ValidAdc(void)
-{
-  gpio_flag flag = ModuleFlag();
-  uint32_t template_adc0 = flag.data &15;
-  return (ADC0_USER == template_adc0);
-}
-#endif  // ESP8266
-
-#ifdef ESP8266
-bool GetUsedInModule(uint32_t val, uint8_t *arr)
-#else  // ESP32
 bool GetUsedInModule(uint32_t val, uint16_t *arr)
-#endif  // ESP8266 - ESP32
 {
   int offset = 0;
 
@@ -1342,63 +1517,94 @@ bool GetUsedInModule(uint32_t val, uint16_t *arr)
   return false;
 }
 
-bool JsonTemplate(const char* dataBuf)
+bool JsonTemplate(char* dataBuf)
 {
-  // {"NAME":"Generic","GPIO":[17,254,29,254,7,254,254,254,138,254,139,254,254],"FLAG":1,"BASE":255}
+  // Old: {"NAME":"Shelly 2.5","GPIO":[56,0,17,0,21,83,0,0,6,82,5,22,156],"FLAG":2,"BASE":18}
+  // New: {"NAME":"Shelly 2.5","GPIO":[320,0,32,0,224,193,0,0,640,192,608,225,3456,4736],"FLAG":0,"BASE":18}
+
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("TPL: |%s|"), dataBuf);
 
   if (strlen(dataBuf) < 9) { return false; }  // Workaround exception if empty JSON like {} - Needs checks
 
-#ifdef ESP8266
-  StaticJsonBuffer<400> jb;  // 331 from https://arduinojson.org/v5/assistant/
-#else
-  StaticJsonBuffer<999> jb;  // 654 from https://arduinojson.org/v5/assistant/
-#endif
-  JsonObject& obj = jb.parseObject(dataBuf);
-  if (!obj.success()) { return false; }
+  JsonParser parser((char*) dataBuf);
+  JsonParserObject root = parser.getRootObject();
+  if (!root) { return false; }
 
   // All parameters are optional allowing for partial changes
-  const char* name = obj[D_JSON_NAME];
-  if (name != nullptr) {
-    SettingsUpdateText(SET_TEMPLATE_NAME, name);
+  JsonParserToken val = root[PSTR(D_JSON_NAME)];
+  if (val) {
+    SettingsUpdateText(SET_TEMPLATE_NAME, val.getStr());
   }
-  if (obj[D_JSON_GPIO].success()) {
-    for (uint32_t i = 0; i < ARRAY_SIZE(Settings.user_template.gp.io); i++) {
+  JsonParserArray arr = root[PSTR(D_JSON_GPIO)];
+  if (arr) {
 #ifdef ESP8266
-      Settings.user_template.gp.io[i] = obj[D_JSON_GPIO][i] | 0;
-#else  // ESP32
-      uint16_t gpio = obj[D_JSON_GPIO][i] | 0;
-      if (gpio == (AGPIO(GPIO_NONE) +1)) {
-        gpio = AGPIO(GPIO_USER);
+    bool old_template = false;
+    uint8_t template8[sizeof(mytmplt8285)] = { GPIO_NONE };
+    if (13 == arr.size()) {  // Possible old template
+      uint32_t gpio = 0;
+      for (uint32_t i = 0; i < ARRAY_SIZE(template8) -1; i++) {
+        gpio = arr[i].getUInt();
+        if (gpio > 255) {    // New templates might have values above 255
+          break;
+        }
+        template8[i] = gpio;
       }
-      Settings.user_template.gp.io[i] = gpio;
-#endif
+      old_template = (gpio < 256);
     }
+    if (old_template) {
+
+      AddLog_P(LOG_LEVEL_DEBUG, PSTR("TPL: Converting template ..."));
+
+      val = root[PSTR(D_JSON_FLAG)];
+      if (val) {
+        template8[ARRAY_SIZE(template8) -1] = val.getUInt() & 0x0F;
+      }
+      TemplateConvert(template8, Settings.user_template.gp.io);
+      Settings.user_template.flag.data = 0;
+    } else {
+#endif
+      for (uint32_t i = 0; i < ARRAY_SIZE(Settings.user_template.gp.io); i++) {
+        JsonParserToken val = arr[i];
+        if (!val) { break; }
+        uint16_t gpio = val.getUInt();
+        if (gpio == (AGPIO(GPIO_NONE) +1)) {
+          gpio = AGPIO(GPIO_USER);
+        }
+        Settings.user_template.gp.io[i] = gpio;
+      }
+      val = root[PSTR(D_JSON_FLAG)];
+      if (val) {
+        Settings.user_template.flag.data = val.getUInt();
+      }
+    }
+#ifdef ESP8266
   }
-  if (obj[D_JSON_FLAG].success()) {
-    uint32_t flag = obj[D_JSON_FLAG] | 0;
-    memcpy(&Settings.user_template.flag, &flag, sizeof(gpio_flag));
-  }
-  if (obj[D_JSON_BASE].success()) {
-    uint32_t base = obj[D_JSON_BASE];
+#endif
+  val = root[PSTR(D_JSON_BASE)];
+  if (val) {
+    uint32_t base = val.getUInt();
     if ((0 == base) || !ValidTemplateModule(base -1)) { base = 18; }
     Settings.user_template_base = base -1;  // Default WEMOS
   }
+
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("TPL: Converted"));
+//  AddLogBufferSize(LOG_LEVEL_DEBUG, (uint8_t*)&Settings.user_template, sizeof(Settings.user_template) / 2, 2);
+
   return true;
 }
 
 void TemplateJson(void)
 {
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("TPL: Show"));
+//  AddLogBufferSize(LOG_LEVEL_DEBUG, (uint8_t*)&Settings.user_template, sizeof(Settings.user_template) / 2, 2);
+
   Response_P(PSTR("{\"" D_JSON_NAME "\":\"%s\",\"" D_JSON_GPIO "\":["), SettingsText(SET_TEMPLATE_NAME));
   for (uint32_t i = 0; i < ARRAY_SIZE(Settings.user_template.gp.io); i++) {
-#ifdef ESP8266
-    ResponseAppend_P(PSTR("%s%d"), (i>0)?",":"", Settings.user_template.gp.io[i]);
-#else  // ESP32
     uint16_t gpio = Settings.user_template.gp.io[i];
     if (gpio == AGPIO(GPIO_USER)) {
       gpio = AGPIO(GPIO_NONE) +1;
     }
     ResponseAppend_P(PSTR("%s%d"), (i>0)?",":"", gpio);
-#endif
   }
   ResponseAppend_P(PSTR("],\"" D_JSON_FLAG "\":%d,\"" D_JSON_BASE "\":%d}"), Settings.user_template.flag, Settings.user_template_base +1);
 }
@@ -1778,14 +1984,16 @@ void Syslog(void)
 void AddLog(uint32_t loglevel)
 {
   char mxtime[10];  // "13:45:21 "
-
   snprintf_P(mxtime, sizeof(mxtime), PSTR("%02d" D_HOUR_MINUTE_SEPARATOR "%02d" D_MINUTE_SECOND_SEPARATOR "%02d "), RtcTime.hour, RtcTime.minute, RtcTime.second);
 
-  if (loglevel <= seriallog_level) {
+  if ((loglevel <= seriallog_level) &&
+      (masterlog_level <= seriallog_level)) {
     Serial.printf("%s%s\r\n", mxtime, log_data);
   }
 #ifdef USE_WEBSERVER
-  if (Settings.webserver && (loglevel <= Settings.weblog_level)) {
+  if (Settings.webserver &&
+     (loglevel <= Settings.weblog_level) &&
+     (masterlog_level <= Settings.weblog_level)) {
     // Delimited, zero-terminated buffer of log lines.
     // Each entry has this format: [index][log data]['\1']
     web_log_index &= 0xFF;
@@ -1806,10 +2014,12 @@ void AddLog(uint32_t loglevel)
 #endif  // USE_WEBSERVER
   if (Settings.flag.mqtt_enabled &&        // SetOption3 - Enable MQTT
       !global_state.mqtt_down &&
-      (loglevel <= Settings.mqttlog_level)) { MqttPublishLogging(mxtime); }
+      (loglevel <= Settings.mqttlog_level) &&
+      (masterlog_level <= Settings.mqttlog_level)) { MqttPublishLogging(mxtime); }
 
   if (!global_state.network_down &&
-      (loglevel <= syslog_level)) { Syslog(); }
+      (loglevel <= syslog_level) &&
+      (masterlog_level <= syslog_level)) { Syslog(); }
 
   prepped_loglevel = 0;
 }
@@ -1932,3 +2142,27 @@ String Decompress(const char * compressed, size_t uncompressed_size) {
 }
 
 #endif // USE_UNISHOX_COMPRESSION
+
+/*********************************************************************************************\
+ * High entropy hardware random generator
+ * Thanks to DigitalAlchemist
+\*********************************************************************************************/
+// Based on code from https://raw.githubusercontent.com/espressif/esp-idf/master/components/esp32/hw_random.c
+uint32_t HwRandom(void) {
+#if ESP8266
+  // https://web.archive.org/web/20160922031242/http://esp8266-re.foogod.com/wiki/Random_Number_Generator
+  #define _RAND_ADDR 0x3FF20E44UL
+#else // ESP32
+  #define _RAND_ADDR 0x3FF75144UL
+#endif
+  static uint32_t last_ccount = 0;
+  uint32_t ccount;
+  uint32_t result = 0;
+  do {
+    ccount = ESP.getCycleCount();
+    result ^= *(volatile uint32_t *)_RAND_ADDR;
+  } while (ccount - last_ccount < 64);
+  last_ccount = ccount;
+  return result ^ *(volatile uint32_t *)_RAND_ADDR;
+#undef _RAND_ADDR
+}

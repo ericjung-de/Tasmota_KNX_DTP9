@@ -81,6 +81,7 @@
 #define D_JSON_GAS "Gas"
 #define D_JSON_GATEWAY "Gateway"
 #define D_JSON_GROUPS "Groups"
+#define D_JSON_HALTING "Halting"
 #define D_JSON_HEAPSIZE "Heap"
 #define D_JSON_HIGH "High"
 #define D_JSON_HOST_NOT_FOUND "Host not found"
@@ -110,7 +111,9 @@
 #define D_JSON_NOISE "Noise"
 #define D_JSON_NONE "None"
 #define D_JSON_OR "or"
+#define D_JSON_ORP "ORP"
 #define D_JSON_PERIOD "Period"
+#define D_JSON_PH "pH"
 #define D_JSON_PHASE_ANGLE "PhaseAngle"
 #define D_JSON_POWERFACTOR "Factor"
 #define D_JSON_POWERUSAGE "Power"
@@ -191,6 +194,7 @@
 #define D_JSON_PV2_POWER "Pv2Power"
 #define D_JSON_SOLAR_POWER "SolarPower"
 #define D_JSON_USAGE "Usage"
+#define D_JSON_IMPORT "Import"
 #define D_JSON_EXPORT "Export"
 #define D_JSON_TOTAL_ACTIVE "TotalActive"
 
@@ -210,6 +214,7 @@
 // Commands tasmota.ino
 #define D_CMND_BACKLOG "Backlog"
 #define D_CMND_DELAY "Delay"
+#define D_CMND_NODELAY "NoDelay"
 #define D_CMND_STATUS "Status"
   #define D_STATUS1_PARAMETER "PRM"
   #define D_STATUS2_FIRMWARE "FWR"
@@ -223,6 +228,7 @@
   #define D_STATUS10_SENSOR "SNS"
   #define D_STATUS11_STATUS "STS"
   #define D_STATUS12_STATUS "STK"
+  #define D_STATUS13_SHUTTER "SHT"
 #define D_CMND_STATE "State"
 #define D_CMND_POWER "Power"
 #define D_CMND_FANSPEED "FanSpeed"
@@ -286,7 +292,7 @@
 #define D_CMND_INTERLOCK "Interlock"
 #define D_CMND_TELEPERIOD "TelePeriod"
 #define D_CMND_RESTART "Restart"
-  #define D_JSON_ONE_TO_RESTART "1 to restart"
+  #define D_JSON_ONE_TO_RESTART "1 to restart, 2 to halt"
 #define D_CMND_RESET "Reset"
   #define D_JSON_RESET_AND_RESTARTING "Reset and Restarting"
   #define D_JSON_ONE_TO_RESET "1 to reset"
@@ -455,6 +461,10 @@
   #define D_JSON_IRHVAC_CLEAN "Clean"
   #define D_JSON_IRHVAC_SLEEP "Sleep"
   #define D_JSON_IRHVAC_CLOCK "Clock"
+  #define D_JSON_IRHVAC_STATE_MODE "StateMode"
+    #define D_JSON_IRHVAC_STATE_MODE_SEND_ONLY "SendOnly"
+    #define D_JSON_IRHVAC_STATE_MODE_STORE_ONLY "StoreOnly"
+    #define D_JSON_IRHVAC_STATE_MODE_SEND_STORE "SendStore"
 #define D_JSON_IRRECEIVED "IrReceived"
 
 // Commands xdrv_06_snfbridge.ino
@@ -481,7 +491,7 @@
 
 // Commands xdrv_09_timers.ino
 #define D_CMND_TIMER "Timer"
-  #define D_JSON_TIMER_ARM "Arm"
+  #define D_JSON_TIMER_ARM "Enable"
   #define D_JSON_TIMER_MODE "Mode"
   #define D_JSON_TIMER_TIME "Time"
   #define D_JSON_TIMER_WINDOW "Window"
@@ -506,13 +516,16 @@
 #define D_CMND_ZIGBEE_STATUS "Status"
 #define D_CMND_ZIGBEE_RESET "Reset"
   #define D_JSON_ZIGBEE_CC2530 "CC2530"
+  #define D_JSON_ZIGBEE_EZSP "EZSP"
 #define D_CMND_ZIGBEEZNPRECEIVE "ZNPReceive"      // only for debug
 #define D_CMND_ZIGBEE_EZSP_RECEIVE "EZSPReceive"      // only for debug
 #define D_CMND_ZIGBEE_EZSP_RECEIVE_RAW "EZSPReceiveRaw"      // only for debug
+#define D_CMND_ZIGBEE_EZSP_LISTEN "Listen"      // only for EZSP
 #define D_CMND_ZIGBEEZNPSEND "ZNPSend"
 #define D_CMND_ZIGBEE_EZSP_SEND "EZSPSend"
 #define D_CMND_ZIGBEE_EZSP_SEND_RAW "EZSPSendRaw"
   #define D_JSON_ZIGBEE_STATE "ZbState"
+  #define D_JSON_ZIGBEE_ROUTE_ERROR "ZbRouteError"
   #define D_JSON_ZIGBEEZNPRECEIVED "ZbZNPReceived"
   #define D_JSON_ZIGBEE_EZSP_RECEIVED "ZbEZSPReceived"
   #define D_JSON_ZIGBEEZNPSENT "ZbZNPSent"
@@ -539,6 +552,8 @@
 #define D_CMND_ZIGBEE_SEND "Send"
 #define D_CMND_ZIGBEE_WRITE "Write"
 #define D_CMND_ZIGBEE_REPORT "Report"
+#define D_CMND_ZIGBEE_READ_CONFIG "ReadConfig"
+#define D_CMND_ZIGBEE_CONFIG "Config"
 #define D_CMND_ZIGBEE_RESPONSE "Response"
   #define D_JSON_ZIGBEE_ZCL_SENT "ZbZCLSent"
 #define D_JSON_ZIGBEE_RECEIVED "ZbReceived"
@@ -548,6 +563,7 @@
   #define D_JSON_ZIGBEE_UNBIND "ZbUnbind"
 #define D_CMND_ZIGBEE_BIND_STATE "BindState"
   #define D_JSON_ZIGBEE_BIND_STATE "ZbBindState"
+#define D_JSON_ZIGBEE_PARENT "ZbParent"
 #define D_CMND_ZIGBEE_PING "Ping"
   #define D_JSON_ZIGBEE_PING "ZbPing"
   #define D_JSON_ZIGBEE_IEEE "IEEEAddr"
@@ -560,6 +576,7 @@
 #define D_CMND_ZIGBEE_RESTORE "Restore"
 #define D_CMND_ZIGBEE_CONFIG "Config"
   #define D_JSON_ZIGBEE_CONFIG "Config"
+#define D_CMND_ZIGBEE_DATA "Data"
 
 // Commands xdrv_25_A4988_Stepper.ino
 #define D_CMND_MOTOR "MOTOR"
@@ -575,11 +592,14 @@
 #define D_CMND_SHUTTER_OPEN "Open"
 #define D_CMND_SHUTTER_CLOSE "Close"
 #define D_CMND_SHUTTER_TOGGLE "Toggle"
+#define D_CMND_SHUTTER_TOGGLEDIR "ToggleDir"
 #define D_CMND_SHUTTER_UP "Up"
 #define D_CMND_SHUTTER_DOWN "Down"
+#define D_CMND_SHUTTER_MODE "Mode"
 #define D_CMND_SHUTTER_STOPOPEN "StopOpen"
 #define D_CMND_SHUTTER_STOPCLOSE "StopClose"
 #define D_CMND_SHUTTER_STOPTOGGLE "StopToggle"
+#define D_CMND_SHUTTER_STOPTOGGLEDIR "StopToggleDir"
 #define D_CMND_SHUTTER_STOPPOSITION "StopPosition"
 #define D_CMND_SHUTTER_STOP "Stop"
 #define D_CMND_SHUTTER_POSITION "Position"
@@ -597,6 +617,7 @@
 #define D_CMND_SHUTTER_LOCK "Lock"
 #define D_CMND_SHUTTER_ENABLEENDSTOPTIME "EnableEndStopTime"
 #define D_CMND_SHUTTER_INVERTWEBBUTTONS "InvertWebButtons"
+#define D_CMND_SHUTTER_PWMRANGE "PWMRange"
 
 // Commands xdrv_32_hotplug.ino
 #define D_CMND_HOTPLUG "HotPlug"
@@ -604,6 +625,7 @@
 // Commands xdrv_34_pwm_dimmer.ino
 #ifdef USE_PWM_DIMMER
 #define D_CMND_BRI_PRESET "BriPreset"
+#define D_CMND_PWM_DIMMER_PWMS "PWMDimmerPWMs"
 #endif
 
 // Commands xdrv_38_ping.ino
@@ -615,7 +637,7 @@
 
 // xsns_70_veml6075.ino
 #define D_JSON_UVA_INTENSITY "UvaIntensity"
-#define D_JSON_UVB_INTENSITY  "UvbItensity"
+#define D_JSON_UVB_INTENSITY  "UvbIntensity"
 #define D_CMND_VEML6075_POWER "power"
 #define D_CMND_VEML6075_DYNAMIC "dynamic"
 #define D_CMND_VEML6075_INTTIME "inttime"
@@ -713,7 +735,7 @@ const char S_RSLT_POWER[] PROGMEM = D_RSLT_POWER;
 const char S_RSLT_RESULT[] PROGMEM = D_RSLT_RESULT;
 const char S_RSLT_WARNING[] PROGMEM = D_RSLT_WARNING;
 const char S_LWT[] PROGMEM = D_LWT;
-const char S_OFFLINE[] PROGMEM = D_OFFLINE;
+const char S_LWT_OFFLINE[] PROGMEM = MQTT_LWT_OFFLINE;
 
 // support.ino
 static const char kMonthNames[] = D_MONTH3LIST;
@@ -748,6 +770,8 @@ const char HTTP_SNS_VOLTAGE[]       PROGMEM = "{s}"     D_VOLTAGE             "{
 const char HTTP_SNS_CURRENT[]       PROGMEM = "{s}"     D_CURRENT             "{m}%s " D_UNIT_AMPERE              "{e}";
 const char HTTP_SNS_POWER[]         PROGMEM = "{s}"     D_POWERUSAGE          "{m}%s " D_UNIT_WATT                "{e}";
 const char HTTP_SNS_ENERGY_TOTAL[]  PROGMEM = "{s}"     D_ENERGY_TOTAL        "{m}%s " D_UNIT_KILOWATTHOUR        "{e}";
+const char HTTP_SNS_PH[]            PROGMEM = "{s}%s "  D_PH                  "{m}%s "                            "{e}";
+const char HTTP_SNS_ORP[]           PROGMEM = "{s}%s "  D_ORP                 "{m}%s " D_UNIT_MILLIVOLT           "{e}";
 
 const char S_MAIN_MENU[]              PROGMEM = D_MAIN_MENU;
 const char S_CONFIGURATION[]          PROGMEM = D_CONFIGURATION;

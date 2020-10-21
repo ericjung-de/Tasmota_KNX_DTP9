@@ -31,14 +31,40 @@ const uint8_t  ZIGBEE_EZSP_CANCEL = 0x1A;  // cancel byte
 const uint8_t  ZIGBEE_EZSP_EOF = 0x7E;          // end of frame
 const uint8_t  ZIGBEE_EZSP_ESCAPE = 0x7D;       // escape byte
 
+const uint32_t ZIGBEE_LED_RECEIVE = 0;     // LED<1> blinks when receiving
+const uint32_t ZIGBEE_LED_SEND = 0;        // LED<2> blinks when receiving
+
 class EZSP_Serial_t {
 public:
-  uint8_t  to_ack = 0;      // 0..7, frame number of next id to send
+  uint8_t  to_send = 0;     // 0..7, frame number of next packet to send, nothing to send if equal to to_end
+  uint8_t  to_end = 0;      // 0..7, frame number of next packet to send
+  uint8_t  to_ack = 0;      // 0..7, frame number of last packet acknowledged + 1
   uint8_t  from_ack = 0;    // 0..7, frame to ack
   uint8_t  ezsp_seq = 0;    // 0..255, EZSP sequence number
+  SBuffer *to_packets[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 };
 
+
 EZSP_Serial_t EZSP_Serial;
+
+//
+// Blink Led Status
+//
+const uint32_t Z_LED_STATUS_ON_MILLIS = 50;   // keep led on at least 50 ms
+bool Z_LedStatusSet(bool onoff) {
+  static bool led_status_on = false;
+  static uint32_t led_on_time = 0;
+
+  if (onoff) {
+    SetLedPowerIdx(ZIGBEE_LED_RECEIVE, 1);
+    led_status_on = true;
+    led_on_time = millis();
+  } else if ((led_status_on) && (TimePassedSince(led_on_time) >= Z_LED_STATUS_ON_MILLIS)) {
+    SetLedPowerIdx(ZIGBEE_LED_RECEIVE, 0);
+    led_status_on = false;
+  }
+  return led_status_on;
+}
 
 #endif // USE_ZIGBEE_EZSP
 
@@ -111,7 +137,7 @@ void ZigbeeInputLoop(void) {
     char hex_char[(zigbee_buffer->len() * 2) + 2];
 		ToHex_P((unsigned char*)zigbee_buffer->getBuffer(), zigbee_buffer->len(), hex_char, sizeof(hex_char));
 
-    AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE "Bytes follow_read_metric = %0d"), ZigbeeSerial->getLoopReadMetric());
+    // AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE "Bytes follow_read_metric = %0d"), ZigbeeSerial->getLoopReadMetric());
 		// buffer received, now check integrity
 		if (zigbee_buffer->len() != zigbee_frame_len) {
 			// Len is not correct, log and reject frame
@@ -128,8 +154,7 @@ void ZigbeeInputLoop(void) {
 			ToHex_P((unsigned char*)znp_buffer.getBuffer(), znp_buffer.len(), hex_char, sizeof(hex_char));
       Response_P(PSTR("{\"" D_JSON_ZIGBEEZNPRECEIVED "\":\"%s\"}"), hex_char);
       if (Settings.flag3.tuya_serial_mqtt_publish) {
-        MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_SENSOR));
-        XdrvRulesProcess();
+        MqttPublishPrefixTopicRulesProcess_P(TELE, PSTR(D_RSLT_SENSOR));
       } else {
         AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE "%s"), mqtt_data);
       }
@@ -149,10 +174,14 @@ void ZigbeeInputLoop(void) {
   // 7D - Escape byte - following byte is escaped
   // 7E - end of frame
 
+  Z_LedStatusSet(false);
+
   while (ZigbeeSerial->available()) {
+    Z_LedStatusSet(true); // turn on receive LED<1>
+
     yield();
     uint8_t zigbee_in_byte = ZigbeeSerial->read();
-		AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: ZbInput byte=0x%02X len=%d"), zigbee_in_byte, zigbee_buffer->len());
+		// AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: ZbInput byte=0x%02X len=%d"), zigbee_in_byte, zigbee_buffer->len());
 
 		// if (0 == zigbee_buffer->len()) {  // make sure all variables are correctly initialized
     //   escape = false;
@@ -164,13 +193,13 @@ void ZigbeeInputLoop(void) {
     }
 
     if (ZIGBEE_EZSP_ESCAPE == zigbee_in_byte) {
-      AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: Escape byte received"));
+      // AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: Escape byte received"));
       escape = true;
       continue;
     }
 
     if (ZIGBEE_EZSP_CANCEL == zigbee_in_byte) {
-      AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: ZbInput byte=0x1A, cancel byte received, discarding %d bytes"), zigbee_buffer->len());
+      // AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: ZbInput byte=0x1A, cancel byte received, discarding %d bytes"), zigbee_buffer->len());
       zigbee_buffer->setLen(0);		// empty buffer
       escape = false;
       frame_complete = false;
@@ -186,7 +215,7 @@ void ZigbeeInputLoop(void) {
     if (zigbee_buffer->len() < ZIGBEE_BUFFER_SIZE) {
       if (escape) {
         // invert bit 5
-        zigbee_in_byte ^= 0x20; 
+        zigbee_in_byte ^= 0x20;
         escape = false;
       }
 
@@ -200,7 +229,7 @@ void ZigbeeInputLoop(void) {
     char hex_char[frame_len * 2 + 2];
     ToHex_P((unsigned char*)zigbee_buffer->getBuffer(), zigbee_buffer->len(), hex_char, sizeof(hex_char));
 
-    AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE "Bytes follow_read_metric = %0d"), ZigbeeSerial->getLoopReadMetric());
+    // AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE "Bytes follow_read_metric = %0d"), ZigbeeSerial->getLoopReadMetric());
     if ((frame_complete) && (frame_len >= 3)) {
       // frame received and has at least 3 bytes (without EOF), checking CRC
       // AddLog_P2(LOG_LEVEL_INFO, PSTR(D_JSON_ZIGBEE_EZSP_RECEIVED ": received raw frame %s"), hex_char);
@@ -238,13 +267,7 @@ void ZigbeeInputLoop(void) {
         }
 
         ToHex_P((unsigned char*)ezsp_buffer.getBuffer(), ezsp_buffer.len(), hex_char, sizeof(hex_char));
-        Response_P(PSTR("{\"" D_JSON_ZIGBEE_EZSP_RECEIVED "2\":\"%s\"}"), hex_char);
-        if (Settings.flag3.tuya_serial_mqtt_publish) {
-          MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_SENSOR));
-          XdrvRulesProcess();
-        } else {
-          AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE "%s"), mqtt_data);    // TODO move to LOG_LEVEL_DEBUG when stable
-        }
+        AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE "{\"" D_JSON_ZIGBEE_EZSP_RECEIVED "2\":\"%s\"}"), hex_char);
         // now process the message
         ZigbeeProcessInputRaw(ezsp_buffer);
       }
@@ -282,6 +305,12 @@ void ZigbeeInitSerial(void)
 			zigbee_buffer = new SBuffer(ZIGBEE_BUFFER_SIZE);
 // AddLog_P2(LOG_LEVEL_INFO, PSTR("ZigbeeInit Mem3 = %d"), ESP_getFreeHeap());
 		}
+
+    if (PinUsed(GPIO_ZIGBEE_RST)) {
+      pinMode(Pin(GPIO_ZIGBEE_RST), OUTPUT);
+      digitalWrite(Pin(GPIO_ZIGBEE_RST), 1);
+    }
+
     zigbee.active = true;
 		zigbee.init_phase = true;			// start the state machine
     zigbee.state_machine = true;      // start the state machine
@@ -291,6 +320,16 @@ void ZigbeeInitSerial(void)
 }
 
 #ifdef USE_ZIGBEE_ZNP
+
+// flush any ongoing frame, sending 256 times 0xFF
+void ZigbeeZNPFlush(void) {
+  if (ZigbeeSerial) {
+		for (uint32_t i = 0; i < 256; i++) {
+			ZigbeeSerial->write(0xFF);
+    }
+    AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE D_JSON_ZIGBEEZNPSENT " 0xFF x 255"));
+  }
+}
 
 void ZigbeeZNPSend(const uint8_t *msg, size_t len) {
 	if ((len < 2) || (len > 252)) {
@@ -409,6 +448,9 @@ void ZigbeeEZSPSendRaw(const uint8_t *msg, size_t len, bool send_cancel) {
 	}
 	uint8_t data_len = len - 2;		// removing CMD1 and CMD2
 
+  // turn send led on
+  Z_LedStatusSet(true);
+
   if (ZigbeeSerial) {
     if (send_cancel) {
       ZigbeeSerial->write(ZIGBEE_EZSP_CANCEL);		// 0x1A
@@ -417,7 +459,7 @@ void ZigbeeEZSPSendRaw(const uint8_t *msg, size_t len, bool send_cancel) {
     bool data_frame = (0 == (msg[0] & 0x80));
     uint8_t rand = 0x42;          // pseudo-randomizer initial value
     uint16_t crc = 0xFFFF;        // CRC16 CCITT initialization
-    
+
     for (uint32_t i=0; i<len; i++) {
       uint8_t out_byte = msg[i];
 
@@ -448,18 +490,19 @@ void ZigbeeEZSPSendRaw(const uint8_t *msg, size_t len, bool send_cancel) {
     // finally send End of Frame
     ZigbeeSerial->write(ZIGBEE_EZSP_EOF);		// 0x1A
   }
+
   // Now send a MQTT message to report the sent message
   char hex_char[(len * 2) + 2];
-  AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE D_JSON_ZIGBEE_EZSP_SENT_RAW " %s"),
+  AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE D_JSON_ZIGBEE_EZSP_SENT_RAW " %s"),
                                   ToHex_P(msg, len, hex_char, sizeof(hex_char)));
 }
 
 // Send an EZSP command and data
 // Ex: Version with min v8 = 000008
-void ZigbeeEZSPSendCmd(const uint8_t *msg, size_t len, bool send_cancel) {
+void ZigbeeEZSPSendCmd(const uint8_t *msg, size_t len) {
   char hex_char[len*2 + 2];
   ToHex_P(msg, len, hex_char, sizeof(hex_char));
-  AddLog_P2(LOG_LEVEL_INFO, PSTR(D_LOG_ZIGBEE "ZbEZSPSend %s"), hex_char);
+  AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE "ZbEZSPSend %s"), hex_char);
 
   SBuffer cmd(len+3);   // prefix with seq number (1 byte) and frame control bytes (2 bytes)
 
@@ -469,23 +512,48 @@ void ZigbeeEZSPSendCmd(const uint8_t *msg, size_t len, bool send_cancel) {
   cmd.addBuffer(msg, len);
 
   // send
-  ZigbeeEZSPSendDATA(cmd.getBuffer(), cmd.len(), send_cancel);
+  ZigbeeEZSPSendDATA(cmd.getBuffer(), cmd.len());
 }
 
 // Send an EZSP DATA frame, automatically calculating the correct frame numbers
-void ZigbeeEZSPSendDATA(const uint8_t *msg, size_t len, bool send_cancel) {
-  uint8_t control_byte = ((EZSP_Serial.to_ack & 0x07) << 4) + (EZSP_Serial.from_ack & 0x07);
-  // increment to_ack
-  EZSP_Serial.to_ack = (EZSP_Serial.to_ack + 1) & 0x07;
-  // build complete frame
-  SBuffer buf(len+1);
-  buf.add8(control_byte);
-  buf.addBuffer(msg, len);
+void ZigbeeEZSPSendDATA_frm(bool send_cancel, uint8_t to_frm, uint8_t from_ack) {
+  SBuffer *buf = EZSP_Serial.to_packets[to_frm];
+  if (!buf) {
+    AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: Buffer for packet %d is not allocated"), EZSP_Serial.to_send);
+    return;
+  }
+
+  uint8_t control_byte = ((to_frm & 0x07) << 4) + (from_ack & 0x07);
+  buf->set8(0, control_byte);      // change control_byte
   // send
-  ZigbeeEZSPSendRaw(buf.getBuffer(), buf.len(), send_cancel);
+  ZigbeeEZSPSendRaw(buf->getBuffer(), buf->len(), send_cancel);
 }
 
-// Receive a high-level EZSP command/response, starting with 16-bits frame ID 
+// Send an EZSP DATA frame, automatically calculating the correct frame numbers
+void ZigbeeEZSPSendDATA(const uint8_t *msg, size_t len) {
+  // prepare buffer by adding 1 byte prefix
+  SBuffer *buf = new SBuffer(len+1);    // prepare for control_byte prefix
+  buf->add8(0x00);                       // placeholder for control_byte
+  buf->addBuffer(msg, len);
+  //
+  AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: adding packet to_send, to_ack:%d, to_send:%d, to_end:%d"),
+                                  EZSP_Serial.to_ack, EZSP_Serial.to_send, EZSP_Serial.to_end);
+  uint8_t to_frm = EZSP_Serial.to_end;
+  if (EZSP_Serial.to_packets[to_frm]) {
+    delete EZSP_Serial.to_packets[to_frm];
+    EZSP_Serial.to_packets[to_frm] = nullptr;
+  }
+  EZSP_Serial.to_packets[to_frm] = buf;
+  EZSP_Serial.to_end = (to_frm + 1) & 0x07;   // move cursor
+  
+  // ZigbeeEZSPSendDATA_frm(send_cancel, to_frm, EZSP_Serial.from_ack);
+
+  // increment to_frame
+  //EZSP_Serial.to_ack = (EZSP_Serial.to_ack + 1) & 0x07;
+  //EZSP_Serial.to_frm = (EZSP_Serial.to_frm + 1) & 0x07;
+}
+
+// Receive a high-level EZSP command/response, starting with 16-bits frame ID
 int32_t ZigbeeProcessInputEZSP(class SBuffer &buf) {
   // verify errors in first 2 bytes.
   // TODO
@@ -495,7 +563,7 @@ int32_t ZigbeeProcessInputEZSP(class SBuffer &buf) {
   bool overflow = frame_control & 0x01;
   bool callbackPending = frame_control & 0x04;
   bool security_enabled = frame_control & 0x8000;
-  if (frame_control != 0x0180) {
+  if (truncated || overflow || security_enabled) {
     AddLog_P2(LOG_LEVEL_INFO, PSTR("ZIG: specific frame_control 0x%04X"), frame_control);
   }
 
@@ -511,40 +579,87 @@ int32_t ZigbeeProcessInputEZSP(class SBuffer &buf) {
   ToHex_P((unsigned char*)buf.getBuffer(), buf.len(), hex_char, sizeof(hex_char));
   Response_P(PSTR("{\"" D_JSON_ZIGBEE_EZSP_RECEIVED "\":\"%s\"}"), hex_char);
   if (Settings.flag3.tuya_serial_mqtt_publish) {
-    MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_SENSOR));
-    XdrvRulesProcess();
+    MqttPublishPrefixTopicRulesProcess_P(TELE, PSTR(D_RSLT_SENSOR));
   } else {
-    AddLog_P2(LOG_LEVEL_INFO, PSTR(D_LOG_ZIGBEE "%s"), mqtt_data);    // TODO move to LOG_LEVEL_DEBUG when stable
+    // demote less interesting messages to LOG_LEVEL_DEBUG
+    uint32_t log_level = LOG_LEVEL_INFO;
+    switch (buf.get16(0)) {
+      case EZSP_version:                  // 0000
+      case EZSP_addEndpoint:              // 0200
+      case EZSP_setConcentrator:          // 1000
+      case EZSP_networkInit:              // 1700
+      case EZSP_stackStatusHandler:       // 1900
+      case EZSP_formNetwork:              // 1E00
+      case EZSP_permitJoining:            // 2200
+      case EZSP_getEui64:                 // 2600
+      case EZSP_getNodeId:                // 2700
+      case EZSP_getNetworkParameters:     // 2800
+      case EZSP_sendUnicast:              // 3400
+      case EZSP_sendBroadcast:            // 3600
+      case EZSP_sendMulticast:            // 3800
+      case EZSP_messageSentHandler:       // 3F00
+      case EZSP_incomingMessageHandler:   // 4500
+      case EZSP_setConfigurationValue:    // 5300
+      case EZSP_setPolicy:                // 5500
+      case 0x0059:                        // 5900 - supposedly removed by still happening
+      case EZSP_setMulticastTableEntry:   // 6400
+      case EZSP_setInitialSecurityState:  // 6800
+      case EZSP_getCurrentSecurityState:  // 6900
+      case EZSP_getKey:                   // 6A00
+        log_level = LOG_LEVEL_DEBUG;
+        break;
+    }
+    AddLog_P2(log_level, PSTR(D_LOG_ZIGBEE "%s"), mqtt_data);    // TODO move to LOG_LEVEL_DEBUG when stable
   }
 
   // Pass message to state machine
   ZigbeeProcessInput(buf);
 }
 
+// Check if we advanced in the ACKed frames, and free from memory packets acknowledged
+void EZSP_HandleAck(uint8_t new_ack) {
+  if (EZSP_Serial.to_ack != new_ack) {      // new ack receveid
+    AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: new ack/data received, was %d now %d"), EZSP_Serial.to_ack, new_ack);
+    uint32_t i = EZSP_Serial.to_ack;
+    do {
+      if (EZSP_Serial.to_packets[i]) {
+        delete EZSP_Serial.to_packets[i];
+        EZSP_Serial.to_packets[i] = nullptr;
+      }
+      AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: freeing packet %d from memory"), i);
+      i = (i + 1) & 0x07;
+    } while (i != new_ack);
+    EZSP_Serial.to_ack = new_ack;
+  }
+}
 
 // Receive raw ASH frame (CRC was removed, data unstuffed) but still contains frame numbers
 int32_t ZigbeeProcessInputRaw(class SBuffer &buf) {
   uint8_t control_byte = buf.get8(0);
   uint8_t ack_num = control_byte & 0x07;        // keep 3 LSB
-  if (control_byte & 0x80) {
+  if (control_byte & 0x80) {  // non DATA frame
 
-    // non DATA frame
     uint8_t frame_type = control_byte & 0xE0;   // keep 3 MSB
     if (frame_type == 0x80) {
 
       // ACK
-      EZSP_Serial.from_ack = ack_num;           // update ack num
+      EZSP_HandleAck(ack_num);
     } else if (frame_type == 0xA0) {
 
       // NAK
-      AddLog_P2(LOG_LEVEL_INFO, PSTR("ZIG: Received NAK %d, resending not implemented"), ack_num);
+      AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: Received NAK %d, to_ack:%d, to_send:%d, to_end:%d"),
+                                  ack_num, EZSP_Serial.to_ack, EZSP_Serial.to_send, EZSP_Serial.to_end);
+      EZSP_Serial.to_send = ack_num;
+      AddLog_P2(LOG_LEVEL_DEBUG, PSTR("ZIG: NAK, resending packet %d"), ack_num);
     } else if (control_byte == 0xC1) {
-      
+
       // RSTACK
       // received just after boot, either because of Power up, hardware reset or RST
-      Z_EZSP_RSTACK(buf.get8(2));
+      EZ_RSTACK(buf.get8(2));
       EZSP_Serial.from_ack = 0;
       EZSP_Serial.to_ack = 0;
+      EZSP_Serial.to_end = 0;
+      EZSP_Serial.to_send = 0;
 
       // pass it to state machine with a special 0xFFFE frame code (EZSP_RSTACK_ID)
       buf.set8(0, Z_B0(EZSP_rstAck));
@@ -553,23 +668,22 @@ int32_t ZigbeeProcessInputRaw(class SBuffer &buf) {
       buf.setLen(3);
       ZigbeeProcessInput(buf);
     } else if (control_byte == 0xC2) {
-      
+
       // ERROR
-      Z_EZSP_ERROR(buf.get8(2));
+      EZ_ERROR(buf.get8(2));
       zigbee.active = false;           // stop all zigbee activities
+      restart_flag = 2;                // there is nothing more we can do except restart
     } else {
 
       // Unknown
       AddLog_P2(LOG_LEVEL_DEBUG, PSTR("ZIG: Received unknown control byte 0x%02X"), control_byte);
     }
-  } else {
+  } else {    // DATA Frame
+    
+    // adjust to latest acked packet
+    uint8_t new_ack = control_byte & 0x07;
+    EZSP_HandleAck(new_ack);
 
-    // DATA Frame
-    // check the frame number, and send ACK or NAK
-    if ((control_byte & 0x07) != EZSP_Serial.to_ack) {
-      AddLog_P2(LOG_LEVEL_INFO, PSTR("ZIG: wrong ack, received %d, expected %d"), control_byte & 0x07, EZSP_Serial.to_ack);
-      //EZSP_Serial.to_ack = control_byte & 0x07;
-    }
     // MCU acknowledged the correct frame
     // we acknowledge the frame too
     EZSP_Serial.from_ack = ((control_byte >> 4) + 1) & 0x07;
@@ -615,10 +729,10 @@ void CmndZbEZSPSendOrReceive(bool send)
     }
     if (send) {
       // Command was `ZbEZSPSend`
-      if      (2 == XdrvMailbox.index) { ZigbeeEZSPSendDATA(buf.getBuffer(), buf.len(), true); }
+      if      (2 == XdrvMailbox.index) { ZigbeeEZSPSendDATA(buf.getBuffer(), buf.len()); }
       else if (3 == XdrvMailbox.index) { ZigbeeEZSPSendRaw(buf.getBuffer(), buf.len(), true); }
-      else                             { ZigbeeEZSPSendCmd(buf.getBuffer(), buf.len(), true); }
-      
+      else                             { ZigbeeEZSPSendCmd(buf.getBuffer(), buf.len()); }
+
     } else {
       // Command was `ZbEZSPReceive`
       if      (2 == XdrvMailbox.index) { ZigbeeProcessInput(buf); }
@@ -648,7 +762,7 @@ void CmndZbEZSPSend(void)
 // - groupaddr: 16-bits group address, or 0x0000 if unicast using shortaddr
 // - clusterIf: 16-bits cluster number
 // - endpoint:  8-bits target endpoint (source is always 0x01), unused for group addresses. Should not be 0x00 except when sending to group address.
-// - cmdId:     8-bits ZCL command number
+// - cmd:     8-bits ZCL command number
 // - clusterSpecific: boolean, is the message general cluster or cluster specific, used to create the FC byte of ZCL
 // - msg:       pointer to byte array, payload of ZCL message (len is following), ignored if nullptr
 // - len:       length of the 'msg' payload
@@ -656,41 +770,127 @@ void CmndZbEZSPSend(void)
 // - transacId: 8-bits, transation id of message (should be incremented at each message), used both for Zigbee message number and ZCL message number
 // Returns: None
 //
-void ZigbeeZCLSend_Raw(uint16_t shortaddr, uint16_t groupaddr, uint16_t clusterId, uint8_t endpoint, uint8_t cmdId, bool clusterSpecific, uint16_t manuf, const uint8_t *msg, size_t len, bool needResponse, uint8_t transacId) {
+void ZigbeeZCLSend_Raw(const ZigbeeZCLSendMessage &zcl) {
 
 #ifdef USE_ZIGBEE_ZNP
-  SBuffer buf(32+len);
+  SBuffer buf(32+zcl.len);
   buf.add8(Z_SREQ | Z_AF);          // 24
   buf.add8(AF_DATA_REQUEST_EXT);    // 02
-  if (BAD_SHORTADDR == shortaddr) {        // if no shortaddr we assume group address
+  if (BAD_SHORTADDR == zcl.shortaddr) {        // if no shortaddr we assume group address
     buf.add8(Z_Addr_Group);         // 01
-    buf.add64(groupaddr);           // group address, only 2 LSB, upper 6 MSB are discarded
+    buf.add64(zcl.groupaddr);           // group address, only 2 LSB, upper 6 MSB are discarded
     buf.add8(0xFF);                 // dest endpoint is not used for group addresses
   } else {
     buf.add8(Z_Addr_ShortAddress);  // 02
-    buf.add64(shortaddr);           // dest address, only 2 LSB, upper 6 MSB are discarded
-    buf.add8(endpoint);             // dest endpoint
+    buf.add64(zcl.shortaddr);           // dest address, only 2 LSB, upper 6 MSB are discarded
+    buf.add8(zcl.endpoint);             // dest endpoint
   }
   buf.add16(0x0000);                // dest Pan ID, 0x0000 = intra-pan
   buf.add8(0x01);                   // source endpoint
-  buf.add16(clusterId);
-  buf.add8(transacId);              // transacId
+  buf.add16(zcl.cluster);
+  buf.add8(zcl.transacId);              // transacId
   buf.add8(0x30);                   // 30 options
   buf.add8(0x1E);                   // 1E radius
 
-  buf.add16(3 + len + (manuf ? 2 : 0));
-  buf.add8((needResponse ? 0x00 : 0x10) | (clusterSpecific ? 0x01 : 0x00) | (manuf ? 0x04 : 0x00));                 // Frame Control Field
-  if (manuf) {
-    buf.add16(manuf);               // add Manuf Id if not null
+  buf.add16(3 + zcl.len + (zcl.manuf ? 2 : 0));
+  buf.add8((zcl.needResponse ? 0x00 : 0x10) | (zcl.clusterSpecific ? 0x01 : 0x00) | (zcl.manuf ? 0x04 : 0x00));                 // Frame Control Field
+  if (zcl.manuf) {
+    buf.add16(zcl.manuf);               // add Manuf Id if not null
   }
-  buf.add8(transacId);              // Transaction Sequance Number
-  buf.add8(cmdId);
-  if (len > 0) {
-    buf.addBuffer(msg, len);        // add the payload
+  buf.add8(zcl.transacId);              // Transaction Sequence Number
+  buf.add8(zcl.cmd);
+  if (zcl.len > 0) {
+    buf.addBuffer(zcl.msg, zcl.len);        // add the payload
   }
 
   ZigbeeZNPSend(buf.getBuffer(), buf.len());
 #endif // USE_ZIGBEE_ZNP
+
+#ifdef USE_ZIGBEE_EZSP
+  SBuffer buf(32+zcl.len);
+
+  if (BAD_SHORTADDR != zcl.shortaddr) {
+    // send unicast message to an address
+    buf.add16(EZSP_sendUnicast);          // 3400
+    buf.add8(EMBER_OUTGOING_DIRECT);    // 00
+    buf.add16(zcl.shortaddr);               // dest addr
+    // ApsFrame
+    buf.add16(Z_PROF_HA);               // Home Automation profile
+    buf.add16(zcl.cluster);               // cluster
+    buf.add8(0x01);                     // srcEp
+    buf.add8(zcl.endpoint);                 // dstEp
+    if (zcl.direct) {
+      buf.add16(0x0000);      // APS frame
+    } else {
+      buf.add16(EMBER_APS_OPTION_ENABLE_ROUTE_DISCOVERY | EMBER_APS_OPTION_RETRY);      // APS frame
+    }
+    buf.add16(zcl.groupaddr);               // groupId
+    buf.add8(zcl.transacId);
+    // end of ApsFrame
+    buf.add8(0x01);                     // tag TODO
+
+    buf.add8(3 + zcl.len + (zcl.manuf ? 2 : 0));
+    buf.add8((zcl.needResponse ? 0x00 : 0x10) | (zcl.clusterSpecific ? 0x01 : 0x00) | (zcl.manuf ? 0x04 : 0x00));                 // Frame Control Field
+    if (zcl.manuf) {
+      buf.add16(zcl.manuf);               // add Manuf Id if not null
+    }
+    buf.add8(zcl.transacId);              // Transaction Sequance Number
+    buf.add8(zcl.cmd);
+    if (zcl.len > 0) {
+      buf.addBuffer(zcl.msg, zcl.len);        // add the payload
+    }
+  } else {
+    // send broadcast group address, aka groupcast
+    buf.add16(EZSP_sendMulticast);      // 3800
+    // ApsFrame
+    buf.add16(Z_PROF_HA);               // Home Automation profile
+    buf.add16(zcl.cluster);               // cluster
+    buf.add8(0x01);                     // srcEp
+    buf.add8(zcl.endpoint);                 // broadcast endpoint for groupcast
+    if (zcl.direct) {
+      buf.add16(0x0000);      // APS frame
+    } else {
+      buf.add16(EMBER_APS_OPTION_ENABLE_ROUTE_DISCOVERY | EMBER_APS_OPTION_RETRY);      // APS frame
+    }
+    buf.add16(zcl.groupaddr);               // groupId
+    buf.add8(zcl.transacId);
+    // end of ApsFrame
+    buf.add8(0);                        // hops, 0x00 = EMBER_MAX_HOPS
+    buf.add8(7);                        // nonMemberRadius, 7 = infinite
+    buf.add8(0x01);                     // tag TODO
+
+    buf.add8(3 + zcl.len + (zcl.manuf ? 2 : 0));
+    buf.add8((zcl.needResponse ? 0x00 : 0x10) | (zcl.clusterSpecific ? 0x01 : 0x00) | (zcl.manuf ? 0x04 : 0x00));                 // Frame Control Field
+    if (zcl.manuf) {
+      buf.add16(zcl.manuf);               // add Manuf Id if not null
+    }
+    buf.add8(zcl.transacId);              // Transaction Sequance Number
+    buf.add8(zcl.cmd);
+    if (zcl.len > 0) {
+      buf.addBuffer(zcl.msg, zcl.len);        // add the payload
+    }
+  }
+
+  ZigbeeEZSPSendCmd(buf.buf(), buf.len());
+#endif // USE_ZIGBEE_EZSP
+}
+
+//
+// Send any buffered data to the NCP
+//
+// Used only with EZSP, as there is no replay of procotol control with ZNP
+void ZigbeeOutputLoop(void) {
+#ifdef USE_ZIGBEE_EZSP
+  // while (EZSP_Serial.to_send != EZSP_Serial.to_end) {
+  if (EZSP_Serial.to_send != EZSP_Serial.to_end) {   // we send only one packet per tick to lower the chance of NAK
+    AddLog_P2(LOG_LEVEL_DEBUG_MORE, PSTR("ZIG: Something to_send, to_ack:%d, to_send:%d, to_end:%d"),
+                                  EZSP_Serial.to_ack, EZSP_Serial.to_send, EZSP_Serial.to_end);
+    // we have a frame waiting to be sent
+    ZigbeeEZSPSendDATA_frm(true, EZSP_Serial.to_send, EZSP_Serial.from_ack);
+    // increment sent counter
+    EZSP_Serial.to_send = (EZSP_Serial.to_send + 1) & 0x07;
+  }
+#endif // USE_ZIGBEE_EZSP
 }
 
 #endif // USE_ZIGBEE

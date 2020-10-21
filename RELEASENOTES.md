@@ -17,13 +17,17 @@ See [migration path](https://tasmota.github.io/docs/Upgrading#migration-path) fo
 6. Migrate to **Tasmota 8.1**
 7. Migrate to **Tasmota 8.x**
 
-While fallback or downgrading is common practice it was never supported due to Settings additions or changes in newer releases. Starting with release **v8.1.0 Doris** the Settings are re-allocated in such a way that fallback is only allowed and possible to release **v7.2.0 Constance**. Once at v7.2.0 you're on your own when downgrading even further.
+--- Major change in internal GPIO function representation ---
+
+8. Migrate to **Tasmota 9.x**
+
+While fallback or downgrading is common practice it was never supported due to Settings additions or changes in newer releases. Starting with release **v9.1.0 Imogen** the internal GPIO function representation has changed in such a way that fallback is only possible to the latest GPIO configuration before installing **v9.1.0**.
 
 ## Supported Core versions
 
-This release will be supported from ESP8266/Arduino library Core version **2.7.1** due to reported security and stability issues on previous Core version. This will also support gzipped binaries.
+This release will be supported from ESP8266/Arduino library Core version **2.7.4.3** due to reported security and stability issues on previous Core version. This will also support gzipped binaries.
 
-Although it might still compile on previous Core versions all support will be removed in the near future.
+Support of Core versions before 2.7.1 has been removed.
 
 ## Support of TLS
 
@@ -35,7 +39,7 @@ For initial configuration this release supports Webserver based **WifiManager** 
 
 ## Provided Binary Downloads
 
-The following binary downloads have been compiled with ESP8266/Arduino library core version **2.7.1**.
+The following binary downloads have been compiled with ESP8266/Arduino library core version **2.7.4.3**.
 
 - **tasmota.bin** = The Tasmota version with most drivers. **RECOMMENDED RELEASE BINARY**
 - **tasmota-BG.bin** to **tasmota-TW.bin** = The Tasmota version in different languages.
@@ -44,50 +48,60 @@ The following binary downloads have been compiled with ESP8266/Arduino library c
 - **tasmota-sensors.bin** = The Sensors version adds more useful sensors.
 - **tasmota-ir** = The InfraRed Receiver and transmitter version allowing all available protocols provided by library IRremoteESP8266 but without most other features.
 - **tasmota-display.bin** = The Display version without Energy Monitoring but adds display support.
+- **tasmota-zbbridge.bin** = The dedicated Sonoff Zigbee Bridge version.
 - **tasmota-minimal.bin** = The Minimal version allows intermediate OTA uploads to support larger versions and does NOT change any persistent parameter. This version **should NOT be used for initial installation**.
+
+The attached binaries can also be downloaded from http://ota.tasmota.com/tasmota/release for ESP8266 or http://ota.tasmota.com/tasmota32/release for ESP32. The links can be used for OTA upgrades too like ``OtaUrl http://ota.tasmota.com/tasmota/release/tasmota.bin``
 
 [List](MODULES.md) of embedded modules.
 
 [Complete list](BUILDS.md) of available feature and sensors.
 
-## Changelog
+## Changelog v9.0.0.2
+### Added
+- Command ``NoDelay`` for immediate backlog command execution by Erik Montnemery (#9544)
+- Command ``SwitchMode 15`` sending only MQTT message on switch change (#9596)
+- Zigbee command ``ZbData`` for better support of device specific data
+- Optional support for Mitsubishi Electric HVAC by David Gwynne (#9237)
+- Optional support for Orno WE517-Modbus energy meter by Maxime Vincent (#9353)
+- SDM630 three phase ImportActive Energy display when ``#define SDM630_IMPORT`` is enabled by Janusz Kostorz (#9124)
+- Optional support for inverted NeoPixelBus data line by enabling ``#define USE_WS2812_INVERTED`` (#8988)
+- Support for PWM dimmer color/trigger on tap, SO88 led, DGR WITH_LOCAL flag, multi-press and ledmask by Paul Diem (#9474, #9584)
+- Support for stateful ACs using ``StateMode`` in tasmota-ir.bin by Arik Yavilevich (#9472)
+- Support for analog buttons indexed within standard button range
+- Support for Vietnamese language translations by Tâm.NT
+- Support for timers in case of no-sunset permanent day by cybermaus (#9543)
+- Support for EZO Ph, ORP and RTD sensors by Christopher Tremblay (#9567, #9585)
 
-### Version 8.3.1.6
+### Breaking Changed
+- Redesigned ESP8266 GPIO internal representation in line with ESP32 changing ``Template`` layout too
+- ``#define MQTT_FINGERPRINT`` from string to hexnumbers (#9570)
+- Command ``Status`` output for disabled status types now returns {"Command":"Error"}
+- MAX31865 driver to support up to 6 thermocouples selected by ``MX31865 CS`` instead of ``SSPI CS`` (#9103)
 
-- Change IRremoteESP8266 library updated to v2.7.7
-- Change Adafruit_SGP30 library from v1.0.3 to v1.2.0 (#8519)
-- Change Energy JSON Total field from ``"Total":[33.736,11.717,16.978]`` to ``"Total":33.736,"TotalTariff":[11.717,16.978]``
-- Change Energy JSON ExportActive field from ``"ExportActive":[33.736,11.717,16.978]`` to ``"ExportActive":33.736,"ExportTariff":[11.717,16.978]``
-- Change ESP32 USER GPIO template representation decreasing template message size
-- Change define USE_TASMOTA_SLAVE into USE_TASMOTA_CLIENT
-- Change commands ``SlaveSend`` and ``SlaveReset`` into ``ClientSend`` and ``ClientReset``
-- Fix escape of non-JSON received serial data (#8329)
-- Fix exception or watchdog on rule re-entry (#8757)
-- Add command ``Rule0`` to change global rule parameters
-- Add command ``Time 4`` to display timestamp using milliseconds (#8537)
-- Add command ``SetOption94 0/1`` to select MAX31855 or MAX6675 thermocouple support (#8616)
-- Add command ``Module2`` to configure fallback module on fast reboot (#8464)
-- Add commands ``LedPwmOn 0..255``, ``LedPwmOff 0..255`` and ``LedPwmMode1 0/1`` to control led brightness by George (#8491)
-- Add ESP32 ethernet commands ``EthType 0/1``, ``EthAddress 0..31`` and ``EthClockMode 0..3``
-- Add support for unique MQTTClient (and inherited fallback topic) by full Mac address using ``mqttclient DVES_%12X`` (#8300)
-- Add more functionality to ``Switchmode`` 11 and 12 (#8450)
-- Add wildcard pattern ``?`` for JSON matching in rules
-- Add support for VEML6075 UVA/UVB/UVINDEX Sensor by device111 (#8432)
-- Add support for VEML7700 Ambient light intensity Sensor by device111 (#8432)
-- Add Three Phase Export Active Energy to SDM630 driver
-- Add Zigbee options to ``ZbSend`` to write and report attributes
-- Add Zigbee auto-responder for common attributes
-- Add ``CpuFrequency`` to ``status 2``
-- Add ``FlashFrequency`` to ``status 4``
-- Add support for up to two BH1750 sensors controlled by commands ``BH1750Resolution`` and ``BH1750MTime`` (#8139)
-- Add support for up to eight MCP9808 temperature sensors by device111 (#8594)
-- Add support for BL0940 energy monitor as used in Blitzwolf BW-SHP10 (#8175)
-- Add initial support for Telegram bot (#8619)
-- Add support for HP303B Temperature and Pressure sensor by Robert Jaakke (#8638)
-- Add rule trigger ``System#Init`` to allow early rule execution without wifi and mqtt initialized yet
-- Add support for Energy sensor (Denky) for French Smart Metering meter provided by global Energy Providers, need a adaptater. See dedicated full [blog](http://hallard.me/category/tinfo/) about French teleinformation stuff
-- Add Library to be used for decoding Teleinfo (French Metering Smart Meter)
-- Add basic support for ESP32 ethernet adding commands ``Wifi 0/1`` and ``Ethernet 0/1`` both default ON
-- Add support for single wire LMT01 temperature Sensor by justifiably (#8713)
-- Add compile time interlock parameters (#8759)
-- Add compile time user template (#8766)
+### Changed
+- Command ``Gpio17`` replaces command ``Adc``
+- Command ``Gpios`` replaces command ``Adcs``
+- New IR Raw compact format (#9444)
+- A4988 optional microstep pin selection
+- Pulsetime to allow use for all relays with 8 interleaved so ``Pulsetime1`` is valid for Relay1, Relay9, Relay17 etc. (#9279)
+- IRremoteESP8266 library from v2.7.10 to v2.7.11
+- NeoPixelBus library from v2.5.0.09 to v2.6.0
+- Management of serial baudrate (#9554)
+- Rotary driver adjusted accordingly if Mi Desk Lamp module is selected (#9399)
+
+### Fixed
+- Ledlink blink when no network connected regression from v8.3.1.4 (#9292)
+- Exception 28 due to device group buffer overflow (#9459)
+- Shutter timing problem due to buffer overflow in calibration matrix (#9458)
+- Light wakeup exception 0 (divide by zero) when ``WakeupDuration`` is not initialised (#9466)
+- Thermostat sensor status corruption regression from v8.5.0.1 (#9449)
+- Telegram message decoding error regression from v8.5.0.1
+- Rule handling of Var or Mem using text regression from v8.5.0.1 (#9540)
+- Correct Energy period display shortly after midnight by gominoa (#9536)
+- TuyaMcu energy display regression from v8.5.0.1 (#9547)
+
+### Removed
+- Support for direct upgrade from Tasmota versions before v7.0
+- Auto config update for all Friendlynames and Switchtopic from Tasmota versions before v8.0
+- Support for downgrade to versions before 9.0 keeping current GPIO configuration

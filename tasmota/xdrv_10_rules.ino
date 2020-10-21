@@ -165,8 +165,8 @@ struct RULES {
   long old_dimm = -1;
 
   uint16_t last_minute = 60;
-  uint16_t vars_event = 0;
-  uint8_t mems_event = 0;
+  uint16_t vars_event = 0;   // Bitmask supporting MAX_RULE_VARS bits
+  uint16_t mems_event = 0;   // Bitmask supporting MAX_RULE_MEMS bits
   bool teleperiod = false;
   bool busy = false;
 
@@ -294,6 +294,7 @@ String GetRule(uint32_t idx) {
     return rule;
 #endif
   }
+  return "";  // Fix GCC10 warning
 }
 
 #ifdef USE_UNISHOX_COMPRESSION
@@ -496,30 +497,41 @@ bool RulesRuleMatch(uint8_t rule_set, String &event, String &rule)
     rule_name = rule_name.substring(0, pos);           // "SUBTYPE1#CURRENT"
   }
 
-  StaticJsonBuffer<1024> jsonBuf;
-  JsonObject &root = jsonBuf.parseObject(event);
-  if (!root.success()) { return false; }               // No valid JSON data
-  JsonObject *obj = &root;
+  String buf = event;   // copy the string into a new buffer that will be modified
+
+//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: RulesRuleMatch |%s|"), buf.c_str());
+
+  JsonParser parser((char*)buf.c_str());
+  JsonParserObject obj = parser.getRootObject();
+  if (!obj) {
+//    AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Event too long (%d)"), event.length());
+    AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: No valid JSON (%s)"), buf.c_str());
+    return false; // No valid JSON data
+  }
   String subtype;
   uint32_t i = 0;
   while ((pos = rule_name.indexOf("#")) > 0) {         // "SUBTYPE1#SUBTYPE2#CURRENT"
     subtype = rule_name.substring(0, pos);
-    const JsonVariant & val = GetCaseInsensitive(*obj, subtype.c_str());
-    if (nullptr == &val) { return false; }            // not found
-    obj = &(val.as<JsonObject>());
-    if (!obj->success()) { return false; }            // not a JsonObject
+    obj = obj[subtype.c_str()].getObject();
+    if (!obj) { return false; }             // not found
 
     rule_name = rule_name.substring(pos +1);
     if (i++ > 10) { return false; }                    // Abandon possible loop
+
+    yield();
   }
 
-  const JsonVariant & val = GetCaseInsensitive(*obj, rule_name.c_str());
-  if (nullptr == &val) { return false; }              // last level not found
+  JsonParserToken val = obj[rule_name.c_str()];
+  if (!val) { return false; }               // last level not found
   const char* str_value;
   if (rule_name_idx) {
-    str_value = (*obj)[rule_name][rule_name_idx -1];   // "CURRENT[1]"
+    if (val.isArray()) {
+      str_value = (val.getArray())[rule_name_idx -1].getStr();
+    } else {
+      str_value = val.getStr();
+    }
   } else {
-    str_value = (*obj)[rule_name];                     // "CURRENT"
+    str_value = val.getStr();                     // "CURRENT"
   }
 
 //AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Name %s, Value |%s|, TrigCnt %d, TrigSt %d, Source %s, Json %s"),
@@ -712,6 +724,11 @@ bool RuleSetProcess(uint8_t rule_set, String &event_saved)
       RulesVarReplace(commands, F("%UPTIME%"), String(MinutesUptime()));
       RulesVarReplace(commands, F("%TIMESTAMP%"), GetDateAndTime(DT_LOCAL));
       RulesVarReplace(commands, F("%TOPIC%"), mqtt_topic);
+      snprintf_P(stemp, sizeof(stemp), PSTR("%06X"), ESP_getChipId());
+      RulesVarReplace(commands, F("%DEVICEID%"), stemp);
+      String mac_address = WiFi.macAddress();
+      mac_address.replace(":", "");
+      RulesVarReplace(commands, F("%MACADDR%"), mac_address);
 #if defined(USE_TIMERS) && defined(USE_SUNRISE)
       RulesVarReplace(commands, F("%SUNRISE%"), String(SunMinutes(0)));
       RulesVarReplace(commands, F("%SUNSET%"), String(SunMinutes(1)));
@@ -749,37 +766,39 @@ bool RuleSetProcess(uint8_t rule_set, String &event_saved)
 
 bool RulesProcessEvent(char *json_event)
 {
+  if (Rules.busy) { return false; }
+
+  Rules.busy = true;
   bool serviced = false;
 
-  if (!Rules.busy) {
-    Rules.busy = true;
-
 #ifdef USE_DEBUG_DRIVER
-    ShowFreeMem(PSTR("RulesProcessEvent"));
+  ShowFreeMem(PSTR("RulesProcessEvent"));
 #endif
 
-    String event_saved = json_event;
-    // json_event = {"INA219":{"Voltage":4.494,"Current":0.020,"Power":0.089}}
-    // json_event = {"System":{"Boot":1}}
-    // json_event = {"SerialReceived":"on"} - invalid but will be expanded to {"SerialReceived":{"Data":"on"}}
-    char *p = strchr(json_event, ':');
-    if ((p != NULL) && !(strchr(++p, ':'))) {  // Find second colon
-      event_saved.replace(F(":"), F(":{\"Data\":"));
-      event_saved += F("}");
-      // event_saved = {"SerialReceived":{"Data":"on"}}
-    }
-    event_saved.toUpperCase();
+//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: ProcessEvent |%s|"), json_event);
 
-//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Event %s"), event_saved.c_str());
-
-    for (uint32_t i = 0; i < MAX_RULE_SETS; i++) {
-      if (GetRuleLen(i) && bitRead(Settings.rule_enabled, i)) {
-        if (RuleSetProcess(i, event_saved)) { serviced = true; }
-      }
-    }
-
-    Rules.busy = false;
+  String event_saved = json_event;
+  // json_event = {"INA219":{"Voltage":4.494,"Current":0.020,"Power":0.089}}
+  // json_event = {"System":{"Boot":1}}
+  // json_event = {"SerialReceived":"on"} - invalid but will be expanded to {"SerialReceived":{"Data":"on"}}
+  char *p = strchr(json_event, ':');
+  if ((p != NULL) && !(strchr(++p, ':'))) {  // Find second colon
+    event_saved.replace(F(":"), F(":{\"Data\":"));
+    event_saved += F("}");
+    // event_saved = {"SerialReceived":{"Data":"on"}}
   }
+  event_saved.toUpperCase();
+
+//AddLog_P2(LOG_LEVEL_DEBUG, PSTR("RUL: Event |%s|"), event_saved.c_str());
+
+  for (uint32_t i = 0; i < MAX_RULE_SETS; i++) {
+    if (GetRuleLen(i) && bitRead(Settings.rule_enabled, i)) {
+      if (RuleSetProcess(i, event_saved)) { serviced = true; }
+    }
+  }
+
+  Rules.busy = false;
+
   return serviced;
 }
 
@@ -790,6 +809,11 @@ bool RulesProcess(void)
 
 void RulesInit(void)
 {
+  // indicates scripter not enabled
+  bitWrite(Settings.rule_once, 7, 0);
+  // and indicates scripter do not use compress
+  bitWrite(Settings.rule_once, 6, 0);
+
   rules_flag.data = 0;
   for (uint32_t i = 0; i < MAX_RULE_SETS; i++) {
     if (0 == GetRuleLen(i)) {
@@ -869,7 +893,7 @@ void RulesEvery50ms(void)
         for (uint32_t i = 0; i < MAX_RULE_VARS; i++) {
           if (bitRead(Rules.vars_event, i)) {
             bitClear(Rules.vars_event, i);
-            snprintf_P(json_event, sizeof(json_event), PSTR("{\"Var%d\":{\"State\":%s}}"), i+1, rules_vars[i]);
+            snprintf_P(json_event, sizeof(json_event), PSTR("{\"Var%d\":{\"State\":\"%s\"}}"), i+1, rules_vars[i]);
             RulesProcessEvent(json_event);
             break;
           }
@@ -879,7 +903,7 @@ void RulesEvery50ms(void)
         for (uint32_t i = 0; i < MAX_RULE_MEMS; i++) {
           if (bitRead(Rules.mems_event, i)) {
             bitClear(Rules.mems_event, i);
-            snprintf_P(json_event, sizeof(json_event), PSTR("{\"Mem%d\":{\"State\":%s}}"), i+1, SettingsText(SET_MEM1 +i));
+            snprintf_P(json_event, sizeof(json_event), PSTR("{\"Mem%d\":{\"State\":\"%s\"}}"), i+1, SettingsText(SET_MEM1 +i));
             RulesProcessEvent(json_event);
             break;
           }
@@ -1015,20 +1039,27 @@ bool RulesMqttData(void)
       if (event_item.Key.length() == 0) {   //If did not specify Key
         value = sData;
       } else {      //If specified Key, need to parse Key/Value from JSON data
-        StaticJsonBuffer<500> jsonBuf;
-        JsonObject& jsonData = jsonBuf.parseObject(sData);
+        JsonParser parser((char*)sData.c_str());
+        JsonParserObject jsonData = parser.getRootObject();
+
         String key1 = event_item.Key;
         String key2;
-        if (!jsonData.success()) break;       //Failed to parse JSON data, ignore this message.
+        if (!jsonData) break;       //Failed to parse JSON data, ignore this message.
         int dot;
         if ((dot = key1.indexOf('.')) > 0) {
           key2 = key1.substring(dot+1);
           key1 = key1.substring(0, dot);
-          if (!jsonData[key1][key2].success()) break;   //Failed to get the key/value, ignore this message.
-          value = (const char *)jsonData[key1][key2];
+          JsonParserToken value_tok = jsonData[key1.c_str()].getObject()[key2.c_str()];
+          if (!value_tok) break;   //Failed to get the key/value, ignore this message.
+          value = value_tok.getStr();
+          // if (!jsonData[key1][key2].success()) break;   //Failed to get the key/value, ignore this message.
+          // value = (const char *)jsonData[key1][key2];
         } else {
-          if (!jsonData[key1].success()) break;
-          value = (const char *)jsonData[key1];
+          JsonParserToken value_tok = jsonData[key1.c_str()];
+          if (!value_tok) break;   //Failed to get the key/value, ignore this message.
+          value = value_tok.getStr();
+          // if (!jsonData[key1].success()) break;
+          // value = (const char *)jsonData[key1];
         }
       }
       value.trim();

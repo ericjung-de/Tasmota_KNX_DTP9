@@ -42,6 +42,8 @@ void DomoticzTempHumPressureSensor(float temp, float hum, float baro = -1);
 char* ToHex_P(const unsigned char * in, size_t insz, char * out, size_t outsz, char inbetween = '\0');
 extern "C" void custom_crash_callback(struct rst_info * rst_info, uint32_t stack, uint32_t stack_end);
 extern "C" void resetPins();
+extern "C" int startWaveformClockCycles(uint8_t pin, uint32_t highCcys, uint32_t lowCcys,
+  uint32_t runTimeCcys, int8_t alignPhase, uint32_t phaseOffsetCcys, bool autoPwm);
 
 #ifdef ESP32
 
@@ -110,24 +112,24 @@ String EthernetMacAddress(void);
 
 #ifndef MQTT_FINGERPRINT1
 // Set an all-zeros default fingerprint to activate auto-learning on first connection (AWS IoT)
-#define MQTT_FINGERPRINT1           "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+#define MQTT_FINGERPRINT1      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00  // [MqttFingerprint1] (auto-learn)
 #endif
-#ifndef MQTT_FINGERPRINT2
-#define MQTT_FINGERPRINT2           "A5 02 FF 13 99 9F 8B 39 8E F1 83 4F 11 23 65 0B 32 36 FC 07"
+#ifndef MQTT_FINGERPRINT2           // SHA1('')
+#define MQTT_FINGERPRINT2      0xDA,0x39,0xA3,0xEE,0x5E,0x6B,0x4B,0x0D,0x32,0x55,0xBF,0xEF,0x95,0x60,0x18,0x90,0xAF,0xD8,0x07,0x09  // [MqttFingerprint2] (invalid)
 #endif
 
 #ifndef WS2812_LEDS
 #define WS2812_LEDS                 30         // [Pixels] Number of LEDs
 #endif
 
-#ifdef USE_MQTT_TLS
-  const uint16_t WEB_LOG_SIZE = 2000;          // Max number of characters in weblog
-#else
+//#ifdef USE_MQTT_TLS                            // Set to 4000 on 20200922 per #9305
+//  const uint16_t WEB_LOG_SIZE = 2000;          // Max number of characters in weblog
+//#else
   const uint16_t WEB_LOG_SIZE = 4000;          // Max number of characters in weblog
-#endif
+//#endif
 
-#if defined(USE_TLS) && defined(ARDUINO_ESP8266_RELEASE_2_3_0)
-  #error "TLS is no more supported on Core 2.3.0, use 2.4.2 or higher."
+#if defined(ARDUINO_ESP8266_RELEASE_2_3_0) || defined(ARDUINO_ESP8266_RELEASE_2_4_0) || defined(ARDUINO_ESP8266_RELEASE_2_4_1) || defined(ARDUINO_ESP8266_RELEASE_2_4_2) || defined(ARDUINO_ESP8266_RELEASE_2_5_0) || defined(ARDUINO_ESP8266_RELEASE_2_5_1) || defined(ARDUINO_ESP8266_RELEASE_2_5_2)
+  #error "Arduino ESP8266 Core versions before 2.7.1 are not supported"
 #endif
 
 #ifndef MQTT_MAX_PACKET_SIZE
@@ -141,6 +143,12 @@ String EthernetMacAddress(void);
 #endif
 #ifndef MQTT_CLEAN_SESSION
 #define MQTT_CLEAN_SESSION          1          // 0 = No clean session, 1 = Clean session (default)
+#endif
+#ifndef MQTT_LWT_OFFLINE
+#define MQTT_LWT_OFFLINE            "Offline"  // MQTT LWT offline topic message
+#endif
+#ifndef MQTT_LWT_ONLINE
+#define MQTT_LWT_ONLINE             "Online"   // MQTT LWT online topic message
 #endif
 
 #ifndef MESSZ
@@ -325,6 +333,12 @@ const char kWebColors[] PROGMEM =
 #define ARDUINO_CORE_RELEASE        ARDUINO_ESP8266_RELEASE
 #endif  // ARDUINO_ESP8266_RELEASE
 
+#ifndef USE_ADC_VCC
+#define USE_ADC
+#else
+#undef USE_ADC
+#endif
+
 #endif  // ESP8266
 
 #ifdef ESP32
@@ -370,18 +384,14 @@ const char kWebColors[] PROGMEM =
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 
-#ifdef ESP8266
-#define AGPIO(x) (x)
-#define BGPIO(x) (x)
-#else  // ESP32
 #define AGPIO(x) (x<<5)
 #define BGPIO(x) (x>>5)
-#endif  // ESP8266 - ESP32
 
 #ifdef USE_DEVICE_GROUPS
 #define SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ...) _SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, __VA_ARGS__, 0)
 #define SendLocalDeviceGroupMessage(REQUEST_TYPE, ...) _SendDeviceGroupMessage(0, REQUEST_TYPE, __VA_ARGS__, 0)
-uint8_t device_group_count = 1;
+uint8_t device_group_count = 0;
+bool first_device_group_is_local = true;
 #endif  // USE_DEVICE_GROUPS
 
 #ifdef DEBUG_TASMOTA_CORE

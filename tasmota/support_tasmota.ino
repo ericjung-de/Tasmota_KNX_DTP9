@@ -207,6 +207,7 @@ void SetDevicePower(power_t rpower, uint32_t source)
 
   XdrvMailbox.index = rpower;
   XdrvCall(FUNC_SET_POWER);               // Signal power state
+  XsnsCall(FUNC_SET_POWER);               // Signal power state
 
   XdrvMailbox.index = rpower;
   XdrvMailbox.payload = source;
@@ -332,8 +333,8 @@ void SetPowerOnState(void)
         bitWrite(power, i, digitalRead(Pin(GPIO_REL1, i)) ^ bitRead(rel_inverted, i));
       }
     }
-    if ((i < MAX_PULSETIMERS) && (bitRead(power, i) || (POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate))) {
-      SetPulseTimer(i, Settings.pulse_timer[i]);
+    if (bitRead(power, i) || (POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate)) {
+      SetPulseTimer(i % MAX_PULSETIMERS, Settings.pulse_timer[i % MAX_PULSETIMERS]);
     }
   }
   blink_powersave = power;
@@ -487,10 +488,17 @@ bool SendKey(uint32_t key, uint32_t device, uint32_t state)
     Response_P(PSTR("{\"%s%d\":{\"State\":%d}}"), (key) ? "Switch" : "Button", device, state);
     result = XdrvRulesProcess();
   }
+#ifdef USE_PWM_DIMMER
+  if (PWM_DIMMER == my_module_type && !result) {
+#endif  // USE_PWM_DIMMER
   int32_t payload_save = XdrvMailbox.payload;
   XdrvMailbox.payload = device_save << 24 | key << 16 | state << 8 | device;
   XdrvCall(FUNC_ANY_KEY);
   XdrvMailbox.payload = payload_save;
+#ifdef USE_PWM_DIMMER
+    result = true;
+  }
+#endif  // USE_PWM_DIMMER
   return result;
 }
 
@@ -530,9 +538,8 @@ void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source)
   }
   active_device = device;
 
-  if (device <= MAX_PULSETIMERS) {
-    SetPulseTimer(device -1, 0);
-  }
+  SetPulseTimer((device -1) % MAX_PULSETIMERS, 0);
+
   power_t mask = 1 << (device -1);        // Device to control
   if (state <= POWER_TOGGLE) {
     if ((blink_mask & mask)) {
@@ -572,7 +579,7 @@ void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source)
     }
 #ifdef USE_DEVICE_GROUPS
     if (SRC_REMOTE != source && SRC_RETRY != source) {
-      if (Settings.flag4.remote_device_mode)  // SetOption88 - Enable relays in separate device groups
+      if (Settings.flag4.multiple_device_groups)  // SetOption88 - Enable relays in separate device groups
         SendDeviceGroupMessage(device - 1, DGR_MSGTYP_UPDATE, DGR_ITEM_POWER, (power >> (device - 1)) & 1 | 0x01000000);  // Explicitly set number of relays to one
       else
         SendLocalDeviceGroupMessage(DGR_MSGTYP_UPDATE, DGR_ITEM_POWER, power);
@@ -588,9 +595,9 @@ void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source)
     if (publish_power && Settings.flag3.hass_tele_on_power) {  // SetOption59 - Send tele/%topic%/STATE in addition to stat/%topic%/RESULT
       MqttPublishTeleState();
     }
-    if (device <= MAX_PULSETIMERS) {  // Restart PulseTime if powered On
-      SetPulseTimer(device -1, (((POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate) ? ~power : power) & mask) ? Settings.pulse_timer[device -1] : 0);
-    }
+
+    // Restart PulseTime if powered On
+    SetPulseTimer((device -1) % MAX_PULSETIMERS, (((POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate) ? ~power : power) & mask) ? Settings.pulse_timer[(device -1) % MAX_PULSETIMERS] : 0);
   }
   else if (POWER_BLINK == state) {
     if (!(blink_mask & mask)) {
@@ -651,10 +658,12 @@ void MqttShowState(void)
   ResponseAppendTime();
   ResponseAppend_P(PSTR(",\"" D_JSON_UPTIME "\":\"%s\",\"UptimeSec\":%u"), GetUptime().c_str(), UpTime());
 
+#ifdef ESP8266
 #ifdef USE_ADC_VCC
   dtostrfd((double)ESP.getVcc()/1000, 3, stemp1);
   ResponseAppend_P(PSTR(",\"" D_JSON_VCC "\":%s"), stemp1);
-#endif
+#endif  // USE_ADC_VCC
+#endif  // ESP8266
 
   ResponseAppend_P(PSTR(",\"" D_JSON_HEAPSIZE "\":%d,\"SleepMode\":\"%s\",\"Sleep\":%u,\"LoadAvg\":%u,\"MqttCount\":%u"),
     ESP_getFreeHeap()/1024, GetTextIndexed(stemp1, sizeof(stemp1), Settings.flag3.sleep_normal, kSleepMode),  // SetOption60 - Enable normal sleep instead of dynamic sleep
@@ -663,7 +672,7 @@ void MqttShowState(void)
   for (uint32_t i = 1; i <= devices_present; i++) {
 #ifdef USE_LIGHT
     if ((LightDevice()) && (i >= LightDevice())) {
-      if (i == LightDevice())  { LightState(1); }    // call it only once
+      if (i == LightDevice())  { ResponseLightState(1); }    // call it only once
     } else {
 #endif
       ResponseAppend_P(PSTR(",\"%s\":\"%s\""), GetPowerDevice(stemp1, i, sizeof(stemp1), Settings.flag.device_index_enable),  // SetOption26 - Switch between POWER or POWER1
@@ -852,11 +861,8 @@ void PerformEverySecond(void)
     }
   }
 
-#ifndef ARDUINO_ESP8266_RELEASE_2_3_0
   // Wifi keep alive to send Gratuitous ARP
   wifiKeepAlive();
-#endif  // ARDUINO_ESP8266_RELEASE_2_3_0
-
 
 #ifdef ESP32
   if (11 == uptime) {      // Perform one-time ESP32 houskeeping
@@ -887,7 +893,9 @@ void Every100mSeconds(void)
     if (pulse_timer[i] != 0L) {           // Timer active?
       if (TimeReached(pulse_timer[i])) {  // Timer finished?
         pulse_timer[i] = 0L;              // Turn off this timer
-        ExecuteCommandPower(i +1, (POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate) ? POWER_ON : POWER_OFF, SRC_PULSETIMER);
+        for (uint32_t j = 0; j < devices_present; j = j +MAX_PULSETIMERS) {
+          ExecuteCommandPower(i + j +1, (POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate) ? POWER_ON : POWER_OFF, SRC_PULSETIMER);
+        }
       }
     }
   }
@@ -920,10 +928,10 @@ void Every250mSeconds(void)
   state_250mS++;
   state_250mS &= 0x3;
 
-  global_state.network_down = (global_state.wifi_down && global_state.eth_down);
+  global_state.network_down = (global_state.wifi_down && global_state.eth_down) ? 1 : 0;
 
-  if (!Settings.flag.global_state && !global_state.network_down) {  // SetOption31 - Control link led blinking
-    if (global_state.data &0x03) {                        // Any problem
+  if (!Settings.flag.global_state) {                      // SetOption31 - Control link led blinking
+    if (global_state.data &0x03) {                        // Network or MQTT problem
       if (global_state.mqtt_down) { blinkinterval = 7; }  // MQTT problem so blink every 2 seconds (slowest)
       if (global_state.network_down) { blinkinterval = 3; }  // Network problem so blink every second (slow)
       blinks = 201;                                       // Allow only a single blink in case the problem is solved
@@ -972,6 +980,9 @@ void Every250mSeconds(void)
         SettingsSave(1);  // Free flash for OTA update
       }
       if (ota_state_flag <= 0) {
+#ifdef USE_COUNTER
+        CounterInterruptDisable(true);  // Prevent OTA failures on 100Hz counter interrupts
+#endif  // USE_COUNTER
 #ifdef USE_WEBSERVER
         if (Settings.webserver) StopWebserver();
 #endif  // USE_WEBSERVER
@@ -1003,15 +1014,6 @@ void Every250mSeconds(void)
 
             char *bch = strrchr(mqtt_data, '/');                       // Only consider filename after last backslash prevent change of urls having "-" in it
             if (bch == nullptr) { bch = mqtt_data; }                   // No path found so use filename only
-/*
-            char *ech = strrchr(bch, '.');                             // Find file type in filename (none, .bin or .gz)
-            if ((ech != nullptr) && (0 == strncasecmp_P(ech, PSTR(".GZ"), 3))) {
-              char *fch = ech;
-              *fch = '\0';
-              ech = strrchr(bch, '.');                                 // Find file type .bin.gz
-              *fch = '.';
-            }
-*/
             char *ech = strchr(bch, '.');                              // Find file type in filename (none, .ino.bin, .ino.bin.gz, .bin, .bin.gz or .gz)
             if (ech == nullptr) { ech = mqtt_data + strlen(mqtt_data); }  // Point to '/0' at end of mqtt_data becoming an empty string
 
@@ -1027,13 +1029,8 @@ void Every250mSeconds(void)
           }
 #endif  // FIRMWARE_MINIMAL
           AddLog_P2(LOG_LEVEL_DEBUG, PSTR(D_LOG_UPLOAD "%s"), mqtt_data);
-#if defined(ARDUINO_ESP8266_RELEASE_2_3_0) || defined(ARDUINO_ESP8266_RELEASE_2_4_0) || defined(ARDUINO_ESP8266_RELEASE_2_4_1) || defined(ARDUINO_ESP8266_RELEASE_2_4_2)
-          ota_result = (HTTP_UPDATE_FAILED != ESPhttpUpdate.update(mqtt_data));
-#else
-          // If using core stage or 2.5.0+ the syntax has changed
           WiFiClient OTAclient;
           ota_result = (HTTP_UPDATE_FAILED != ESPhttpUpdate.update(OTAclient, mqtt_data));
-#endif
           if (!ota_result) {
 #ifndef FIRMWARE_MINIMAL
             int ota_error = ESPhttpUpdate.getLastError();
@@ -1063,6 +1060,9 @@ void Every250mSeconds(void)
         ResponseAppend_P(PSTR("\"}"));
 //        restart_flag = 2;          // Restart anyway to keep memory clean webserver
         MqttPublishPrefixTopic_P(STAT, PSTR(D_CMND_UPGRADE));
+#ifdef USE_COUNTER
+        CounterInterruptDisable(false);
+#endif  // USE_COUNTER
       }
     }
     break;
@@ -1075,8 +1075,8 @@ void Every250mSeconds(void)
       if (save_data_counter <= 0) {
         if (Settings.flag.save_state) {                   // SetOption0 - Save power state and use after restart
           power_t mask = POWER_MASK;
-          for (uint32_t i = 0; i < MAX_PULSETIMERS; i++) {
-            if ((Settings.pulse_timer[i] > 0) && (Settings.pulse_timer[i] < 30)) {  // 3 seconds
+          for (uint32_t i = 0; i < devices_present; i++) {
+            if ((Settings.pulse_timer[i % MAX_PULSETIMERS] > 0) && (Settings.pulse_timer[i % MAX_PULSETIMERS] < 30)) {  // 3 seconds
               mask &= ~(1 << i);
             }
           }
@@ -1086,7 +1086,7 @@ void Every250mSeconds(void)
         } else {
           Settings.power = 0;
         }
-        SettingsSave(0);
+        if (!restart_flag) { SettingsSave(0); }
         save_data_counter = Settings.save_data;
       }
     }
@@ -1151,7 +1151,7 @@ void Every250mSeconds(void)
       }
       restart_flag--;
       if (restart_flag <= 0) {
-        AddLog_P(LOG_LEVEL_INFO, PSTR(D_LOG_APPLICATION D_RESTARTING));
+        AddLog_P2(LOG_LEVEL_INFO, PSTR(D_LOG_APPLICATION "%s"), (restart_halt) ? "Halted" : D_RESTARTING);
         EspRestart();
       }
     }
@@ -1440,8 +1440,7 @@ void SerialInput(void)
     }
     ResponseJsonEnd();
 
-    MqttPublishPrefixTopic_P(RESULT_OR_TELE, PSTR(D_JSON_SERIALRECEIVED));
-    XdrvRulesProcess();
+    MqttPublishPrefixTopicRulesProcess_P(RESULT_OR_TELE, PSTR(D_JSON_SERIALRECEIVED));
     serial_in_byte_counter = 0;
   }
 }
@@ -1481,7 +1480,14 @@ void GpioInit(void)
   if (Settings.module != Settings.last_module) {
     Settings.baudrate = APP_BAUDRATE / 300;
     Settings.serial_config = TS_SERIAL_8N1;
+    SetSerialBegin();
   }
+
+//  AddLog_P2(LOG_LEVEL_DEBUG, PSTR("DBG: Used GPIOs %d"), GPIO_SENSOR_END);
+
+#ifdef ESP8266
+  ConvertGpios();
+#endif  // ESP8266
 
   for (uint32_t i = 0; i < ARRAY_SIZE(Settings.user_template.gp.io); i++) {
     if ((Settings.user_template.gp.io[i] >= AGPIO(GPIO_SENSOR_END)) && (Settings.user_template.gp.io[i] < AGPIO(GPIO_USER))) {
@@ -1502,19 +1508,6 @@ void GpioInit(void)
       my_module.io[i] = def_gp.io[i];               // Force Template override
     }
   }
-#ifdef ESP8266
-  if ((Settings.my_adc0 >= ADC0_END) && (Settings.my_adc0 < ADC0_USER)) {
-    Settings.my_adc0 = ADC0_NONE;                   // Fix not supported sensor ids in module
-  }
-  else if (Settings.my_adc0 > ADC0_NONE) {
-    my_adc0 = Settings.my_adc0;                     // Set User selected Module sensors
-  }
-  my_module_flag = ModuleFlag();
-  uint32_t template_adc0 = my_module_flag.data &15;
-  if ((template_adc0 > ADC0_NONE) && (template_adc0 < ADC0_USER)) {
-    my_adc0 = template_adc0;                        // Force Template override
-  }
-#endif
 
   for (uint32_t i = 0; i < ARRAY_SIZE(my_module.io); i++) {
     uint32_t mpin = ValidPin(i, my_module.io[i]);
@@ -1576,11 +1569,11 @@ void GpioInit(void)
 
 //  AddLogBufferSize(LOG_LEVEL_DEBUG, (uint8_t*)gpio_pin, ARRAY_SIZE(gpio_pin), sizeof(gpio_pin[0]));
 
-#ifdef ESP8266
-  if ((2 == Pin(GPIO_TXD)) || (H801 == my_module_type)) { Serial.set_tx(2); }
-
   analogWriteRange(Settings.pwm_range);      // Default is 1023 (Arduino.h)
   analogWriteFreq(Settings.pwm_frequency);   // Default is 1000 (core_esp8266_wiring_pwm.c)
+
+#ifdef ESP8266
+  if ((2 == Pin(GPIO_TXD)) || (H801 == my_module_type)) { Serial.set_tx(2); }
 
 #ifdef USE_SPI
   spi_flg = (((PinUsed(GPIO_SPI_CS) && (Pin(GPIO_SPI_CS) > 14)) || (Pin(GPIO_SPI_CS) < 12)) || ((PinUsed(GPIO_SPI_DC) && (Pin(GPIO_SPI_DC) > 14)) || (Pin(GPIO_SPI_DC) < 12)));
@@ -1593,11 +1586,8 @@ void GpioInit(void)
     SetPin(14, GPIO_SPI_CLK);
     AddLog_P2(LOG_LEVEL_DEBUG, PSTR("SPI: Using GPIO12(MISO), GPIO13(MOSI) and GPIO14(CLK)"));
   }
-  soft_spi_flg = (PinUsed(GPIO_SSPI_CS) && PinUsed(GPIO_SSPI_SCLK) && (PinUsed(GPIO_SSPI_MOSI) || PinUsed(GPIO_SSPI_MISO)));
 #endif  // USE_SPI
 #else // ESP32
-  analogWriteFreqRange(0, Settings.pwm_frequency, Settings.pwm_range);
-
 #ifdef USE_SPI
   if (PinUsed(GPIO_SPI_CS) || PinUsed(GPIO_SPI_DC)) {
     if ((15 == Pin(GPIO_SPI_CS)) && (!GetPin(12) && !GetPin(13) && !GetPin(14))) {  // HSPI
@@ -1648,9 +1638,9 @@ void GpioInit(void)
       }
     }
   }
-  soft_spi_flg = (PinUsed(GPIO_SSPI_SCLK) && (PinUsed(GPIO_SSPI_MOSI) || PinUsed(GPIO_SSPI_MISO)));
 #endif  // USE_SPI
 #endif  // ESP8266 - ESP32
+  soft_spi_flg = (PinUsed(GPIO_SSPI_SCLK) && (PinUsed(GPIO_SSPI_MOSI) || PinUsed(GPIO_SSPI_MISO)));
 
   // Set any non-used GPIO to INPUT - Related to resetPins() in support_legacy_cores.ino
   // Doing it here solves relay toggles at restart.
@@ -1673,6 +1663,9 @@ void GpioInit(void)
 
   devices_present = 0;
   light_type = LT_BASIC;                     // Use basic PWM control if SetOption15 = 0
+
+  XsnsCall(FUNC_MODULE_INIT);
+
   if (XdrvCall(FUNC_MODULE_INIT)) {
     // Serviced
   }
@@ -1698,12 +1691,11 @@ void GpioInit(void)
 
   for (uint32_t i = 0; i < MAX_PWMS; i++) {     // Basic PWM control only
     if (PinUsed(GPIO_PWM1, i)) {
+#ifdef ESP8266
       pinMode(Pin(GPIO_PWM1, i), OUTPUT);
-#ifdef ESP32
-      analogAttach(Pin(GPIO_PWM1, i),i);
-      analogWriteFreqRange(i,Settings.pwm_frequency,Settings.pwm_range);
+#else  // ESP32
+      analogAttach(Pin(GPIO_PWM1, i), i);
 #endif
-
       if (light_type) {
         // force PWM GPIOs to low or high mode, see #7165
         analogWrite(Pin(GPIO_PWM1, i), bitRead(pwm_inverted, i) ? Settings.pwm_range : 0);
@@ -1761,4 +1753,5 @@ void GpioInit(void)
   SetLedLink(Settings.ledstate &8);
 
   XdrvCall(FUNC_PRE_INIT);
+  XsnsCall(FUNC_PRE_INIT);
 }

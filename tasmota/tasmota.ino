@@ -16,22 +16,25 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*====================================================
-  Prerequisites:
-    - Change libraries/PubSubClient/src/PubSubClient.h
-        #define MQTT_MAX_PACKET_SIZE 1200
 
-  Arduino IDE 1.8.12 and up parameters
-    - Select IDE Tools - Board: "Generic ESP8266 Module"
-    - Select IDE Tools - Flash Mode: "DOUT (compatible)"
-    - Select IDE Tools - Flash Size: "1M (FS:none OTA:~502KB)"
-    - Select IDE Tools - LwIP Variant: "v2 Higher Bandwidth (no feature)"
-    - Select IDE Tools - VTables: "Flash"
-    - Select IDE Tools - Espressif FW: "nonos-sdk-2.2.1+100 (190703)"
-  ====================================================*/
+/*********************************************************************************************\
+ * Preferred IDE is Visual Studio Code with PlatformIO extension which doesn't need prerequisites
+ *
+ * Limited support for Arduino IDE needs Prerequisites:
+ *    - Change libraries/PubSubClient/src/PubSubClient.h
+ *       #define MQTT_MAX_PACKET_SIZE 1200
+ *
+ *  Arduino IDE 1.8.12 and up parameters for partly support
+ *    - Select IDE Tools - Board: "Generic ESP8266 Module"
+ *    - Select IDE Tools - Flash Mode: "DOUT (compatible)"
+ *    - Select IDE Tools - Flash Size: "1M (FS:none OTA:~502KB)"
+ *    - Select IDE Tools - LwIP Variant: "v2 Higher Bandwidth (no feature)"
+ *    - Select IDE Tools - VTables: "Flash"
+ *    - Select IDE Tools - Espressif FW: "nonos-sdk-2.2.1+100 (190703)"
+\*********************************************************************************************/
 
 // Location specific includes
-#include <core_version.h>                   // Arduino_Esp8266 version information (ARDUINO_ESP8266_RELEASE and ARDUINO_ESP8266_RELEASE_2_3_0)
+#include <core_version.h>                   // Arduino_Esp8266 version information (ARDUINO_ESP8266_RELEASE and ARDUINO_ESP8266_RELEASE_2_7_1)
 #include "tasmota_compat.h"
 #include "tasmota_version.h"                // Tasmota version information
 #include "tasmota.h"                        // Enumeration used in my_user_config.h
@@ -43,18 +46,12 @@
 #include "i18n.h"                           // Language support configured by my_user_config.h
 #include "tasmota_template.h"               // Hardware configuration
 
-#ifdef ARDUINO_ESP8266_RELEASE_2_4_0
-#include "lwip/init.h"
-#if LWIP_VERSION_MAJOR != 1
-  #error Please use stable lwIP v1.4
-#endif
-#endif
-
 // Libraries
 #include <ESP8266HTTPClient.h>              // Ota
 #include <ESP8266httpUpdate.h>              // Ota
 #include <StreamString.h>                   // Webserver, Updater
-#include <ArduinoJson.h>                    // WemoHue, IRremote, Domoticz
+#include <JsonParser.h>
+#include <JsonGenerator.h>
 #ifdef USE_ARDUINO_OTA
   #include <ArduinoOTA.h>                   // Arduino OTA
   #ifndef USE_DISCOVERY
@@ -64,9 +61,9 @@
 #ifdef USE_DISCOVERY
   #include <ESP8266mDNS.h>                  // MQTT, Webserver, Arduino OTA
 #endif  // USE_DISCOVERY
-#ifdef USE_I2C
+//#ifdef USE_I2C
   #include <Wire.h>                         // I2C support library
-#endif  // USE_I2C
+//#endif  // USE_I2C
 #ifdef USE_SPI
   #include <SPI.h>                          // SPI support, TFT
 #endif  // USE_SPI
@@ -86,6 +83,7 @@ unsigned long feature_sns1;                 // Compiled sensor feature map
 unsigned long feature_sns2;                 // Compiled sensor feature map
 unsigned long feature5;                     // Compiled feature map
 unsigned long feature6;                     // Compiled feature map
+unsigned long feature7;                     // Compiled feature map
 unsigned long serial_polling_window = 0;    // Serial polling window
 unsigned long state_second = 0;             // State second timer
 unsigned long state_50msecond = 0;          // State 50msecond timer
@@ -111,18 +109,15 @@ uint32_t uptime = 0;                        // Counting every second until 42949
 uint32_t loop_load_avg = 0;                 // Indicative loop load average
 uint32_t global_update = 0;                 // Timestamp of last global temperature and humidity update
 uint32_t web_log_index = 1;                 // Index in Web log buffer (should never be 0)
-float global_temperature = NAN;             // Provide a global temperature to be used by some sensors
+uint32_t baudrate = APP_BAUDRATE;           // Current Serial baudrate
+float global_temperature_celsius = NAN;     // Provide a global temperature to be used by some sensors
 float global_humidity = 0.0f;               // Provide a global humidity to be used by some sensors
-float global_pressure = 0.0f;               // Provide a global pressure to be used by some sensors
+float global_pressure_hpa = 0.0f;           // Provide a global pressure to be used by some sensors
 uint16_t tele_period = 9999;                // Tele period timer
 uint16_t blink_counter = 0;                 // Number of blink cycles
 uint16_t seriallog_timer = 0;               // Timer to disable Seriallog
 uint16_t syslog_timer = 0;                  // Timer to re-enable syslog_level
-
-#ifdef ESP32
 uint16_t gpio_pin[MAX_GPIO_PIN] = { 0 };    // GPIO functions indexed by pin number
-#endif  // ESP32
-
 int16_t save_data_counter;                  // Counter and flag for config save to Flash
 RulesBitfield rules_flag;                   // Rule state flags (16 bits)
 uint8_t mqtt_cmnd_blocked = 0;              // Ignore flag for publish command
@@ -131,11 +126,6 @@ uint8_t state_250mS = 0;                    // State 250msecond per second flag
 uint8_t latching_relay_pulse = 0;           // Latching relay pulse timer
 uint8_t ssleep;                             // Current copy of Settings.sleep
 uint8_t blinkspeed = 1;                     // LED blink rate
-
-#ifdef ESP8266
-uint8_t gpio_pin[MAX_GPIO_PIN] = { 0 };     // GPIO functions indexed by pin number
-#endif  // ESP8266 - ESP32
-
 uint8_t active_device = 1;                  // Active device in ExecuteCommandPower
 uint8_t leds_present = 0;                   // Max number of LED supported
 uint8_t led_inverted = 0;                   // LED inverted flag (1 = (0 = On, 1 = Off))
@@ -148,10 +138,10 @@ uint8_t light_type = 0;                     // Light types
 uint8_t serial_in_byte;                     // Received byte
 uint8_t ota_retry_counter = OTA_ATTEMPTS;   // OTA retry counter
 uint8_t devices_present = 0;                // Max number of devices supported
+uint8_t masterlog_level = 0;                // Master log level used to override set log level
 uint8_t seriallog_level;                    // Current copy of Settings.seriallog_level
 uint8_t syslog_level;                       // Current copy of Settings.syslog_level
 uint8_t my_module_type;                     // Current copy of Settings.module or user template type
-uint8_t my_adc0 = 0;                        // Active copy of Module ADC0
 uint8_t last_source = 0;                    // Last command source
 uint8_t shutters_present = 0;               // Number of actual define shutters
 uint8_t prepped_loglevel = 0;               // Delayed log level message
@@ -171,8 +161,8 @@ bool soft_spi_flg = false;                  // Software SPI configured
 bool ntp_force_sync = false;                // Force NTP sync
 bool is_8285 = false;                       // Hardware device ESP8266EX (0) or ESP8285 (1)
 bool skip_light_fade;                       // Temporarily skip light fading
+bool restart_halt = false;                  // Do not restart but stay in wait loop
 myio my_module;                             // Active copy of Module GPIOs (17 x 8 bits)
-gpio_flag my_module_flag;                   // Active copy of Template GPIO flags
 StateBitfield global_state;                 // Global states (currently Wifi and Mqtt) (8 bits)
 char my_version[33];                        // Composed version string
 char my_image[33];                          // Code image and/or commit
@@ -211,10 +201,14 @@ void setup(void) {
   if (!RtcRebootValid()) {
     RtcReboot.fast_reboot_count = 0;
   }
+#ifdef FIRMWARE_MINIMAL
+  RtcReboot.fast_reboot_count = 0;  // Disable fast reboot and quick power cycle detection
+#else
   RtcReboot.fast_reboot_count++;
+#endif
   RtcRebootSave();
 
-  Serial.begin(APP_BAUDRATE);
+  Serial.begin(baudrate);
 //  Serial.setRxBufferSize(INPUT_BUFFER_SIZE);  // Default is 256 chars
   seriallog_level = LOG_LEVEL_INFO;  // Allow specific serial messages until config loaded
 
@@ -273,15 +267,12 @@ void setup(void) {
         for (uint32_t i = 0; i < ARRAY_SIZE(Settings.my_gp.io); i++) {
           Settings.my_gp.io[i] = GPIO_NONE;         // Reset user defined GPIO disabling sensors
         }
-#ifdef ESP8266
-        Settings.my_adc0 = ADC0_NONE;               // Reset user defined ADC0 disabling sensors
-#endif
       }
       if (RtcReboot.fast_reboot_count > Settings.param[P_BOOT_LOOP_OFFSET] +4) {  // Restarted 6 times
         Settings.module = Settings.fallback_module;  // Reset module to fallback module
 //        Settings.last_module = Settings.fallback_module;
       }
-      AddLog_P2(LOG_LEVEL_INFO, PSTR(D_LOG_APPLICATION D_LOG_SOME_SETTINGS_RESET " (%d)"), RtcReboot.fast_reboot_count);
+      AddLog_P2(LOG_LEVEL_INFO, PSTR("FRC: " D_LOG_SOME_SETTINGS_RESET " (%d)"), RtcReboot.fast_reboot_count);
     }
   }
 
@@ -319,7 +310,7 @@ void setup(void) {
   XdrvCall(FUNC_INIT);
   XsnsCall(FUNC_INIT);
 #ifdef USE_SCRIPT
-  Run_Scripter(">BS",3,0);
+  if (bitRead(Settings.rule_enabled, 0)) Run_Scripter(">BS",3,0);
 #endif
 
   rules_flag.system_init = 1;
@@ -328,18 +319,25 @@ void setup(void) {
 void BacklogLoop(void) {
   if (TimeReached(backlog_delay)) {
     if (!BACKLOG_EMPTY && !backlog_mutex) {
+      backlog_mutex = true;
+      bool nodelay = false;
+      bool nodelay_detected = false;
+      String cmd;
+      do {
 #ifdef SUPPORT_IF_STATEMENT
-      backlog_mutex = true;
-      String cmd = backlog.shift();
-      backlog_mutex = false;
-      ExecuteCommand((char*)cmd.c_str(), SRC_BACKLOG);
+        cmd = backlog.shift();
 #else
-      backlog_mutex = true;
-      ExecuteCommand((char*)backlog[backlog_pointer].c_str(), SRC_BACKLOG);
-      backlog_pointer++;
-      if (backlog_pointer >= MAX_BACKLOG) { backlog_pointer = 0; }
-      backlog_mutex = false;
+        cmd = backlog[backlog_pointer];
+        backlog[backlog_pointer] = (const char*) nullptr;  // Force deallocation of the String internal memory
+        backlog_pointer++;
+        if (backlog_pointer >= MAX_BACKLOG) { backlog_pointer = 0; }
 #endif
+        nodelay_detected = !strncasecmp_P(cmd.c_str(), PSTR(D_CMND_NODELAY), strlen(D_CMND_NODELAY));
+        if (nodelay_detected) { nodelay = true; }
+      } while (!BACKLOG_EMPTY && nodelay_detected);
+      if (!nodelay_detected) { ExecuteCommand((char*)cmd.c_str(), SRC_BACKLOG); }
+      if (nodelay) { backlog_delay = 0; }  // Reset backlog_delay which has been set by ExecuteCommand (CommandHandler)
+      backlog_mutex = false;
     }
   }
 }
@@ -365,9 +363,6 @@ void loop(void) {
 
   ButtonLoop();
   SwitchLoop();
-#ifdef ROTARY_V1
-  RotaryLoop();
-#endif
 #ifdef USE_DEVICE_GROUPS
   DeviceGroupsLoop();
 #endif  // USE_DEVICE_GROUPS
@@ -375,6 +370,9 @@ void loop(void) {
 
   if (TimeReached(state_50msecond)) {
     SetNextTimeInterval(state_50msecond, 50);
+#ifdef ROTARY_V1
+    RotaryHandler();
+#endif  // ROTARY_V1
     XdrvCall(FUNC_EVERY_50_MSECOND);
     XsnsCall(FUNC_EVERY_50_MSECOND);
   }
