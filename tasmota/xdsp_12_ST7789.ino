@@ -121,6 +121,7 @@ void ST7789_InitDriver()
     st7789->init(Settings.display_width,Settings.display_height);
     renderer = st7789;
     renderer->DisplayInit(DISPLAY_INIT_MODE,Settings.display_size,Settings.display_rotate,Settings.display_font);
+    renderer->dim(Settings.display_dimmer);
 
 #ifdef SHOW_SPLASH
     // Welcome text
@@ -195,7 +196,7 @@ bool Xdsp12(uint8_t function)
 {
   bool result = false;
 
-//AddLog_P2(LOG_LEVEL_INFO, PSTR("touch %d - %d"), FT5206_found, function);
+//AddLog_P(LOG_LEVEL_INFO, PSTR("touch %d - %d"), FT5206_found, function);
 
   if (FUNC_DISPLAY_INIT_DRIVER == function) {
     ST7789_InitDriver();

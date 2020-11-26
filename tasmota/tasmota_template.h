@@ -20,28 +20,6 @@
 #ifndef _TASMOTA_TEMPLATE_H_
 #define _TASMOTA_TEMPLATE_H_
 
-#ifdef ESP32
-
-// Hardware has no ESP32
-#undef USE_TUYA_DIMMER
-#undef USE_PWM_DIMMER
-#undef USE_EXS_DIMMER
-#undef USE_ARMTRONIX_DIMMERS
-#undef USE_SONOFF_RF
-#undef USE_SONOFF_SC
-#undef USE_SONOFF_IFAN
-#undef USE_SONOFF_L1
-#undef USE_SONOFF_D1
-#undef USE_RF_FLASH
-
-// Not ported (yet)
-#undef USE_DISCOVERY
-#undef USE_MY92X1
-#undef USE_TUYA_MCU
-#undef USE_PS_16_DZ
-
-#endif  // ESP32
-
 // User selectable GPIO functionality
 // ATTENTION: Only add at the end of this list just before GPIO_SENSOR_END
 //            Then add the same name(s) in a nice location in array kGpioNiceList
@@ -101,8 +79,7 @@ enum UserSelectablePins {
   GPIO_RDM6300_RX,                     // RDM6300 RX
   GPIO_IBEACON_TX, GPIO_IBEACON_RX,    // HM17 IBEACON Serial interface
   GPIO_A4988_DIR, GPIO_A4988_STP, GPIO_A4988_ENA, GPIO_A4988_MS1,  // A4988 interface
-  GPIO_SPARE1,                         // Do not use
-  GPIO_SPARE2,                         // Do not use
+  GPIO_OUTPUT_HI, GPIO_OUTPUT_LO,      // Fixed output state
   GPIO_DDS2382_TX, GPIO_DDS2382_RX,    // DDS2382 Serial interface
   GPIO_DDSU666_TX, GPIO_DDSU666_RX,    // DDSU666 Serial interface
   GPIO_SM2135_CLK, GPIO_SM2135_DAT,    // SM2135 PWM controller
@@ -147,10 +124,10 @@ enum UserSelectablePins {
   GPIO_IEM3000_TX, GPIO_IEM3000_RX,    // IEM3000 Serial interface
   GPIO_ZIGBEE_RST,                     // Zigbee reset
   GPIO_DYP_RX,
-  GPIO_MIEL_HVAC_TX,                   // Mitsubishi Electric HVAC TX pin
-  GPIO_MIEL_HVAC_RX,                   // Mitsubishi Electric HVAC RX pin
-  GPIO_WE517_TX,                       // ORNO WE517 Serial interface
-  GPIO_WE517_RX,                       // ORNO WE517 Serial interface
+  GPIO_MIEL_HVAC_TX, GPIO_MIEL_HVAC_RX,  // Mitsubishi Electric HVAC
+  GPIO_WE517_TX, GPIO_WE517_RX,        // ORNO WE517 Serial interface
+  GPIO_AS608_TX, GPIO_AS608_RX,        // Serial interface AS608 / R503
+  GPIO_SHELLY_DIMMER_BOOT0, GPIO_SHELLY_DIMMER_RST_INV,
   GPIO_SENSOR_END };
 
 enum ProgramSelectablePins {
@@ -214,8 +191,7 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_RDM6300_RX "|"
   D_SENSOR_IBEACON_TX "|" D_SENSOR_IBEACON_RX "|"
   D_SENSOR_A4988_DIR "|" D_SENSOR_A4988_STP "|" D_SENSOR_A4988_ENA "|" D_SENSOR_A4988_MS1 "|"
-  "s1|"
-  "s2|"
+  D_SENSOR_OUTPUT_HI "|" D_SENSOR_OUTPUT_LO "|"
   D_SENSOR_DDS2382_TX "|" D_SENSOR_DDS2382_RX "|"
   D_SENSOR_DDSU666_TX "|" D_SENSOR_DDSU666_RX "|"
   D_SENSOR_SM2135_CLK "|" D_SENSOR_SM2135_DAT "|"
@@ -257,7 +233,9 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_ZIGBEE_RST "|"
   D_SENSOR_DYP_RX "|"
   D_SENSOR_MIEL_HVAC_TX "|" D_SENSOR_MIEL_HVAC_RX "|"
-  D_SENSOR_WE517_TX "|" D_SENSOR_WE517_RX
+  D_SENSOR_WE517_TX "|" D_SENSOR_WE517_RX "|"
+  D_SENSOR_AS608_TX "|" D_SENSOR_AS608_RX "|"
+  D_SENSOR_SHELLY_DIMMER_BOOT0 "|" D_SENSOR_SHELLY_DIMMER_RST_INV
   ;
 
 const char kSensorNamesFixed[] PROGMEM =
@@ -297,6 +275,8 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #endif
   AGPIO(GPIO_LEDLNK),                   // Link led
   AGPIO(GPIO_LEDLNK_INV),               // Inverted link led
+  AGPIO(GPIO_OUTPUT_HI),                // Fixed output high
+  AGPIO(GPIO_OUTPUT_LO),                // Fixed output low
 
 /*-------------------------------------------------------------------------------------------*\
  * Protocol specifics
@@ -382,6 +362,10 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #endif
 #ifdef USE_ELECTRIQ_MOODL
   AGPIO(GPIO_ELECTRIQ_MOODL_TX),
+#endif
+#ifdef USE_SHELLY_DIMMER
+  AGPIO(GPIO_SHELLY_DIMMER_BOOT0),
+  AGPIO(GPIO_SHELLY_DIMMER_RST_INV),
 #endif
 #endif  // USE_LIGHT
 
@@ -567,6 +551,10 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #ifdef USE_OPENTHERM
   AGPIO(GPIO_BOILER_OT_TX),
   AGPIO(GPIO_BOILER_OT_RX),
+#endif
+#ifdef USE_AS608
+  AGPIO(GPIO_AS608_TX),
+  AGPIO(GPIO_AS608_RX),
 #endif
 
 /*-------------------------------------------------------------------------------------------*\

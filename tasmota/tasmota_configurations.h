@@ -53,7 +53,8 @@
 //#undef USE_DEVICE_GROUPS                        // Disable support for device groups (+5k6 code)
 #undef USE_PWM_DIMMER                           // Disable support for MJ-SD01/acenx/NTONPOWER PWM dimmers (+4k5 code)
 #undef USE_KEELOQ                               // Disable support for Jarolift rollers by Keeloq algorithm (+4k5 code)
-#undef USE_SONOFF_D1                            // DIsable support for Sonoff D1 Dimmer (+0k7 code)
+#undef USE_SONOFF_D1                            // Disable support for Sonoff D1 Dimmer (+0k7 code)
+#undef USE_SHELLY_DIMMER                        // Disable support for Shelly Dimmer (+3k code)
 
 // -- Optional light modules ----------------------
 #define USE_LIGHT                                // Add Dimmer/Light support
@@ -127,9 +128,18 @@
 //#define USE_MCP9808                            // [I2cDriver51] Enable MCP9808 temperature sensor (I2C addresses 0x18 - 0x1F) (+0k9 code)
 //#define USE_HP303B                             // [I2cDriver52] Enable HP303B temperature and pressure sensor (I2C address 0x76 or 0x77) (+6k2 code)
 //#define USE_MLX90640                           // [I2cDriver53] Enable MLX90640 IR array temperature sensor (I2C address 0x33) (+20k code)
-//#define USE_EZOPH                              // [I2cDriver55] Enable support for EZO's pH sensor (+0k6 code) - Shared EZO code required for any EZO device (+1k0 code)
-//#define USE_EZOORP                             // [I2cDriver55] Enable support for EZO's ORP sensor (+0k6 code) - Shared EZO code required for any EZO device (+1k0 code)
-//#define USE_EZORTD                             // [I2cDriver55] Enable support for EZO's RTD sensor (+0k6 code) - Shared EZO code required for any EZO device (+1k0 code)
+//#define USE_EZOPH                              // [I2cDriver55] Enable support for EZO's pH sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOORP                             // [I2cDriver55] Enable support for EZO's ORP sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZORTD                             // [I2cDriver55] Enable support for EZO's RTD sensor (+0k2 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOHUM                             // [I2cDriver55] Enable support for EZO's HUM sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOEC                              // [I2cDriver55] Enable support for EZO's EC sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOCO2                             // [I2cDriver55] Enable support for EZO's CO2 sensor (+0k2 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOO2                              // [I2cDriver55] Enable support for EZO's O2 sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOPRS                             // [I2cDriver55] Enable support for EZO's PRS sensor (+0k7 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOFLO                             // [I2cDriver55] Enable support for EZO's FLO sensor (+0k4 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZODO                              // [I2cDriver55] Enable support for EZO's DO sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZORGB                             // [I2cDriver55] Enable support for EZO's RGB sensor (+0k5 code) - Shared EZO code required for any EZO device (+1k2 code)
+//#define USE_EZOPMP                             // [I2cDriver55] Enable support for EZO's PMP sensor (+0k3 code) - Shared EZO code required for any EZO device (+1k2 code)
 
 #define USE_MHZ19                                // Add support for MH-Z19 CO2 sensor (+2k code)
 #define USE_SENSEAIR                             // Add support for SenseAir K30, K70 and S8 CO2 sensor (+2k3 code)
@@ -155,11 +165,12 @@
 #define USE_IBEACON                              // Add support for bluetooth LE passive scan of ibeacon devices (uses HM17 module)
 //#define USE_GPS                                  // Add support for GPS and NTP Server for becoming Stratus 1 Time Source (+ 3.1kb flash, +132 bytes RAM)
 #define USE_HM10                                 // (ESP8266 only) Add support for HM-10 as a BLE-bridge for the LYWSD03 (+5k1 code)
-//#define USE_MI_ESP32                             // (ESP32 only) Add support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
+#define USE_MI_ESP32                             // (ESP32 only) Add support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
 #define USE_HRXL                                 // Add support for MaxBotix HRXL-MaxSonar ultrasonic range finders (+0k7)
 //#define USE_TASMOTA_CLIENT                       // Add support for Arduino Uno/Pro Mini via serial interface including flashing (+2k3 code, 44 mem)
 //#define USE_OPENTHERM                            // Add support for OpenTherm (+15k code)
 //#define USE_MIEL_HVAC                            // Add support for Mitsubishi Electric HVAC serial interface (+5k code)
+//#define USE_AS608                                // Add support for AS608 optical and R503 capacitive fingerprint sensor (+3k4 code)
 
 #define USE_ENERGY_SENSOR                        // Add energy sensors (-14k code)
 #define USE_PZEM004T                             // Add support for PZEM004T Energy monitor (+2k code)
@@ -217,6 +228,8 @@
 #undef USE_EMULATION_WEMO                        // Disable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
 #undef USE_DEEPSLEEP                             // Disable support for deepsleep (+1k code)
 #undef USE_DEVICE_GROUPS                         // Disable support for device groups (+3k5 code)
+#undef USE_MI_ESP32                              // (ESP32 only) Disable support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
+
 #undef USE_PWM_DIMMER_REMOTE                     // Disbale support for remote switches to PWM Dimmer
 #undef DEBUG_THEO                                // Disable debug code
 #undef USE_DEBUG_DRIVER                          // Disable debug code
@@ -258,6 +271,7 @@
 #undef USE_PWM_DIMMER_REMOTE                     // Disbale support for remote switches to PWM Dimmer
 #undef USE_KEELOQ                                // Disable support for Jarolift rollers by Keeloq algorithm (+4k5 code)
 #undef USE_SONOFF_D1                             // Disable support for Sonoff D1 Dimmer (+0k7 code)
+#undef USE_SHELLY_DIMMER                         // Disable support for Shelly Dimmer (+3k code)
 
 #undef USE_ENERGY_SENSOR                         // Disable energy sensors (-14k code)
   #undef USE_PZEM004T                            // Disable PZEM004T energy sensor
@@ -273,6 +287,7 @@
   #undef USE_TELEINFO                            // Disable support for French Energy Provider metering telemetry
   #undef USE_IEM3000                             // Disable support for Schneider Electric iEM3000-Modbus series energy monitor (+0k8 code)
   #undef USE_WE517                               // Disable support for Orno WE517-Modbus energy monitor (+1k code)
+#undef USE_MI_ESP32                              // (ESP32 only) Disable support for ESP32 as a BLE-bridge (+9k2 mem, +292k flash)
 
 
 #define USE_I2C                                  // I2C using library wire (+10k code, 0k2 mem, 124 iram)
@@ -350,6 +365,7 @@
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
 #undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
 #undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
+#undef USE_SHELLY_DIMMER                         // Disable support for Shelly Dimmer (+3k code)
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -436,15 +452,25 @@
 #define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE    // [SerialLog] (LOG_LEVEL_NONE, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG_MORE)
 
 #undef USE_ARDUINO_OTA                           // Disable support for Arduino OTA
-#define USE_DOMOTICZ                              // Disable Domoticz
+#define USE_DOMOTICZ                             // Enable Domoticz
 #undef USE_HOME_ASSISTANT                        // Disable Home Assistant
-#undef USE_MQTT_TLS                              // Disable TLS support won't work as the MQTTHost is not set
+
+// -- MQTT - TLS - AWS IoT ------------------------
+#ifdef USE_ZBBRIDGE_TLS                            // Enable TLS for ZbBridge
+  #define USE_MQTT_TLS                             // Use TLS for MQTT connection (+34.5k code, +7.0k mem and +4.8k additional during connection handshake)
+    #define USE_MQTT_TLS_CA_CERT                   // Force full CA validation instead of fingerprints, slower, but simpler to use.  (+2.2k code, +1.9k mem during connection handshake)
+                                                   // This includes the LetsEncrypt CA in tasmota_ca.ino for verifying server certificates
+    #define USE_MQTT_TLS_FORCE_EC_CIPHER           // Force Elliptic Curve cipher (higher security) required by some servers (automatically enabled with USE_MQTT_AWS_IOT) (+11.4k code, +0.4k mem)
+    #define USE_MQTT_AWS_IOT_LIGHT                 // Enable MQTT for AWS IoT in light mode, with user/password instead of private certificate
+  #define USE_TLS                                  // flag indicates we need to include TLS code
+#endif                                             // USE_ZBBRIDGE_TLS
+
 #undef USE_KNX                                   // Disable KNX IP Protocol Support
 //#undef USE_WEBSERVER                             // Disable Webserver
 //#undef USE_WEBSEND_RESPONSE                      // Disable command WebSend response message (+1k code)
-#define USE_EMULATION                             // Disable Wemo or Hue emulation
-#define USE_EMULATION_HUE                         // Disable Hue Bridge emulation for Alexa (+14k code, +2k mem common)
-//#undef USE_EMULATION_WEMO                        // Disable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
+#define USE_EMULATION                            // Enable Hue emulation
+#define USE_EMULATION_HUE                        // Enable Hue Bridge emulation for Alexa (+14k code, +2k mem common)
+#undef USE_EMULATION_WEMO                        // Disable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
 #undef USE_CUSTOM                                // Disable Custom features
 #undef USE_DISCOVERY                             // Disable Discovery services for both MQTT and web server
 //#undef USE_TIMERS                                // Disable support for up to 16 timers
@@ -483,6 +509,7 @@
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
 #undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
 #undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
+#undef USE_SHELLY_DIMMER                         // Disable support for Shelly Dimmer (+3k code)
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -550,12 +577,10 @@
 #undef USE_ZIGBEE_ZNP
 #define USE_ZIGBEE_EZSP
 #define USE_TCP_BRIDGE
-  #define USE_ZIGBEE_CHANNEL  11                  // Zigbee Channel (11-26)
+  #define USE_ZIGBEE_CHANNEL  11                 // Zigbee Channel (11-26)
   #define USE_ZIGBEE_COALESCE_ATTR_TIMER 350     // timer to coalesce attribute values (in ms)
 
-
 #endif  // SONOFF_ZIGBEEBRIDGE ******************************************************************
-
 
 
 /*********************************************************************************************\
@@ -619,6 +644,7 @@
 #undef USE_SONOFF_L1                             // Disable support for Sonoff L1 led control
 #undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
 #undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
+#undef USE_SHELLY_DIMMER                         // Disable support for Shelly Dimmer (+3k code)
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -682,11 +708,13 @@
 #undef USE_DEBUG_DRIVER                          // Disable debug code
 #endif  // FIRMWARE_LITE
 
+
 /*********************************************************************************************\
  * [tasmota-minimal.bin]
  * Provide the smallest image possible while still enabling a webserver for intermediate image load
 \*********************************************************************************************/
 
+#ifndef FIRMWARE_MINICUSTOM
 #ifdef FIRMWARE_MINIMAL
 
 #undef CODE_IMAGE_STR
@@ -751,6 +779,7 @@
 #undef USE_ELECTRIQ_MOODL                        // Disable support for ElectriQ iQ-wifiMOODL RGBW LED controller
 #undef USE_LIGHT_PALETTE                         // Disable support for color palette (+0k9 code)
 #undef USE_DGR_LIGHT_SEQUENCE                    // Disable support for device group light sequencing (requires USE_DEVICE_GROUPS) (+0k2 code)
+#undef USE_SHELLY_DIMMER                         // Disable support for Shelly Dimmer (+3k code)
 
 #undef USE_COUNTER                               // Disable counters
 #define USE_ADC_VCC                              // Display Vcc in Power status. Disable for use as Analog input on selected devices
@@ -782,6 +811,7 @@
 #undef USE_TASMOTA_CLIENT                        // Disable support for Arduino Uno/Pro Mini via serial interface including flashing (+2k3 code, 44 mem)
 #undef USE_OPENTHERM                             // Disable support for OpenTherm (+15k code)
 #undef USE_MIEL_HVAC                             // Disable support for Mitsubishi Electric HVAC serial interface (+5k code)
+#undef USE_AS608                                 // Disable support for AS608 optical and R503 capacitive fingerprint sensor (+3k4 code)
 
 #undef USE_ENERGY_SENSOR                         // Disable energy sensors
 #undef USE_PZEM004T                              // Disable PZEM004T energy sensor
@@ -817,10 +847,35 @@
 #undef USE_PROMETHEUS                            // Disable support for https://prometheus.io/ metrics exporting over HTTP /metrics endpoint
 #undef DEBUG_THEO                                // Disable debug code
 #undef USE_DEBUG_DRIVER                          // Disable debug code
+
 #endif  // FIRMWARE_MINIMAL
+#endif  // ifndef FIRMWARE_MINICUSTOM
+
+
+/*********************************************************************************************\
+ * [tasmota-minicustom.bin]
+ * Make a small minimal custom image possible
+\*********************************************************************************************/
+
+#ifdef FIRMWARE_MINICUSTOM
+#define FIRMWARE_MINIMAL
+
+#undef CODE_IMAGE_STR
+#define CODE_IMAGE_STR "mini-custom"
+
+#undef FIRMWARE_LITE                            // Disable tasmota-lite with no sensors
+#undef FIRMWARE_SENSORS                         // Disable tasmota-sensors with useful sensors enabled
+#undef FIRMWARE_KNX_NO_EMULATION                // Disable tasmota-knx with KNX but without Emulation
+#undef FIRMWARE_DISPLAYS                        // Disable tasmota-display with display drivers enabled
+#undef FIRMWARE_IR                              // Disable tasmota-ir with IR full protocols activated
+#undef FIRMWARE_IR_CUSTOM                       // Disable tasmota customizable with special marker to add all IR protocols
+
+#endif  // FIRMWARE_MINICUSTOM
+
 
 #ifdef ESP32
 #include "tasmota_configurations_ESP32.h"
 #endif  // ESP32
+
 
 #endif  // _TASMOTA_CONFIGURATIONS_H_
