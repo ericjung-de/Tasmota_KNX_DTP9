@@ -52,18 +52,12 @@ All the libraries required for Tasmota are [here](https://github.com/ascillato/T
 * [ESP KNX IP Library](https://github.com/ascillato/Tasmota_KNX/tree/KNX_development/lib/esp-knx-ip-0.5.2). A copy of this modified library is also available [here](https://github.com/ascillato/esp-knx-ip). The original is [here](https://github.com/envy/esp-knx-ip).
 
 **Esp8266 board libraries:**
-* v2.7.1 Works fine. No known issues. **(RECOMMENDED)**
-* v2.6.3 Works fine. No known issues.
-* v2.6.2 Works fine. No known issues. Bigger flash usage than 2.6.1
-* v2.6.1 Works fine. No known issues. Smaller flash usage than 2.6.0 
-* v2.6.0 Works fine. No known issues.
-* v2.5.2 Has some wifi issues. Sleep feature works fine but needs to be 0 for better KNX performance. Do not use.
-* v2.5.1 Has some wifi and **security** issues. Do not use.
-* v2.5.0 Has some wifi and **security** issues. Do not use.
-* v2.4.2 Command sleep don't work in this version. It has **security** issues. Do not use.
-* v2.4.1 Have some wifi and **security** issues. Do not use.
-* v2.4.0 Have some wifi and **security** issues. Do not use.
-* v2.3.0 It is slower than v2.4.2. Sleep feature works but it has **security** issues. Do not use.
+* v2.7.4.7 Works fine. No known issues. **(RECOMMENDED)**
+_(Support for old libraries have been dropped)_
+
+**Esp32 board libraries:**
+* v1.0.4.2 Works fine. No known issues. **(RECOMMENDED)**
+_(Support for old libraries have been dropped)_
 
 ## Firmware ##
 
@@ -92,6 +86,8 @@ Features that can be used with Tasmota's rules:
 * Receive KNX command (on/off)
 * Send values by KNX (any float type, temperature for example)
 * Receive values by KNX (any float type, temperature for example)
+* Send KNX Scenes (on/off)
+* Receive KNX Scenes (on/off)
 * Receive a KNX read request
 * View/Set the Physical Address
 * View/Set Group Address to send data
