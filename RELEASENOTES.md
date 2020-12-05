@@ -66,18 +66,23 @@ The attached binaries can also be downloaded from http://ota.tasmota.com/tasmota
 - Zigbee support for Mi Door and Contact (#9759)
 - Zigbee alarm persistence (#9785)
 - Zigbee persistence of device/sensor data in EEPROM (only ZBBridge)
+- TyuaMcu update 2/3 by Federico Leoni (#10004)
 - Support for additional EZO sensors by Christopher Tremblay
 - Support for AS608 optical and R503 capacitive fingerprint sensor
 - Support for Shelly Dimmer 1 and 2 by James Turton (#9854)
 - Support for common anode sevenseg displays by adding ``#define USE_DISPLAY_SEVENSEG_COMMON_ANODE`` by Ken Sanislo (#9963)
 - Support for multiple WeMo devices by Magic73 (#9208)
 - KNX read reply for Power (#9236, #9891)
+- Fallback NTP server from x.pool.ntp.org if no ntpservers are configured
+- Optional CCloader support for CC25xx Zigbee or CC26xx BLE by Christian Baars (#9970)
 
 ### Breaking Changed
 - KNX DPT9 (16-bit float) to DPT14 (32-bit float) by Adrian Scillato (#9811, #9888)
 
 ### Changed
 - Core library from v2.7.4.5 to v2.7.4.7
+- IRremoteESP8266 library from v2.7.12 to v2.7.13
+- Shelly Dimmer 1 and 2 stm32 firmware from v51.4 to v51.5
 - Platformio compiler option `no target align` enabled (#9749)
 - Sonoff L1 color up scaling and color margin detection (#9545)
 - MQTT Wifi connection timeout from 5000 to 200 mSec (#9886)
@@ -90,6 +95,9 @@ The attached binaries can also be downloaded from http://ota.tasmota.com/tasmota
 - KNX ESP32 UDP mulicastpackage (#9811)
 - GUI MqttUser and MqttPassword updates when TLS is compiled in (#9825)
 - ESP32 TasmotaClient firmware upgrade (#9218)
+- Reset to defaults after 6 hours of DeepSleep (#9993)
+- Backlog timing wraparound (#9995)
 
 ### Removed
 - Version compatibility check
+- PN532 define USE_PN532_CAUSE_EVENTS replaced by generic rule trigger `on pn532#uid=`

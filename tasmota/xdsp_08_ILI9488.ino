@@ -72,6 +72,14 @@ void ILI9488_InitDriver()
       bppin=Pin(GPIO_BACKLIGHT);
     }
 
+#ifdef ESP8266
+#undef HW_SPI_MOSI
+#define HW_SPI_MOSI 13
+#undef HW_SPI_MISO
+#define HW_SPI_MISO 12
+#undef HW_SPI_CLK
+#define HW_SPI_CLK 14
+#endif  // ESP8266
 #ifdef ESP32
 #undef HW_SPI_MOSI
 #define HW_SPI_MOSI 23
@@ -79,14 +87,7 @@ void ILI9488_InitDriver()
 #define HW_SPI_MISO 19
 #undef HW_SPI_CLK
 #define HW_SPI_CLK 18
-#else
-#undef HW_SPI_MOSI
-#define HW_SPI_MOSI 13
-#undef HW_SPI_MISO
-#define HW_SPI_MISO 12
-#undef HW_SPI_CLK
-#define HW_SPI_CLK 14
-#endif
+#endif  // ESP32
 
     // init renderer, must use hardware spi
     if (PinUsed(GPIO_SSPI_CS) && (Pin(GPIO_SSPI_MOSI)==HW_SPI_MOSI) && (Pin(GPIO_SSPI_SCLK)==HW_SPI_CLK)) {
