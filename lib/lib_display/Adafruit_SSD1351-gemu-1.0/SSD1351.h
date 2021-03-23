@@ -93,13 +93,13 @@ class SSD1351 : public Renderer {
 
  public:
 
-  SSD1351(int8_t cs,int8_t mosi,int8_t sclk);
+  SSD1351(int8_t cs,int8_t mosi,int8_t sclk, int8_t dc);
 
   void begin(void);
   void DisplayInit(int8_t p,int8_t size,int8_t rot,int8_t font);
   void setAddrWindow_i(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
   void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
-  void pushColors(uint16_t *data, uint8_t len, boolean first);
+  void pushColors(uint16_t *data, uint16_t len, boolean first);
   void drawPixel(int16_t x, int16_t y, uint16_t color);
   void write16BitColor(uint16_t color);
   void setRotation(uint8_t r);
@@ -119,10 +119,11 @@ class SSD1351 : public Renderer {
 
  private:
   uint8_t  tabcolor;
+  SPISettings spis;
   void fastSPIwrite(uint8_t d,uint8_t dc);
   void start(void);
   void stop(void);
-  int8_t  _cs, _mosi, _sclk, _hwspi;
+  int8_t  _cs, _mosi, _sclk, _hwspi, _dc;
 
 };
 

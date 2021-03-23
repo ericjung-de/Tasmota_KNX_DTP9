@@ -1,7 +1,7 @@
 /*
   xdrv_21_wemo_multi.ino - multiple wemo support for Tasmota
 
-  Copyright (C) 2020  Magic73, Heiko Krupp and Theo Arends
+  Copyright (C) 2021  Magic73, Heiko Krupp and Theo Arends
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -234,14 +234,18 @@ private:
   int _deviceId;
 
   String WemoSerialnumber(void) {
-    char serial[18];
+    char serial[20];
 
-    snprintf_P(serial, sizeof(serial), PSTR("201612K%08X-%d"), ESP_getChipId(), _deviceId);
+    char index[8] = { 0 };
+    if (_deviceId > 1) {  // Keep backward compatibility
+      snprintf_P(index, sizeof(index), PSTR("%02X"), _deviceId);
+    }
+    snprintf_P(serial, sizeof(serial), PSTR("201612K%08X%s"), ESP_getChipId(), index);
     return String(serial);
   }
 
   String WemoUuid(void) {
-    char uuid[29];
+    char uuid[32];
 
     snprintf_P(uuid, sizeof(uuid), PSTR("Socket-1_0-%s"), WemoSerialnumber().c_str());
     return String(uuid);
@@ -252,7 +256,7 @@ public:
     _deviceId = deviceId;
     _webServer = webServer;
 #ifdef USE_EMULATION_WEMO_DEBUG
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: Device #%d listening on port %d"), _deviceId, _localPort);
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: Device #%d listening on port %d"), _deviceId, _localPort);
 #endif
   }
 
@@ -260,7 +264,7 @@ public:
     _deviceId = deviceId;
     _localPort = localPort;
 #ifdef USE_EMULATION_WEMO_DEBUG
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: Device #%d listening on port %d"), _deviceId, _localPort);
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: Device #%d listening on port %d"), _deviceId, _localPort);
 #endif
     _webServer = new ESP8266WebServer(_localPort);
 
@@ -274,7 +278,7 @@ public:
   }
 
   void WemoRespondToMSearch(int echo_type) {
-//    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: WemoRespondToMSearch device #%d: %d"), _deviceId, echo_type);
+//    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: WemoRespondToMSearch device #%d: %d"), _deviceId, echo_type);
 
     char message[TOPSZ];
 
@@ -290,15 +294,15 @@ public:
       PortUdp.write(response);
       PortUdp.endPacket();
 
-//      AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: Sending packet device %d: %s"), _deviceId, response);
+//      AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: Sending packet device %d: %s"), _deviceId, response);
 
       snprintf_P(message, sizeof(message), PSTR(D_RESPONSE_SENT));
     } else {
       snprintf_P(message, sizeof(message), PSTR(D_FAILED_TO_SEND_RESPONSE));
     }
     // Do not use AddLog_P here (interrupt routine) if syslog or mqttlog is enabled. UDP/TCP will force exception 9
-    PrepLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: WeMo Type %d, %s to %s:%d"),
-              echo_type, message, udp_remote_ip.toString().c_str(), udp_remote_port);
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: WeMo Type %d, %s to %s:%d"),
+             echo_type, message, udp_remote_ip.toString().c_str(), udp_remote_port);
   }
 
   void HandleServerLoop() {
@@ -315,7 +319,7 @@ private:
   }
 
   void LogUpnpWithClient(const char *msg) {
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR(D_LOG_HTTP "%s from %s"), msg, _webServer->client().remoteIP().toString().c_str());
+    AddLog(LOG_LEVEL_DEBUG, PSTR(D_LOG_HTTP "%s from %s"), msg, _webServer->client().remoteIP().toString().c_str());
   }
 
   void HandleUpnpEvent() {
@@ -325,8 +329,8 @@ private:
     strlcpy(event, _webServer->arg(0).c_str(), sizeof(event));
 
 #ifdef USE_EMULATION_WEMO_DEBUG
-    //AddLog_P(LOG_LEVEL_DEBUG_MORE, PSTR("\n%s"), event);
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: HandleUpnpEvent for deviceId %d: %s"), _deviceId, event);
+    //AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("\n%s"), event);
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: HandleUpnpEvent for deviceId %d: %s"), _deviceId, event);
 #endif
 
     //differentiate get and set state
@@ -358,7 +362,7 @@ private:
 
   void HandleUpnpService(void) {
 #ifdef USE_EMULATION_WEMO_DEBUG
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: HandleUpnpService"));
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: HandleUpnpService"));
 #endif
     LogUpnpWithClient(PSTR(D_WEMO_EVENT_SERVICE));
 
@@ -371,7 +375,7 @@ private:
 
   void HandleUpnpMetaService(void) {
 #ifdef USE_EMULATION_WEMO_DEBUG
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: HandleUpnpMetaService"));
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: HandleUpnpMetaService"));
 #endif
     LogUpnpWithClient(PSTR(D_WEMO_META_SERVICE));
 
@@ -395,14 +399,14 @@ private:
     setup_xml.replace("{x3", WemoSerialnumber());
     InternalWSSend(200, CT_XML, setup_xml);
 #ifdef USE_EMULATION_WEMO_DEBUG
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: Sending device #%d: %s"), _deviceId, setup_xml.c_str());
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: Sending device #%d: %s"), _deviceId, setup_xml.c_str());
 #endif
   }
 
 public:
   void RegisterHandlers(void) {
 #ifdef USE_EMULATION_WEMO_DEBUG
-    AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: Register device #%d"), _deviceId);
+    AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: Register device #%d"), _deviceId);
 #endif
     _webServer->on(F("/upnp/control/basicevent1"), [&]() { HandleUpnpEvent(); });
     _webServer->on(F("/eventservice.xml"), [&]() { HandleUpnpService(); });
@@ -415,13 +419,9 @@ WemoSwitch *wemoDevice[MAX_FRIENDLYNAMES] = {};
 int numOfWemoSwitch = 0;
 
 void WemoRespondToMSearch(int echo_type) {
-  TickerMSearch.detach();
-
   for (uint32_t i = 0; i < numOfWemoSwitch; i++) {
     wemoDevice[i]->WemoRespondToMSearch(echo_type);
   }
-
-  udp_response_mutex = false;
 }
 
 /*********************************************************************************************\
@@ -441,7 +441,7 @@ bool Xdrv21(uint8_t function)
         break;
       case FUNC_WEB_ADD_HANDLER:
 #ifdef USE_EMULATION_WEMO_DEBUG
-        AddLog_P(LOG_LEVEL_DEBUG, PSTR("WMO: Adding handlers for %d devices"), TasmotaGlobal.devices_present);
+        AddLog(LOG_LEVEL_DEBUG, PSTR("WMO: Adding handlers for %d devices"), TasmotaGlobal.devices_present);
 #endif
         // For the first device use the current webserver, for the others.. create a new one listening on a different PortUdp
         wemoDevice[numOfWemoSwitch] = new WemoSwitch(1, Webserver);

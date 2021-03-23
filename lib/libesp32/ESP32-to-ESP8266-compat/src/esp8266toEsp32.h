@@ -23,8 +23,8 @@
 // basics
 //
 // dummy defines
-#define SPIFFS_END (SPI_FLASH_SEC_SIZE * 200)
-#define SETTINGS_LOCATION SPIFFS_END
+//#define SPIFFS_END (SPI_FLASH_SEC_SIZE * 200)
+//#define SETTINGS_LOCATION SPIFFS_END
 
 #include <Esp.h>
 
@@ -114,10 +114,6 @@ typedef int SerConfu8;
 typedef int SerialConfig;
 //#define analogWrite(a, b)
 
-//
-// WS2812
-//
-#define NeoEsp8266BitBang800KbpsMethod NeoEsp32BitBang800KbpsMethod
 //
 // UDP
 //

@@ -1,7 +1,7 @@
 /*
   xsns_80_mfrc522.ino - Support for MFRC522 (SPI) NFC Tag Reader on Tasmota
 
-  Copyright (C) 2020  Theo Arends
+  Copyright (C) 2021  Theo Arends
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef USE_SPI
 #ifdef USE_RC522
 /*********************************************************************************************\
  * MFRC522 - 13.56 MHz RFID reader
@@ -24,7 +25,7 @@
  * Connections:
  * MFRC522  ESP8266         Tasmota
  * -------  --------------  ----------
- *  SDA     GPIO0..5,15,16  SPI CS
+ *  SDA     GPIO0..5,15,16  RC522 CS
  *  SCK     GPIO14          SPI CLK
  *  MOSI    GPIO13          SPI MOSI
  *  MISO    GPIO12          SPI MISO
@@ -36,7 +37,8 @@
 
 #define XSNS_80        80
 
-#define USE_RC522_DATA_FUNCTION
+//#define USE_RC522_DATA_FUNCTION              // Add support for reading data block content (+0k4 code)
+//#define USE_RC522_TYPE_INFORMATION           // Add support for showing card type (+0k4 code)
 
 #include <MFRC522.h>
 MFRC522 *Mfrc522;
@@ -52,22 +54,19 @@ void RC522ScanForTag(void) {
   if (!Mfrc522->PICC_IsNewCardPresent() || !Mfrc522->PICC_ReadCardSerial()) { return; }
 
   ToHex_P((unsigned char*)Mfrc522->uid.uidByte, Mfrc522->uid.size, Rc522.uids, sizeof(Rc522.uids));
+  ResponseTime_P(PSTR(",\"RC522\":{\"UID\":\"%s\""), Rc522.uids);
 
-  MFRC522::PICC_Type piccType = Mfrc522->PICC_GetType(Mfrc522->uid.sak);
-  AddLog_P(LOG_LEVEL_DEBUG, PSTR("MFR: UID %s, Type %s"), Rc522.uids, Mfrc522->PICC_GetTypeName(piccType));
-
+  MFRC522::PICC_Type picc_type = Mfrc522->PICC_GetType(Mfrc522->uid.sak);
 #ifdef USE_RC522_DATA_FUNCTION
-  bool didit = false;
-  if (   piccType == MFRC522::PICC_TYPE_MIFARE_MINI
-      || piccType == MFRC522::PICC_TYPE_MIFARE_1K
-      || piccType == MFRC522::PICC_TYPE_MIFARE_4K) {
+  if (   picc_type == MFRC522::PICC_TYPE_MIFARE_MINI
+      || picc_type == MFRC522::PICC_TYPE_MIFARE_1K
+      || picc_type == MFRC522::PICC_TYPE_MIFARE_4K) {
 
-    uint8_t trailerBlock = 7;
     MFRC522::MIFARE_Key key;
     for (uint32_t i = 0; i < 6; i++) {
       key.keyByte[i] = 0xFF;
     }
-    MFRC522::StatusCode status = Mfrc522->PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(Mfrc522->uid));
+    MFRC522::StatusCode status = Mfrc522->PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, 1, &key, &(Mfrc522->uid));
     if (status == MFRC522::STATUS_OK) {
       uint8_t buffer[18];  // The buffer must be at least 18 bytes because a CRC_A is also returned
       uint8_t size = sizeof(buffer);
@@ -81,31 +80,29 @@ void RC522ScanForTag(void) {
             card_datas[i] = '\0';
           }
         }
-        didit = true;
-        ResponseTime_P(PSTR(",\"RC522\":{\"UID\":\"%s\",\"" D_JSON_DATA "\":\"%s\"}}"), Rc522.uids, card_datas);
+        ResponseAppend_P(PSTR(",\"" D_JSON_DATA "\":\"%s\""), card_datas);
       }
     }
   }
-  if (!didit) {
-    ResponseTime_P(PSTR(",\"RC522\":{\"UID\":\"%s\"}}"), Rc522.uids);
-  }
-#else
-  ResponseTime_P(PSTR(",\"RC522\":{\"UID\":\"%s\"}}"), Rc522.uids);
-#endif
+#endif  // USE_RC522_DATA_FUNCTION
+#ifdef USE_RC522_TYPE_INFORMATION
+  ResponseAppend_P(PSTR(",\"" D_JSON_TYPE "\":\"%s\""), Mfrc522->PICC_GetTypeName(picc_type));
+#endif  // USE_RC522_TYPE_INFORMATION
+  ResponseJsonEndEnd();
   MqttPublishTeleSensor();
 
-  // Halt PICC
-  Mfrc522->PICC_HaltA();
+  Mfrc522->PICC_HaltA();       // Halt PICC
+  Mfrc522->PCD_StopCrypto1();  // Stop encryption on PCD
 
-  Rc522.scantimer = 7;  // Ignore tags found for two seconds
+  Rc522.scantimer = 7;         // Ignore tags found for two seconds
 }
 
 void RC522Init(void) {
-  if (PinUsed(GPIO_SPI_CS) && PinUsed(GPIO_RC522_RST)) {
-    Mfrc522 = new MFRC522(Pin(GPIO_SPI_CS), Pin(GPIO_RC522_RST));
+  if (PinUsed(GPIO_RC522_CS) && PinUsed(GPIO_RC522_RST) && TasmotaGlobal.spi_enabled) {
+    Mfrc522 = new MFRC522(Pin(GPIO_RC522_CS), Pin(GPIO_RC522_RST));
     SPI.begin();
     Mfrc522->PCD_Init();
-    if (Mfrc522->PCD_PerformSelfTest()) {
+//    if (Mfrc522->PCD_PerformSelfTest()) {  // Saves 0k5 code
       uint8_t v = Mfrc522->PCD_ReadRegister(Mfrc522->VersionReg);
       char ver[8] = { 0 };
       switch (v) {
@@ -116,17 +113,48 @@ void RC522Init(void) {
       }
       uint8_t empty_uid[4] = { 0 };
       ToHex_P((unsigned char*)empty_uid, sizeof(empty_uid), Rc522.uids, sizeof(Rc522.uids));
-      AddLog_P(LOG_LEVEL_INFO, PSTR("MFR: RC522 Rfid Reader detected %s"), ver);
+      AddLog(LOG_LEVEL_INFO, PSTR("MFR: RC522 Rfid Reader detected %s"), ver);
       Rc522.present = true;
-    }
+//    }
+//    Mfrc522->PCD_Init();       // Re-init as SelfTest blows init
   }
 }
 
 #ifdef USE_WEBSERVER
 void RC522Show(void) {
-  WSContentSend_PD(PSTR("{s}RC522 UID{m}%s {e}"), Rc522.uids);
+  WSContentSend_PD(PSTR("{s}RC522 UID{m}%s{e}"), Rc522.uids);
 }
 #endif  // USE_WEBSERVER
+
+/*********************************************************************************************\
+ * Supported commands for Sensor80:
+ *
+ * Sensor80 1        - Show antenna gain
+ * Sensor80 1 <gain> - Set antenna gain 0..7 (default 4)
+\*********************************************************************************************/
+
+bool RC522Command(void) {
+  bool serviced = true;
+  char argument[XdrvMailbox.data_len];
+
+  for (uint32_t ca = 0; ca < XdrvMailbox.data_len; ca++) {
+    if ((' ' == XdrvMailbox.data[ca]) || ('=' == XdrvMailbox.data[ca])) { XdrvMailbox.data[ca] = ','; }
+  }
+
+  switch (XdrvMailbox.payload) {
+    case 1:  // Antenna gain
+      uint8_t gain;
+      if (strchr(XdrvMailbox.data, ',') != nullptr) {
+        gain = strtol(ArgV(argument, 2), nullptr, 10) & 0x7;
+        Mfrc522->PCD_SetAntennaGain(gain << 4);
+      }
+      gain = Mfrc522->PCD_GetAntennaGain() >> 4;  // 0..7
+      Response_P(PSTR("{\"Sensor80\":{\"Gain\":%d}}"), gain);
+      break;
+  }
+
+  return serviced;
+}
 
 /*********************************************************************************************\
  * Interface
@@ -147,6 +175,11 @@ bool Xsns80(uint8_t function) {
           RC522ScanForTag();
         }
         break;
+      case FUNC_COMMAND_SENSOR:
+        if (XSNS_80 == XdrvMailbox.index) {
+          result = RC522Command();
+        }
+        break;
 #ifdef USE_WEBSERVER
       case FUNC_WEB_SENSOR:
         RC522Show();
@@ -158,3 +191,4 @@ bool Xsns80(uint8_t function) {
 }
 
 #endif  // USE_RC522
+#endif  // USE_SPI

@@ -1,7 +1,7 @@
 /*
   xdrv_23_zigbee_converters.ino - zigbee support for Tasmota
 
-  Copyright (C) 2020  Theo Arends and Stephan Hadinger
+  Copyright (C) 2021  Theo Arends and Stephan Hadinger
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -42,9 +42,12 @@ enum Z_DataTypes {
   ZEUI64    = 0xF0, Zkey128 = 0xF1,
   Zunk      = 0xFF,
   // adding fake type for Tuya specific encodings
-  Ztuya1    = 0x80,   // 1 byte unsigned int, Big Endian when output (input is taken care of)
-  Ztuya2    = 0x81,   // 2 bytes unsigned, Big Endian when output (input is taken care of)
-  Ztuya4    = 0x82,   // 4 bytes signed, Big Endian when output (input is taken care of)
+  Ztuya0    = Zoctstr,
+  Ztuya1    = Zbool,
+  Ztuya2    = Zint32,
+  Ztuya3    = Zstring,
+  Ztuya4    = Zuint8,
+  Ztuya5    = Zuint32
 };
 
 //
@@ -65,18 +68,13 @@ uint8_t Z_getDatatypeLen(uint8_t t) {
     case Zsemi:
     case ZclusterId:
     case ZattribId:
-    case Ztuya1:
       return 2;
-    case Ztuya2:
-      return 3;
     case Zsingle:
     case ZToD:
     case Zdate:
     case ZUTC:
     case ZbacOID:
       return 4;
-    case Ztuya4:
-      return 5;
     case Zdouble:
     case ZEUI64:
       return 8;
@@ -129,7 +127,7 @@ enum Cx_cluster_short {
   Cx0010, Cx0011, Cx0012, Cx0013, Cx0014, Cx001A, Cx0020, Cx0100,
   Cx0101, Cx0102, Cx0201, Cx0300, Cx0400, Cx0401, Cx0402, Cx0403,
   Cx0404, Cx0405, Cx0406, Cx0500, Cx0702, Cx0B01, Cx0B04, Cx0B05,
-  CxEF00, CxFCCC,
+  CxEF00, CxFCC0, CxFCCC,
 };
 
 const uint16_t Cx_cluster[] PROGMEM = {
@@ -138,18 +136,18 @@ const uint16_t Cx_cluster[] PROGMEM = {
   0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x001A, 0x0020, 0x0100,
   0x0101, 0x0102, 0x0201, 0x0300, 0x0400, 0x0401, 0x0402, 0x0403,
   0x0404, 0x0405, 0x0406, 0x0500, 0x0702, 0x0B01, 0x0B04, 0x0B05,
-  0xEF00, 0xFCCC,
+  0xEF00, 0xFCC0, 0xFCCC,
 };
 
 uint16_t CxToCluster(uint8_t cx) {
-  if (cx < ARRAY_SIZE(Cx_cluster)) {
+  if (cx < nitems(Cx_cluster)) {
     return pgm_read_word(&Cx_cluster[cx]);
   }
   return 0xFFFF;
 }
 
 uint8_t ClusterToCx(uint16_t cluster) {
-  for (uint32_t i=0; i<ARRAY_SIZE(Cx_cluster); i++) {
+  for (uint32_t i=0; i<nitems(Cx_cluster); i++) {
     if (pgm_read_word(&Cx_cluster[i]) == cluster) {
       return i;
     }
@@ -172,7 +170,7 @@ const int8_t Cm_multiplier[] PROGMEM = {
 
 int8_t CmToMultiplier(uint8_t cm) {
   cm = cm & 0x0F;     // get only low nibble
-  if (cm < ARRAY_SIZE(Cm_multiplier)) {
+  if (cm < nitems(Cm_multiplier)) {
     return pgm_read_byte(&Cm_multiplier[cm]);
   }
   return 1;
@@ -197,6 +195,7 @@ const Z_AttributeConverter Z_PostProcess[] PROGMEM = {
   { Zoctstr,  Cx0000, 0x000A,  Z_(ProductCode),          Cm1, 0 },
   { Zstring,  Cx0000, 0x000B,  Z_(ProductURL),           Cm1, 0 },
   { Zstring,  Cx0000, 0x4000,  Z_(SWBuildID),            Cm1, 0 },
+  { Zuint8,   Cx0000, 0x4005,  Z_(MullerLightMode),      Cm1, 0 },
   // { Zunk,     Cx0000, 0xFFFF,  nullptr,                 Cm0, 0 },    // Remove all other values
   // Cmd 0x0A - Cluster 0x0000, attribute 0xFF01 - proprietary
   { Zmap8,    Cx0000, 0xFF01,  Z_(),                     Cm0, 0 },
@@ -468,6 +467,13 @@ const Z_AttributeConverter Z_PostProcess[] PROGMEM = {
   { Zuint8,   Cx0201, 0x4001, Z_(ValvePosition),         Cm1, 0 },
   { Zuint8,   Cx0201, 0x4002, Z_(EurotronicErrors),      Cm1, 0 },
   { Zint16,   Cx0201, 0x4003, Z_(CurrentTemperatureSetPoint), Cm_100, 0 },
+  { Zuint24,  Cx0201, 0x4008, Z_(EurotronicHostFlags),   Cm1, 0 },
+  // below are synthetic virtual attributes used to decode EurotronicHostFlags
+  // Last byte acts as a field mask for the lowest byte value
+  { Zbool,    Cx0201, 0xF002, Z_(TRVMirrorDisplay),      Cm1, 0 },
+  { Zbool,    Cx0201, 0xF004, Z_(TRVBoost),              Cm1, 0 },
+  { Zbool,    Cx0201, 0xF010, Z_(TRVWindowOpen),         Cm1, 0 },
+  { Zbool,    Cx0201, 0xF080, Z_(TRVChildProtection),    Cm1, 0 },
   // below are virtual attributes to simplify ZbData import/export
   { Zuint8,   Cx0201, 0xFFF0,  Z_(ThSetpoint),           Cm1 + Z_EXPORT_DATA, Z_MAPPING(Z_Data_Thermo, th_setpoint) },
   { Zint16,   Cx0201, 0xFFF1,  Z_(TempTarget),        Cm_100 + Z_EXPORT_DATA, Z_MAPPING(Z_Data_Thermo, temperature_target) },
@@ -603,8 +609,15 @@ const Z_AttributeConverter Z_PostProcess[] PROGMEM = {
   { Zuint8,   Cx0B05, 0x011D,  Z_(LastMessageRSSI),      Cm1, 0 },
 
   // Tuya Moes specific - 0xEF00
-  { Zoctstr,  CxEF00, 0x0070,  Z_(TuyaScheduleWorkdays), Cm1, 0 },
-  { Zoctstr,  CxEF00, 0x0071,  Z_(TuyaScheduleHolidays), Cm1, 0 },
+  // Mapping of Tuya type with internal mapping
+  // 0x00 - Zoctstr (len N)
+  // 0x01 - Ztuya1 (len 1) - equivalent to Zuint8 without invalid value handling
+  // 0x02 - Ztuya4 (len 4) - equivalent to Zint32 in big endian and without invalid value handling
+  // 0x03 - Zstr (len N)
+  // 0x04 - Ztuya1 (len 1)
+  // 0x05 - Ztuya4u (len 1/2/4) - equivalent to Zuint32
+  { Ztuya0,   CxEF00, 0x0070,  Z_(TuyaScheduleWorkdays), Cm1, 0 },
+  { Ztuya0,   CxEF00, 0x0071,  Z_(TuyaScheduleHolidays), Cm1, 0 },
   { Ztuya1,   CxEF00, 0x0101,  Z_(Power),                Cm1, 0 },
   { Ztuya1,   CxEF00, 0x0102,  Z_(Power2),               Cm1, 0 },
   { Ztuya1,   CxEF00, 0x0103,  Z_(Power3),               Cm1, 0 },
@@ -613,21 +626,24 @@ const Z_AttributeConverter Z_PostProcess[] PROGMEM = {
   { Ztuya1,   CxEF00, 0x0112,  Z_(TuyaWindowDetection),  Cm1, 0 },
   { Ztuya1,   CxEF00, 0x0114,  Z_(TuyaValveDetection),   Cm1, 0 },
   { Ztuya1,   CxEF00, 0x0174,  Z_(TuyaAutoLock),         Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x0202,  Z_(TuyaTempTarget),       Cm_10, 0 },
-  { Ztuya4,   CxEF00, 0x0203,  Z_(LocalTemperature),     Cm_10, 0 },  // will be overwritten by actual LocalTemperature
-  { Ztuya1,   CxEF00, 0x0215,  Z_(TuyaBattery),          Cm1, 0 },   // TODO check equivalent?
-  { Ztuya4,   CxEF00, 0x0266,  Z_(TuyaMinTemp),          Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x0267,  Z_(TuyaMaxTemp),          Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x0269,  Z_(TuyaBoostTime),        Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x026B,  Z_(TuyaComfortTemp),      Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x026C,  Z_(TuyaEcoTemp),          Cm1, 0 },
-  { Ztuya1,   CxEF00, 0x026D,  Z_(TuyaValvePosition),    Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x0272,  Z_(TuyaAwayTemp),         Cm1, 0 },
-  { Ztuya4,   CxEF00, 0x0275,  Z_(TuyaAwayDays),         Cm1, 0 },
-  { Ztuya1,   CxEF00, 0x0404,  Z_(TuyaPreset),           Cm1, 0 },
-  { Ztuya1,   CxEF00, 0x0405,  Z_(TuyaFanMode),          Cm1, 0 },
-  { Ztuya1,   CxEF00, 0x046A,  Z_(TuyaForceMode),        Cm1, 0 },
-  { Ztuya1,   CxEF00, 0x046F,  Z_(TuyaWeekSelect),       Cm1, 0 },
+  { Zint16,   CxEF00, 0x0202,  Z_(TuyaTempTarget),       Cm_10, Z_MAPPING(Z_Data_Thermo, temperature_target) },
+  { Zint16,   CxEF00, 0x0203,  Z_(LocalTemperature),     Cm_10, Z_MAPPING(Z_Data_Thermo, temperature) },  // will be overwritten by actual LocalTemperature
+  { Ztuya2,   CxEF00, 0x0215,  Z_(TuyaBattery),          Cm1, 0 },   // TODO check equivalent?
+  { Ztuya2,   CxEF00, 0x0266,  Z_(TuyaMinTemp),          Cm1, 0 },
+  { Ztuya2,   CxEF00, 0x0267,  Z_(TuyaMaxTemp),          Cm1, 0 },
+  { Ztuya2,   CxEF00, 0x0269,  Z_(TuyaBoostTime),        Cm1, 0 },
+  { Ztuya2,   CxEF00, 0x026B,  Z_(TuyaComfortTemp),      Cm1, 0 },
+  { Ztuya2,   CxEF00, 0x026C,  Z_(TuyaEcoTemp),          Cm1, 0 },
+  { Zuint8,   CxEF00, 0x026D,  Z_(TuyaValvePosition),    Cm1, Z_MAPPING(Z_Data_Thermo, th_setpoint) },
+  { Ztuya2,   CxEF00, 0x0272,  Z_(TuyaAwayTemp),         Cm1, 0 },
+  { Ztuya2,   CxEF00, 0x0275,  Z_(TuyaAwayDays),         Cm1, 0 },
+  { Ztuya4,   CxEF00, 0x0404,  Z_(TuyaPreset),           Cm1, 0 },
+  { Ztuya4,   CxEF00, 0x0405,  Z_(TuyaFanMode),          Cm1, 0 },
+  { Ztuya4,   CxEF00, 0x046A,  Z_(TuyaForceMode),        Cm1, 0 },
+  { Ztuya4,   CxEF00, 0x046F,  Z_(TuyaWeekSelect),       Cm1, 0 },
+
+  // Aqara Opple spacific
+  { Zuint8,   CxFCC0, 0x0009,  Z_(OppleMode),            Cm1, 0 },
 
   // Terncy specific - 0xFCCC
   { Zuint16, CxFCCC, 0x001A,  Z_(TerncyDuration),        Cm1, 0 },
@@ -652,7 +668,7 @@ typedef union ZCLHeaderFrameControl_t {
 const __FlashStringHelper* zigbeeFindAttributeByName(const char *command,
                                     uint16_t *cluster, uint16_t *attribute, int8_t *multiplier,
                                     uint8_t *zigbee_type = nullptr, Z_Data_Type *data_type = nullptr, uint8_t *map_offset = nullptr) {
-  for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
+  for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
     const Z_AttributeConverter *converter = &Z_PostProcess[i];
     if (0 == pgm_read_word(&converter->name_offset)) { continue; }         // avoid strcasecmp_P() from crashing
     if (0 == strcasecmp_P(command, Z_strings + pgm_read_word(&converter->name_offset))) {
@@ -674,7 +690,7 @@ const __FlashStringHelper* zigbeeFindAttributeByName(const char *command,
 //
 const __FlashStringHelper* zigbeeFindAttributeById(uint16_t cluster, uint16_t attr_id,
                                       uint8_t *attr_type, int8_t *multiplier) {
-  for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
+  for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
     const Z_AttributeConverter *converter = &Z_PostProcess[i];
     uint16_t conv_cluster = CxToCluster(pgm_read_byte(&converter->cluster_short));
     uint16_t conv_attr_id = pgm_read_word(&converter->attribute);
@@ -707,19 +723,21 @@ public:
 
 
   void log(void) {
-    char hex_char[_payload.len()*2+2];
-		ToHex_P((unsigned char*)_payload.getBuffer(), _payload.len(), hex_char, sizeof(hex_char));
     Response_P(PSTR("{\"" D_JSON_ZIGBEEZCL_RECEIVED "\":{"
-                    "\"groupid\":%d," "\"clusterid\":%d," "\"srcaddr\":\"0x%04X\","
+                    "\"groupid\":%d," "\"clusterid\":\"0x%04X\"," "\"srcaddr\":\"0x%04X\","
                     "\"srcendpoint\":%d," "\"dstendpoint\":%d," "\"wasbroadcast\":%d,"
                     "\"" D_CMND_ZIGBEE_LINKQUALITY "\":%d," "\"securityuse\":%d," "\"seqnumber\":%d,"
-                    "\"fc\":\"0x%02X\",\"manuf\":\"0x%04X\",\"transact\":%d,"
-                    "\"cmdid\":\"0x%02X\",\"payload\":\"%s\"}}"),
+                    "\"fc\":\"0x%02X\","
+                    "\"frametype\":%d,\"direction\":%d,\"disableresp\":%d,"
+                    "\"manuf\":\"0x%04X\",\"transact\":%d,"
+                    "\"cmdid\":\"0x%02X\",\"payload\":\"%_B\"}}"),
                     _groupaddr, _cluster_id, _srcaddr,
                     _srcendpoint, _dstendpoint, _wasbroadcast,
                     _linkquality, _securityuse, _seqnumber,
-                    _frame_control, _manuf_code, _transact_seq, _cmd_id,
-                    hex_char);
+                    _frame_control,
+                    _frame_control.b.frame_type, _frame_control.b.direction, _frame_control.b.disable_def_resp,
+                    _manuf_code, _transact_seq, _cmd_id,
+                    &_payload);
     if (Settings.flag3.tuya_serial_mqtt_publish) {
       MqttPublishPrefixTopicRulesProcess_P(TELE, PSTR(D_RSLT_SENSOR));
     } else {
@@ -764,8 +782,9 @@ public:
   void parseReadAttributesResponse(Z_attribute_list& attr_list);
   void parseReadConfigAttributes(Z_attribute_list& attr_list);
   void parseConfigAttributes(Z_attribute_list& attr_list);
+  void parseWriteAttributesResponse(Z_attribute_list& attr_list);
   void parseResponse(void);
-  void parseResponseOld(void);
+  void parseResponse_inner(uint8_t cmd, bool cluster_specific, uint8_t status);
   void parseClusterSpecificCommand(Z_attribute_list& attr_list);
 
   // synthetic attributes converters
@@ -848,7 +867,7 @@ uint8_t toPercentageCR2032(uint32_t voltage) {
 // Adds to buf:
 // - n bytes: value (typically between 1 and 4 bytes, or bigger for strings)
 // returns number of bytes of attribute, or <0 if error
-int32_t encodeSingleAttribute(class SBuffer &buf, double val_d, const char *val_str, uint8_t attrtype) {
+int32_t encodeSingleAttribute(SBuffer &buf, double val_d, const char *val_str, uint8_t attrtype) {
   uint32_t len = Z_getDatatypeLen(attrtype);    // pre-compute length, overloaded for variable length attributes
   uint32_t u32 = val_d;
   int32_t  i32 = val_d;
@@ -863,10 +882,6 @@ int32_t encodeSingleAttribute(class SBuffer &buf, double val_d, const char *val_
     case Zmap8:       // map8
       buf.add8(u32);
       break;
-    case Ztuya1:      // tuya specific 1 byte
-      buf.add8(1);    // len
-      buf.add8(u32);
-      break;
     // unsigned 16
     case Zuint16:     // uint16
     case Zenum16:     // enum16
@@ -874,10 +889,12 @@ int32_t encodeSingleAttribute(class SBuffer &buf, double val_d, const char *val_
     case Zmap16:      // map16
       buf.add16(u32);
       break;
-    case Ztuya2:
-      buf.add8(2);    // len
-      buf.add16BigEndian(u32);
     // unisgned 32
+    case Zuint24:
+      buf.add16(u32);
+      buf.add8(u32 >> 16);
+      break;
+    // unisgned 24
     case Zuint32:     // uint32
     case Zdata32:     // data32
     case Zmap32:      // map32
@@ -894,10 +911,6 @@ int32_t encodeSingleAttribute(class SBuffer &buf, double val_d, const char *val_
       break;
     case Zint32:      // int32
       buf.add32(i32);
-      break;
-    case Ztuya4:
-      buf.add8(4);    // len
-      buf.add32BigEndian(i32);
       break;
 
     case Zsingle:      // float
@@ -977,6 +990,15 @@ uint32_t parseSingleAttribute(Z_attribute & attr, const SBuffer &buf,
         }
       }
       break;
+    case Zuint24:
+      {
+        uint32_t uint24_val = buf.get16(i) + (buf.get8(i+2) >> 16);
+        // i += 3;
+        if (0xFFFFFF != uint24_val) {
+          attr.setUInt(uint24_val);
+        }
+      }
+      break;
     case Zuint32:      // uint32
     case ZUTC:      // UTC
       {
@@ -986,15 +1008,6 @@ uint32_t parseSingleAttribute(Z_attribute & attr, const SBuffer &buf,
           attr.setUInt(uint32_val);
         }
       }
-      break;
-    case Ztuya1:      // uint8 Big Endian
-      attr.setUInt(buf.get8(i+1));
-      break;
-    case Ztuya2:      // uint16  Big Endian
-      attr.setUInt(buf.get16BigEndian(i+1));
-      break;
-    case Ztuya4:
-      attr.setInt(buf.get32IBigEndian(i+1));
       break;
     // Note: uint40, uint48, uint56, uint64 are displayed as Hex
     // Note: int40, int48, int56, int64 are displayed as Hex
@@ -1171,6 +1184,10 @@ void ZCLFrame::parseReportAttributes(Z_attribute_list& attr_list) {
   uint32_t i = 0;
   uint32_t len = _payload.len();
 
+  if (ZCL_WRITE_ATTRIBUTES == getCmdId()) {
+    attr_list.addAttribute(PSTR("Command"), true).setStr(PSTR("Write"));
+  }
+
   while (len >= i + 3) {
     uint16_t attrid = _payload.get16(i);
     i += 2;
@@ -1192,23 +1209,19 @@ void ZCLFrame::parseReportAttributes(Z_attribute_list& attr_list) {
   // The sensor expects the coordinator to send a Default Response to acknowledge the attribute reporting
   if (0 == _frame_control.b.disable_def_resp) {
     // the device expects a default response
-    SBuffer buf(2);
-    buf.add8(_cmd_id);
-    buf.add8(0x00);   // Status = OK
-
-    ZigbeeZCLSend_Raw(ZigbeeZCLSendMessage({
-      _srcaddr,
-      0x0000,
-      _cluster_id,
-      _srcendpoint,
-      ZCL_DEFAULT_RESPONSE,
-      _manuf_code,
-      false /* not cluster specific */,
-      false /* noresponse */,
-      true /* direct no retry */,
-      _transact_seq,  /* zcl transaction id */
-      buf.getBuffer(), buf.len()
-    }));
+    ZCLMessage zcl(2);   // message is 2 bytes
+    zcl.shortaddr = _srcaddr;
+    zcl.cluster = _cluster_id;
+    zcl.endpoint = _srcendpoint;
+    zcl.cmd = ZCL_DEFAULT_RESPONSE;
+    zcl.manuf = _manuf_code;
+    zcl.clusterSpecific = false;  /* not cluster specific */
+    zcl.needResponse = false;     /* noresponse */
+    zcl.direct = true;            /* direct no retry */
+    zcl.setTransac(_transact_seq);
+    zcl.buf.add8(_cmd_id);
+    zcl.buf.add8(0);    // Status = OK
+    zigbeeZCLSendCmd(zcl);
   }
 }
 
@@ -1267,6 +1280,7 @@ void ZCLFrame::removeInvalidAttributes(Z_attribute_list& attr_list) {
 // Note: both function are now split to compute on extracted attributes
 //
 void ZCLFrame::computeSyntheticAttributes(Z_attribute_list& attr_list) {
+  const Z_Device & device = zigbee_devices.findShortAddr(_srcaddr);
   const char * model_c = zigbee_devices.getModelId(_srcaddr);  // null if unknown
   String modelId((char*) model_c);
   // scan through attributes and apply specific converters
@@ -1292,19 +1306,58 @@ void ZCLFrame::computeSyntheticAttributes(Z_attribute_list& attr_list) {
         }
         break;
       case 0x02010008:    // Pi Heating Demand - solve Eutotronic bug
+      case 0x02014008:    // Eurotronic Host Flags decoding
         {
           const char * manufacturer_c = zigbee_devices.getManufacturerId(_srcaddr);  // null if unknown
           String manufacturerId((char*) manufacturer_c);
           if (manufacturerId.equals(F("Eurotronic"))) {
-            // Eurotronic does not report 0..100 but 0..255, including 255 which is normally an ivalid value
-            uint8_t valve = attr.getUInt();
-            if (attr.isNone()) { valve = 255; }
-            uint8_t valve_100 = changeUIntScale(valve, 0, 255, 0, 100);
-            attr.setUInt(valve_100);
+            if (ccccaaaa == 0x02010008) {
+              // Eurotronic does not report 0..100 but 0..255, including 255 which is normally an ivalid value
+              uint8_t valve = attr.getUInt();
+              if (attr.isNone()) { valve = 255; }
+              uint8_t valve_100 = changeUIntScale(valve, 0, 255, 0, 100);
+              attr.setUInt(valve_100);
+            } else if (ccccaaaa == 0x02014008) {
+              uint32_t mode = attr.getUInt();
+              if (mode & 0x02) { attr_list.addAttribute(0x0201, 0xF002).setUInt(1); }
+              if (mode & 0x04) { attr_list.addAttribute(0x0201, 0xF004).setUInt(1); }
+              if (mode & 0x10) { attr_list.addAttribute(0x0201, 0xF010).setUInt(1); }
+              if (mode & 0x80) { attr_list.addAttribute(0x0201, 0xF080).setUInt(1); }
+            }
           }
         }
         break;
-      case 0x04030000:    // Pressure
+      case 0x03000000:    // Hue
+      case 0x03000001:    // Sat
+      case 0x03000003:    // X
+      case 0x03000004:    // Y
+        {                 // generate synthetic RGB
+          const Z_attribute * attr_rgb = attr_list.findAttribute(PSTR("RGB"));
+          if (attr_rgb == nullptr) {      // make sure we didn't already computed it
+            uint8_t brightness = 255;
+            if (device.valid()) {
+              const Z_Data_Light & light = device.data.find<Z_Data_Light>(_srcendpoint);
+              if ((&light != nullptr) && (light.validDimmer())) {
+                // Dimmer has a valid value
+                brightness = changeUIntScale(light.getDimmer(), 0, 254, 0, 255);   // range is 0..255
+              }
+            }
+
+            const Z_attribute * attr_hue = attr_list.findAttribute(0x0300, 0x0000);
+            const Z_attribute * attr_sat = attr_list.findAttribute(0x0300, 0x0001);
+            const Z_attribute * attr_x   = attr_list.findAttribute(0x0300, 0x0003);
+            const Z_attribute * attr_y   = attr_list.findAttribute(0x0300, 0x0004);
+            if (attr_hue && attr_sat) {
+              uint8_t sat = changeUIntScale(attr_sat->getUInt(), 0, 254, 0, 255);
+              uint16_t hue = changeUIntScale(attr_hue->getUInt(), 0, 254, 0, 360);
+              Z_Data_Light::toRGBAttributesHSB(attr_list, hue, sat, brightness);
+            } else if (attr_x && attr_y) {
+              Z_Data_Light::toRGBAttributesXYB(attr_list, attr_x->getUInt(), attr_y->getUInt(), brightness);
+            }
+          }
+        }
+        break;
+      case 0x04030000:    // SeaPressure
         {
           int16_t pressure = attr.getInt();
           int16_t pressure_sealevel = (pressure / FastPrecisePow(1.0 - ((float)Settings.altitude / 44330.0f), 5.255f)) - 21.6f;
@@ -1405,7 +1458,7 @@ void ZCLFrame::parseReadAttributes(Z_attribute_list& attr_list) {
     read_attr_ids[i/2] = attrid;
 
     // find the attribute name
-    for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
+    for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
       const Z_AttributeConverter *converter = &Z_PostProcess[i];
       uint16_t conv_cluster = CxToCluster(pgm_read_byte(&converter->cluster_short));
       uint16_t conv_attribute = pgm_read_word(&converter->attribute);
@@ -1449,6 +1502,11 @@ void ZCLFrame::parseConfigAttributes(Z_attribute_list& attr_list) {
   attr_1.setStrRaw(attr_config_list.toString(true).c_str());
 }
 
+// ZCL_WRITE_ATTRIBUTES_RESPONSE
+void ZCLFrame::parseWriteAttributesResponse(Z_attribute_list& attr_list) {
+  parseResponse_inner(ZCL_WRITE_ATTRIBUTES_RESPONSE, false, _payload.get8(0));
+}
+
 // ZCL_READ_REPORTING_CONFIGURATION_RESPONSE
 void ZCLFrame::parseReadConfigAttributes(Z_attribute_list& attr_list) {
   uint32_t i = 0;
@@ -1469,7 +1527,7 @@ void ZCLFrame::parseReadConfigAttributes(Z_attribute_list& attr_list) {
 
     // find the attribute name
     int8_t multiplier = 1;
-    for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
+    for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
       const Z_AttributeConverter *converter = &Z_PostProcess[i];
       uint16_t conv_cluster = CxToCluster(pgm_read_byte(&converter->cluster_short));
       uint16_t conv_attribute = pgm_read_word(&converter->attribute);
@@ -1536,12 +1594,8 @@ void ZCLFrame::parseReadAttributesResponse(Z_attribute_list& attr_list) {
   }
 }
 
-// ZCL_DEFAULT_RESPONSE
-void ZCLFrame::parseResponse(void) {
-  if (_payload.len() < 2) { return; }   // wrong format
-  uint8_t cmd = _payload.get8(0);
-  uint8_t status = _payload.get8(1);
 
+void ZCLFrame::parseResponse_inner(uint8_t cmd, bool cluster_specific, uint8_t status) {
   Z_attribute_list attr_list;
 
   // "Device"
@@ -1554,7 +1608,7 @@ void ZCLFrame::parseResponse(void) {
     attr_list.addAttributePMEM(PSTR(D_JSON_ZIGBEE_NAME)).setStr(friendlyName);
   }
   // "Command"
-  snprintf_P(s, sizeof(s), PSTR("%04X!%02X"), _cluster_id, cmd);
+  snprintf_P(s, sizeof(s), PSTR("%04X%c%02X"), _cluster_id, cluster_specific ? '!' : '_', cmd);
   attr_list.addAttributePMEM(PSTR(D_JSON_ZIGBEE_CMD)).setStr(s);
   // "Status"
   attr_list.addAttributePMEM(PSTR(D_JSON_ZIGBEE_STATUS)).setUInt(status);
@@ -1573,16 +1627,62 @@ void ZCLFrame::parseResponse(void) {
   MqttPublishPrefixTopicRulesProcess_P(RESULT_OR_TELE, PSTR(D_JSON_ZIGBEEZCL_RECEIVED));
 }
 
+// ZCL_DEFAULT_RESPONSE
+void ZCLFrame::parseResponse(void) {
+  if (_payload.len() < 2) { return; }   // wrong format
+  uint8_t cmd = _payload.get8(0);
+  uint8_t status = _payload.get8(1);
+
+  parseResponse_inner(cmd, true, status);
+}
+
+/*********************************************************************************************\
+ * Callbacks
+\*********************************************************************************************/
+// Reset the debounce marker
+void Z_ResetDebounce(uint16_t shortaddr, uint16_t groupaddr, uint16_t cluster, uint8_t endpoint, uint32_t value) {
+  zigbee_devices.getShortAddr(shortaddr).debounce_endpoint = 0;
+}
+
 // Parse non-normalized attributes
 void ZCLFrame::parseClusterSpecificCommand(Z_attribute_list& attr_list) {
-  convertClusterSpecific(attr_list, _cluster_id, _cmd_id, _frame_control.b.direction, _srcaddr, _srcendpoint, _payload);
-  if (!Settings.flag5.zb_disable_autoquery) {
-  // read attributes unless disabled
-    if (!_frame_control.b.direction) {    // only handle server->client (i.e. device->coordinator)
-      if (_wasbroadcast) {                // only update for broadcast messages since we don't see unicast from device to device and we wouldn't know the target
-        sendHueUpdate(BAD_SHORTADDR, _groupaddr, _cluster_id);
+  // Check if debounce is active and if the packet is a duplicate
+  Z_Device & device = zigbee_devices.getShortAddr(_srcaddr);
+  if ((device.debounce_endpoint != 0) && (device.debounce_endpoint == _srcendpoint) && (device.debounce_transact == _transact_seq)) {
+    // this is a duplicate, drop the packet
+    AddLog(LOG_LEVEL_DEBUG, PSTR(D_LOG_ZIGBEE "Discarding duplicate command from 0x%04X, endpoint %d"), _srcaddr, _srcendpoint);
+  } else {
+    // reset the duplicate marker, parse the packet normally, and set a timer to reset the marker later (which will discard any existing timer for the same device/endpoint)
+    device.debounce_endpoint = _srcendpoint;
+    device.debounce_transact = _transact_seq;
+    zigbee_devices.setTimer(_srcaddr, 0 /* groupaddr */, USE_ZIGBEE_DEBOUNCE_COMMANDS, 0 /*clusterid*/, _srcendpoint, Z_CAT_DEBOUNCE_CMD, 0, &Z_ResetDebounce);
+
+    convertClusterSpecific(attr_list, _cluster_id, _cmd_id, _frame_control.b.direction, _srcaddr, _srcendpoint, _payload);
+    if (!Settings.flag5.zb_disable_autoquery) {
+    // read attributes unless disabled
+      if (!_frame_control.b.direction) {    // only handle server->client (i.e. device->coordinator)
+        if (_wasbroadcast) {                // only update for broadcast messages since we don't see unicast from device to device and we wouldn't know the target
+          sendHueUpdate(BAD_SHORTADDR, _groupaddr, _cluster_id);
+        }
       }
     }
+  }
+  // Send Default Response to acknowledge the attribute reporting
+  if (0 == _frame_control.b.disable_def_resp) {
+    // the device expects a default response
+    ZCLMessage zcl(2);   // message is 4 bytes
+    zcl.shortaddr = _srcaddr;
+    zcl.cluster = _cluster_id;
+    zcl.endpoint = _srcendpoint;
+    zcl.cmd = ZCL_DEFAULT_RESPONSE;
+    zcl.manuf = _manuf_code;
+    zcl.clusterSpecific = false;  /* not cluster specific */
+    zcl.needResponse = false;     /* noresponse */
+    zcl.direct = true;            /* direct no retry */
+    zcl.setTransac(_transact_seq);
+    zcl.buf.add8(_cmd_id);
+    zcl.buf.add8(0x00);   // Status = OK
+    zigbeeZCLSendCmd(zcl);
   }
 }
 
@@ -1591,12 +1691,15 @@ void ZCLFrame::parseClusterSpecificCommand(Z_attribute_list& attr_list) {
 void ZCLFrame::syntheticAnalogValue(Z_attribute_list &attr_list, class Z_attribute &attr) {
   const char * modelId_c = zigbee_devices.getModelId(_srcaddr);  // null if unknown
   String modelId((char*) modelId_c);
-  
+
   if (modelId.startsWith(F("lumi.sensor_cube"))) {
     attr.setKeyId(0x000C, 0xFF55);    // change to AqaraRotate
   }
   if (modelId.startsWith(F("lumi.plug"))) {
     attr.setKeyId(0x0702, 0x0000);    // change to EnergyTotal
+  }
+  if (modelId.startsWith(F("lumi.ctrl"))) {
+    attr.setKeyId(0x0B04, 0x050B);    // change to ActivePower
   }
 }
 
@@ -1636,6 +1739,10 @@ void ZCLFrame::syntheticAqaraSensor(Z_attribute_list &attr_list, class Z_attribu
           if (0x64 == attrid) {
             attr_list.addAttributePMEM(PSTR("SmokeDensity")).copyVal(attr);
           }
+        } else if (modelId.startsWith(F("lumi.sensor_wleak"))) {   // gas leak
+          if (0x64 == attrid) {
+            attr_list.addAttributePMEM(PSTR("Water")).copyVal(attr);
+          }
         } else if (modelId.startsWith(F("lumi.sensor_natgas"))) {   // gas leak
           if (0x64 == attrid) {
             attr_list.addAttributePMEM(PSTR("GasDensity")).copyVal(attr);
@@ -1652,9 +1759,9 @@ void ZCLFrame::syntheticAqaraSensor(Z_attribute_list &attr_list, class Z_attribu
           } else if (0x66 == attrid) {
             attr_list.addAttribute(0x0403, 0x0000).setUInt((ival32 + 50) / 100);  // Pressure
           }
-        } else if (modelId.startsWith(F("lumi.plug"))) {
+        } else if (modelId.startsWith(F("lumi.plug")) || modelId.startsWith(F("lumi.ctrl"))) {
           if (0x64 == attrid) {
-            attr_list.addAttribute(0x0600, 0x0000).setInt(uval32);          // Power (on/off)
+            attr_list.addAttribute(0x0006, 0x0000).setInt(uval32);          // Power (on/off)
           } else if (0x98 == attrid) {
             attr_list.addAttribute(0x0B04, 0x050B).setInt(ival32);          // Active Power
           } else if (0x95 == attrid) {
@@ -1763,33 +1870,48 @@ void ZCLFrame::syntheticAqaraCubeOrButton(class Z_attribute_list &attr_list, cla
     //     presentValue = x + 512 = double tap while side x is on top
   } else if (modelId.startsWith(F("lumi.remote")) || modelId.startsWith(F("lumi.sensor_swit"))) {   // only for Aqara buttons WXKG11LM & WXKG12LM, 'swit' because of #9923
     int32_t val = attr.getInt();
-    const __FlashStringHelper *aqara_click = F("click");
-    const __FlashStringHelper *aqara_action = F("action");
+    const __FlashStringHelper *aqara_click = F("click");    // deprecated
+    const __FlashStringHelper *aqara_action = F("action");  // deprecated
+    Z_attribute & attr_click = attr_list.addAttribute(PSTR("Click"), true);
 
     switch (val) {
       case 0:
-        attr_list.addAttribute(aqara_action).setStr(PSTR("hold"));
+        attr_list.addAttribute(aqara_action).setStr(PSTR("hold"));            // deprecated
+        attr_click.setStr(PSTR("hold"));
         break;
       case 1:
-        attr_list.addAttribute(aqara_click).setStr(PSTR("single"));
+        attr_list.addAttribute(aqara_click).setStr(PSTR("single"));            // deprecated
+        attr_click.setStr(PSTR("single"));
         break;
       case 2:
-        attr_list.addAttribute(aqara_click).setStr(PSTR("double"));
+        attr_list.addAttribute(aqara_click).setStr(PSTR("double"));            // deprecated
+        attr_click.setStr(PSTR("double"));
+        break;
+      case 3:
+        attr_click.setStr(PSTR("triple"));
+        break;
+      case 4:
+        attr_click.setStr(PSTR("quadruple"));
         break;
       case 16:
-        attr_list.addAttribute(aqara_action).setStr(PSTR("hold"));
+        attr_list.addAttribute(aqara_action).setStr(PSTR("hold"));            // deprecated
+        attr_click.setStr(PSTR("hold"));
         break;
       case 17:
-        attr_list.addAttribute(aqara_action).setStr(PSTR("release"));
+        attr_list.addAttribute(aqara_action).setStr(PSTR("release"));            // deprecated
+        attr_click.setStr(PSTR("release"));
         break;
       case 18:
-        attr_list.addAttribute(aqara_action).setStr(PSTR("shake"));
+        attr_list.addAttribute(aqara_action).setStr(PSTR("shake"));            // deprecated
+        attr_click.setStr(PSTR("shake"));
         break;
       case 255:
-        attr_list.addAttribute(aqara_action).setStr(PSTR("release"));
+        attr_list.addAttribute(aqara_action).setStr(PSTR("release"));            // deprecated
+        attr_click.setStr(PSTR("release"));
         break;
       default:
         attr_list.addAttribute(aqara_click).setUInt(val);
+        attr_click.setStr(PSTR("release"));
         break;
     }
   }
@@ -1827,7 +1949,7 @@ void ZCLFrame::syntheticAqaraVibration(class Z_attribute_list &attr_list, class 
           y = buf2.get16(2);
           x = buf2.get16(4);
           char temp[32];
-          snprintf_P(temp, sizeof(temp), "[%i,%i,%i]", x, y, z);
+          snprintf_P(temp, sizeof(temp), PSTR("[%i,%i,%i]"), x, y, z);
           attr.setStrRaw(temp);
           // calculate angles
           float X = x;
@@ -1836,7 +1958,7 @@ void ZCLFrame::syntheticAqaraVibration(class Z_attribute_list &attr_list, class 
           int32_t Angle_X = 0.5f + atanf(X/sqrtf(z*z+y*y)) * f_180pi;
           int32_t Angle_Y = 0.5f + atanf(Y/sqrtf(x*x+z*z)) * f_180pi;
           int32_t Angle_Z = 0.5f + atanf(Z/sqrtf(x*x+y*y)) * f_180pi;
-          snprintf_P(temp, sizeof(temp), "[%i,%i,%i]", Angle_X, Angle_Y, Angle_Z);
+          snprintf_P(temp, sizeof(temp), PSTR("[%i,%i,%i]"), Angle_X, Angle_Y, Angle_Z);
           attr_list.addAttributePMEM(PSTR("AqaraAngles")).setStrRaw(temp);
         }
       }
@@ -1879,7 +2001,7 @@ void Z_postProcessAttributes(uint16_t shortaddr, uint16_t src_ep, class Z_attrib
       uint8_t map_offset = 0;
       uint8_t zigbee_type = Znodata;
       int8_t conv_multiplier;
-      for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
+      for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
         const Z_AttributeConverter *converter = &Z_PostProcess[i];
         uint16_t conv_cluster = CxToCluster(pgm_read_byte(&converter->cluster_short));
         uint16_t conv_attribute = pgm_read_word(&converter->attribute);
@@ -1911,6 +2033,13 @@ void Z_postProcessAttributes(uint16_t shortaddr, uint16_t src_ep, class Z_attrib
         uint32_t uval32 = attr.getUInt();     // call converter to uint only once
         int32_t  ival32 = attr.getInt();     // call converter to int only once
         // AddLog_P(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_ZIGBEE "Mapping type=%d offset=%d zigbee_type=%02X value=%d\n"), (uint8_t) map_type, map_offset, zigbee_type, ival32);
+        switch (ccccaaaa) {
+          case 0xEF000202:
+          case 0xEF000203:    // need to convert Tuya temperatures from 1/10 to 1/00 °C
+            ival32 = ival32 * 10;
+            break;
+        }
+
         switch (zigbee_type) {
           case Zenum8:
           case Zmap8:
@@ -1960,6 +2089,39 @@ void Z_postProcessAttributes(uint16_t shortaddr, uint16_t src_ep, class Z_attrib
   }
 }
 
+// Internal search function
+void Z_parseAttributeKey_inner(class Z_attribute & attr, uint16_t preferred_cluster) {
+  // scan attributes to find by name, and retrieve type
+  for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
+    const Z_AttributeConverter *converter = &Z_PostProcess[i];
+    uint16_t local_attr_id = pgm_read_word(&converter->attribute);
+    uint16_t local_cluster_id = CxToCluster(pgm_read_byte(&converter->cluster_short));
+    uint8_t  local_type_id = pgm_read_byte(&converter->type);
+    int8_t   local_multiplier = CmToMultiplier(pgm_read_byte(&converter->multiplier_idx));
+    // AddLog_P(LOG_LEVEL_DEBUG, PSTR("Try cluster = 0x%04X, attr = 0x%04X, type_id = 0x%02X"), local_cluster_id, local_attr_id, local_type_id);
+
+    if (!attr.key_is_str) {
+      if ((attr.key.id.cluster == local_cluster_id) && (attr.key.id.attr_id == local_attr_id)) {
+        attr.attr_type = local_type_id;
+        break;
+      }
+    } else if (pgm_read_word(&converter->name_offset)) {
+      const char * key = attr.key.key;
+      // AddLog_P(LOG_LEVEL_DEBUG, PSTR("Comparing '%s' with '%s'"), attr_name, converter->name);
+      if (0 == strcasecmp_P(key, Z_strings + pgm_read_word(&converter->name_offset))) {
+        if ((preferred_cluster == 0xFFFF) ||    // any cluster
+            (local_cluster_id == preferred_cluster)) {
+          // match
+          attr.setKeyId(local_cluster_id, local_attr_id);
+          attr.attr_type = local_type_id;
+          attr.attr_multiplier = local_multiplier;
+          break;
+        }
+      }
+    }
+  }
+}
+
 //
 // Given an attribute string, retrieve all attribute details.
 // Input: the attribute has a key name, either: <cluster>/<attr> or <cluster>/<attr>%<type> or "<attribute_name>"
@@ -1976,7 +2138,7 @@ void Z_postProcessAttributes(uint16_t shortaddr, uint16_t src_ep, class Z_attrib
 //   Note: the attribute value is unchanged and unparsed
 //
 // Note: if the type is specified in the key, the multiplier is not applied, no conversion happens
-bool Z_parseAttributeKey(class Z_attribute & attr) {
+bool Z_parseAttributeKey(class Z_attribute & attr, uint16_t preferred_cluster) {
   // check if the name has the format "XXXX/YYYY" where XXXX is the cluster, YYYY the attribute id
   // alternative "XXXX/YYYY%ZZ" where ZZ is the type (for unregistered attributes)
   if (attr.key_is_str) {
@@ -2002,33 +2164,11 @@ bool Z_parseAttributeKey(class Z_attribute & attr) {
   // AddLog_P(LOG_LEVEL_DEBUG, PSTR("cluster_id = 0x%04X, attr_id = 0x%04X"), cluster_id, attr_id);
 
   // do we already know the type, i.e. attribute and cluster are also known
+  if ((Zunk == attr.attr_type) && (preferred_cluster != 0xFFFF)) {
+    Z_parseAttributeKey_inner(attr, preferred_cluster);   // try to find with the selected cluster
+  }
   if (Zunk == attr.attr_type) {
-    // scan attributes to find by name, and retrieve type
-    for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
-      const Z_AttributeConverter *converter = &Z_PostProcess[i];
-      uint16_t local_attr_id = pgm_read_word(&converter->attribute);
-      uint16_t local_cluster_id = CxToCluster(pgm_read_byte(&converter->cluster_short));
-      uint8_t  local_type_id = pgm_read_byte(&converter->type);
-      int8_t   local_multiplier = CmToMultiplier(pgm_read_byte(&converter->multiplier_idx));
-      // AddLog_P(LOG_LEVEL_DEBUG, PSTR("Try cluster = 0x%04X, attr = 0x%04X, type_id = 0x%02X"), local_cluster_id, local_attr_id, local_type_id);
-
-      if (!attr.key_is_str) {
-        if ((attr.key.id.cluster == local_cluster_id) && (attr.key.id.attr_id == local_attr_id)) {
-          attr.attr_type = local_type_id;
-          break;
-        }
-      } else if (pgm_read_word(&converter->name_offset)) {
-        const char * key = attr.key.key;
-        // AddLog_P(LOG_LEVEL_DEBUG, PSTR("Comparing '%s' with '%s'"), attr_name, converter->name);
-        if (0 == strcasecmp_P(key, Z_strings + pgm_read_word(&converter->name_offset))) {
-          // match
-          attr.setKeyId(local_cluster_id, local_attr_id);
-          attr.attr_type = local_type_id;
-          attr.attr_multiplier = local_multiplier;
-          break;
-        }
-      }
-    }
+    Z_parseAttributeKey_inner(attr, 0xFFFF);    // try again with any cluster
   }
   return (Zunk != attr.attr_type) ? true : false;
 }
@@ -2041,7 +2181,7 @@ bool Z_parseAttributeKey(class Z_attribute & attr) {
 void Z_Data::toAttributes(Z_attribute_list & attr_list) const {
   Z_Data_Type type = getType();
   // iterate through attributes to see which ones need to be exported
-  for (uint32_t i = 0; i < ARRAY_SIZE(Z_PostProcess); i++) {
+  for (uint32_t i = 0; i < nitems(Z_PostProcess); i++) {
     const Z_AttributeConverter *converter = &Z_PostProcess[i];
     uint8_t conv_export = pgm_read_byte(&converter->multiplier_idx) & Z_EXPORT_DATA;
     uint8_t conv_mapping = pgm_read_byte(&converter->mapping);
@@ -2067,8 +2207,8 @@ void Z_Data::toAttributes(Z_attribute_list & attr_list) const {
         case Zenum16:
         case Zuint16: uval32 = *(uint16_t*)attr_address;  if (uval32 !=  0x0000FFFF) data_size = 16;  break;
         case Zuint32: uval32 = *(uint32_t*)attr_address;  if (uval32 !=  0xFFFFFFFF) data_size = 32;  break;
-        case Zint8:   ival32 = *(int8_t*)attr_address;    if (ival32 != -0xFFFFFF80) data_size = -8;  break;
-        case Zint16:  ival32 = *(int16_t*)attr_address;   if (ival32 != -0xFFFF8000) data_size = -16; break;
+        case Zint8:   ival32 = *(int8_t*)attr_address;    if (ival32 != -0x80)       data_size = -8;  break;
+        case Zint16:  ival32 = *(int16_t*)attr_address;   if (ival32 != -0x8000)     data_size = -16; break;
         case Zint32:  ival32 = *(int32_t*)attr_address;   if (ival32 != -0x80000000) data_size = -32; break;
       }
       if (data_size != 0) {
@@ -2087,15 +2227,67 @@ void Z_Data::toAttributes(Z_attribute_list & attr_list) const {
   }
 }
 
+// Add both attributes RGB and RGBb based on the inputs
+// r,g,b are expected to be 100% brightness
+// brightness is expected 0..255
+void Z_Data_Light::toRGBAttributesRGBb(Z_attribute_list & attr_list, uint8_t r, uint8_t g, uint8_t b, uint8_t brightness) {
+  SBuffer rgb(3);
+  rgb.add8(r);
+  rgb.add8(g);
+  rgb.add8(b);
+  attr_list.addAttribute(PSTR("RGB"), true).setBuf(rgb, 0, 3);
+  // now blend with brightness
+  r = changeUIntScale(r, 0, 255, 0, brightness);
+  g = changeUIntScale(g, 0, 255, 0, brightness);
+  b = changeUIntScale(b, 0, 255, 0, brightness);
+  rgb.set8(0, r);
+  rgb.set8(1, g);
+  rgb.set8(2, b);
+  attr_list.addAttribute(PSTR("RGBb"), true).setBuf(rgb, 0, 3);
+}
+
+// Convert from Hue/Sat + Brightness to RGB+RGBb
+// sat: 0..255
+// hue: 0..359
+// brightness: 0..255
+void Z_Data_Light::toRGBAttributesHSB(Z_attribute_list & attr_list, uint16_t hue, uint8_t sat, uint8_t brightness) {
+  uint8_t r,g,b;
+  HsToRgb(hue, sat, &r, &g, &b);
+  Z_Data_Light::toRGBAttributesRGBb(attr_list, r, g, b, brightness);
+}
+
+// Convert X/Y to RGB and RGBb
+// X: 0..65535
+// Y: 0..65535
+// brightness: 0..255
+void Z_Data_Light::toRGBAttributesXYB(Z_attribute_list & attr_list, uint16_t x, uint16_t y, uint8_t brightness) {
+  uint8_t r,g,b;
+  XyToRgb(x / 65535.0f, y / 65535.0f, &r, &g, &b);
+  Z_Data_Light::toRGBAttributesRGBb(attr_list, r, g, b, brightness);
+}
+
+void Z_Data_Light::toRGBAttributes(Z_attribute_list & attr_list) const {
+  uint8_t brightness = 255;
+  if (validDimmer()) {
+    brightness = changeUIntScale(getDimmer(), 0, 254, 0, 255);   // range is 0..255
+  }
+  if (validHue() && validSat()) {
+    uint8_t sat = changeUIntScale(getSat(), 0, 254, 0, 255);
+    Z_Data_Light::toRGBAttributesHSB(attr_list, getHue(), sat, brightness);
+  } else if (validX() && validY()) {
+    Z_Data_Light::toRGBAttributesXYB(attr_list, getX(), getY(), brightness);
+  }
+}
+
 //
 // Check if this device needs Battery reporting
-// This is usefule for IKEA device that tend to drain battery quickly when Battery reporting is set
+// This is useful for IKEA or Philips devices that tend to drain battery quickly when Battery reporting is set
 //
 bool Z_BatteryReportingDeviceSpecific(uint16_t shortaddr) {
   const Z_Device & device = zigbee_devices.findShortAddr(shortaddr);
   if (device.manufacturerId) {
     String manuf_c(device.manufacturerId);
-    if (manuf_c.startsWith(F("IKEA"))) {
+    if ((manuf_c.startsWith(F("IKEA"))) || (manuf_c.startsWith(F("Philips")))) {
       return false;
     }
   }
