@@ -436,7 +436,7 @@ jobs:
         platformio upgrade --dev
         platformio update
     - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX32-AF   
+      run: platformio run -e tasmota32_KNX-AF   
 
   tasmota32_KNX-BG:
     runs-on: ubuntu-latest
