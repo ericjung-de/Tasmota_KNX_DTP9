@@ -3,7 +3,7 @@ name: Tasmota Build
 on: [push]
 
 jobs:
-  tasmota_KNX-EN:
+  tasmota_KNX:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -26,47 +26,7 @@ jobs:
         platformio upgrade --dev
         platformio update
     - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-EN
-    - name: Commit files  # transfer the new binaries back into the repository
-      run: |
-        git config --local user.name "Platformio BUILD"
-        git add -f ./build_output/firmware/*.*
-        git commit -m "Updating Latest Compiled Binaries"
-    - name: Push changes  # push the output folder to the repo
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: 'KNX_development'
-        force: true
-
-  tasmota32_KNX-EN:
-    needs: tasmota_KNX-EN
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-    - uses: actions/checkout@v1
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota32_KNX-EN
-    - name: Commit files  # transfer the new binaries back into the repository
-      run: |
-        git config --local user.name "Platformio BUILD"
-        git add -f ./build_output/firmware/*.*
-        git commit -m "Updating Latest Compiled Binaries"
-    - name: Push changes  # push the output folder to the repo
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: 'KNX_development'
-        force: true
-
-  tasmota_KNX-ES:
-    needs: tasmota_KNX-EN
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-    - uses: actions/checkout@v1
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota32_KNX-ES
+      run: platformio run
     - name: Commit files  # transfer the new binaries back into the repository
       run: |
         git config --local user.name "Platformio BUILD"
