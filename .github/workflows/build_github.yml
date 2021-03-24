@@ -16,6 +16,11 @@ jobs:
         pip install -U platformio
         platformio upgrade --dev
         platformio update
+        sudo swapoff -a
+        sudo rm -f /swapfile
+        sudo apt clean
+        docker rmi $(docker image ls -aq)
+        df -h
     - name: Run PlatformIO       
       run: platformio run
     - name: Commit files  # transfer the new binaries back into the repository
