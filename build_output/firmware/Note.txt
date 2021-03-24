@@ -1,0 +1,1 @@
+These files are the binaries that can be flashed onto your ESP8266, ESP8285 and ESP32 devices. Enjoy!
