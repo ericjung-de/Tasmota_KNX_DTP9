@@ -32,7 +32,22 @@ jobs:
         platformio update
     - name: Run PlatformIO       
       run: platformio run -e tasmota-minimal
-      
+
+  tasmota_KNX-AF:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-AF   
+
   tasmota_KNX-BG:
     runs-on: ubuntu-latest
     steps:
@@ -137,6 +152,21 @@ jobs:
         platformio update
     - name: Run PlatformIO       
       run: platformio run -e tasmota_KNX-FR
+  
+  tasmota_KNX-FY:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-FY
 
   tasmota_KNX-GR:
     runs-on: ubuntu-latest
