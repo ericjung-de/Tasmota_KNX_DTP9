@@ -32,7 +32,22 @@ jobs:
         platformio update
     - name: Run PlatformIO       
       run: platformio run -e tasmota-minimal
-      
+
+  tasmota_KNX-AF:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-AF   
+
   tasmota_KNX-BG:
     runs-on: ubuntu-latest
     steps:
@@ -137,6 +152,21 @@ jobs:
         platformio update
     - name: Run PlatformIO       
       run: platformio run -e tasmota_KNX-FR
+  
+  tasmota_KNX-FY:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U platformio
+        platformio upgrade --dev
+        platformio update
+    - name: Run PlatformIO       
+      run: platformio run -e tasmota_KNX-FY
 
   tasmota_KNX-GR:
     runs-on: ubuntu-latest
@@ -378,96 +408,6 @@ jobs:
     - name: Run PlatformIO       
       run: platformio run -e tasmota_KNX-VN
 
-  tasmota_KNX-DE_2MB:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-DE_2MB
-
-  tasmota_KNX-EN_2MB:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-EN_2MB
-
-  tasmota_KNX-ES_2MB:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-ES_2MB
-      
-  tasmota_KNX-DE_4MB:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-DE_4MB
-
-  tasmota_KNX-EN_4MB:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-EN_4MB
-
-  tasmota_KNX-ES_4MB:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota_KNX-ES_4MB
-
   tasmota32_KNX-DE:
     runs-on: ubuntu-latest
     steps:
@@ -512,18 +452,3 @@ jobs:
         platformio update
     - name: Run PlatformIO       
       run: platformio run -e tasmota32_KNX-ES
-
-  tasmota32_WEBCAM:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python
-      uses: actions/setup-python@v1
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U platformio
-        platformio upgrade --dev
-        platformio update
-    - name: Run PlatformIO       
-      run: platformio run -e tasmota32_WEBCAM
