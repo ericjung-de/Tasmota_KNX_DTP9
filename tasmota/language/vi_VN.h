@@ -109,6 +109,7 @@
 #define D_GATEWAY "Cổng kết nối"
 #define D_GROUP "Nhóm"
 #define D_HOST "Máy chủ"
+#define D_HALL_EFFECT "Hall Effect"
 #define D_HOSTNAME "Tên máy chủ"
 #define D_HUMIDITY "Độ ẩm"
 #define D_ILLUMINANCE "Độ sáng"
@@ -808,7 +809,8 @@
 #define D_SENSOR_TFMINIPLUS_TX  "TFmini+ TX"
 #define D_SENSOR_TFMINIPLUS_RX  "TFmini+ RX"
 #define D_SENSOR_ZEROCROSS     "ZC Pulse"
-
+#define D_SENSOR_HALLEFFECT    "HallEffect"
+#define D_SENSOR_EPD_DATA      "EPD Data"
 
 // Units
 #define D_UNIT_AMPERE "A"

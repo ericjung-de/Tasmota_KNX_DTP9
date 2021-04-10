@@ -109,6 +109,7 @@
 #define D_GATEWAY "Шлюз"
 #define D_GROUP "Група"
 #define D_HOST "Хост"
+#define D_HALL_EFFECT "Hall Effect"
 #define D_HOSTNAME "Име на хоста"
 #define D_HUMIDITY "Влажност"
 #define D_ILLUMINANCE "Осветеност"
@@ -807,7 +808,8 @@
 #define D_SENSOR_TFMINIPLUS_TX  "TFmini+ TX"
 #define D_SENSOR_TFMINIPLUS_RX  "TFmini+ RX"
 #define D_SENSOR_ZEROCROSS     "ZC Pulse"
-
+#define D_SENSOR_HALLEFFECT    "HallEffect"
+#define D_SENSOR_EPD_DATA      "EPD Data"
 
 // Units
 #define D_UNIT_AMPERE "A"

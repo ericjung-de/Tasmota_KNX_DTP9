@@ -158,6 +158,10 @@ enum UserSelectablePins {
   GPIO_MAX7219CLK, GPIO_MAX7219DIN, GPIO_MAX7219CS, // MAX7219 interface
   GPIO_TFMINIPLUS_TX, GPIO_TFMINIPLUS_RX,  // TFmini Plus ToF sensor
   GPIO_ZEROCROSS,
+#ifdef ESP32
+  GPIO_HALLEFFECT,
+  GPIO_EPD_DATA,                       // Base connection EPD driver
+#endif
   GPIO_SENSOR_END };
 
 enum ProgramSelectablePins {
@@ -171,7 +175,7 @@ typedef union {                            // Restricted by MISRA-C Rule 18.4 bu
   uint32_t data;                           // Allow bit manipulation using SetOption
   struct {                                 // GPIO Option_A1 .. Option_A32
     uint32_t pwm1_input : 1;               // bit 0 (v9.2.0.1)   - Option_A1 - (Light) Change PWM1 to input on power off and no fade running (1)
-    uint32_t spare01 : 1;                  // bit 1
+    uint32_t dummy_energy : 1;             // bit 1 (v9.3.1.2)   - Option_A2 - (Energy) Enable dummy values
     uint32_t spare02 : 1;                  // bit 2
     uint32_t spare03 : 1;                  // bit 3
     uint32_t spare04 : 1;                  // bit 4
@@ -336,6 +340,10 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_MAX7219_CLK "|" D_SENSOR_MAX7219_DIN "|" D_SENSOR_MAX7219_CS "|"
   D_SENSOR_TFMINIPLUS_TX "|" D_SENSOR_TFMINIPLUS_RX "|"
   D_SENSOR_ZEROCROSS "|"
+#ifdef ESP32
+  D_SENSOR_HALLEFFECT "|"
+  D_SENSOR_EPD_DATA "|"
+#endif
   ;
 
 const char kSensorNamesFixed[] PROGMEM =
@@ -464,6 +472,9 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #endif  // USE_DISPLAY_TM1637
   AGPIO(GPIO_BACKLIGHT),      // Display backlight control
   AGPIO(GPIO_OLED_RESET),     // OLED Display Reset
+#ifdef ESP32
+  AGPIO(GPIO_EPD_DATA),       // Base connection EPD driver
+#endif
 #endif  // USE_DISPLAY
 
 #ifdef USE_MAX31865
@@ -807,11 +818,13 @@ const uint16_t kGpioNiceList[] PROGMEM = {
   AGPIO(GPIO_MAX7219DIN),
   AGPIO(GPIO_MAX7219CS),
 #endif  // USE_DISPLAY_MAX7219
+
 /*-------------------------------------------------------------------------------------------*\
  * ESP32 specifics
 \*-------------------------------------------------------------------------------------------*/
 
 #ifdef ESP32
+  AGPIO(GPIO_HALLEFFECT) + 2,             // Hall effect sensor connected to GPIO36 and 39
 #ifdef USE_WEBCAM
   AGPIO(GPIO_WEBCAM_PWDN),
   AGPIO(GPIO_WEBCAM_RESET),
@@ -829,7 +842,7 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #ifdef USE_ETHERNET
   AGPIO(GPIO_ETH_PHY_POWER),
   AGPIO(GPIO_ETH_PHY_MDC),
-  AGPIO(GPIO_ETH_PHY_MDIO),  // Ethernet
+  AGPIO(GPIO_ETH_PHY_MDIO),               // Ethernet
 #endif  // USE_ETHERNET
 
 /*-------------------------------------------------------------------------------------------*\
